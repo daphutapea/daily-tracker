@@ -24,7 +24,8 @@ The header shows the date, the time and three buttons. Add task opens a new task
 Add event opens a new event today, starting at the next full hour. New note opens an empty note. The
 greeting uses the name you set in Settings.
 
-Under the buttons is a ruler for today, from midnight to midnight. Diamonds are deadlines, short bars
+Below the buttons is the quick-add field (see [Quick add](#quick-add)). Under it is a ruler for today,
+from midnight to midnight. Diamonds are deadlines, short bars
 are events, and the teal line is the current time. A filled red diamond is a deadline you have already
 missed. Click any mark to open it.
 
@@ -37,6 +38,25 @@ missed. Click any mark to open it.
 | Numbers | Counts that open the matching list when clicked, tasks finished per day over the last week, how many of today’s and this week’s deadlines you met, and your open tasks by status and priority. Show table swaps the chart for the numbers behind it. |
 
 On a phone, your quick links sit at the bottom of Home.
+
+## Quick add
+
+Write what’s coming up the way you’d say it, and the AI drafts the tasks and events for you. Open it
+from the field on Home, the Quick add button in the sidebar, or Cmd+K (Ctrl+K on Windows) from any page.
+
+For example: “Sync with Dennis Tuesday 10 to 11am, remind me 15 min before. Finish the labelling sheet
+by Friday, high priority.” English, Bahasa Indonesia or a mix all work, and one note can hold several
+things.
+
+Press Read it (or Cmd+Enter). Each item comes back as a card you can change before anything is saved:
+switch it between task and event, fix the title, day, time, reminder, priority or project, or remove
+it. A task with a day but no time is due at 17:00. An event that overlaps one already in your calendar
+gets a warning. Press Add to save them all, or Edit note to go back and rewrite.
+
+The AI only drafts. It can’t save, change or delete anything; you do that with the Add button. It runs
+on Google’s Gemini free tier, so there is a daily limit; if you reach it, the app says so and you can
+add items by hand until the next day. Quick add needs a one-time setup, described in
+[docs/SETUP.md](docs/SETUP.md).
 
 ## Tasks
 
@@ -117,15 +137,30 @@ While the app is open, a reminder also appears in the corner of the screen with 
 you link Telegram, that pop-up is the only reminder you get.
 
 The morning summary is optional. It lists overdue tasks, today’s deadlines and today’s events, and it
-arrives once a day within two hours after the time you choose. Reminder times follow the time zone shown
-in Settings, which updates to match the device you use.
+arrives once a day within two hours after the time you choose. The weekly review message is optional
+too: on the day and time you pick, it sends what you finished that week, which deadlines slipped, and
+what’s due the week after. Reminder times follow the time zone shown in Settings, which updates to match
+the device you use.
+
+## Weekly review
+
+Open Review in the sidebar, or Weekly review next to Numbers on Home. It shows one week, Monday to
+Sunday, and the arrows step back and forward through earlier weeks.
+
+| Section | What it shows |
+|---|---|
+| Summary | How many tasks you finished and how many deadlines slipped. |
+| Tasks finished per day | One column per day of that week. Show table swaps it for the numbers. |
+| Finished | Every task you marked done that week, with when. |
+| Slipped | Deadlines that fell in that week and passed before the task was done, whether it’s still open or was finished late. |
+| The week after | Deadlines and events planned for the following week. |
 
 ## Settings
 
 | Section | What you can do there |
 |---|---|
 | You | Set the name used in the greeting, and see the time zone reminders use. |
-| Telegram reminders | Connect your bot, link your chat, send a test message, and turn on the morning summary. |
+| Telegram reminders | Connect your bot, link your chat, send a test message, and turn on the morning summary and the weekly review message. |
 | Projects | Add, rename, archive or delete projects. Deleting a project keeps its tasks and notes; they just lose the label. |
 | Appearance | Match your system, or always use Light or Dark. Each mode has two colour sets: Sage or White for light, Navy or Charcoal for dark. Each card shows a small preview. These choices are saved on each device separately. |
 | Account | See which account is signed in, and sign out. |

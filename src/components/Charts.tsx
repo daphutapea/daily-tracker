@@ -2,7 +2,15 @@ import { format, isSameDay } from 'date-fns'
 import { useState } from 'react'
 
 /** Columns for "tasks finished per day". One series, so no legend; the title names it. */
-export function FinishedPerDay({ days, counts }: { days: Date[]; counts: number[] }) {
+export function FinishedPerDay({
+  days,
+  counts,
+  caption = 'Last 7 days',
+}: {
+  days: Date[]
+  counts: number[]
+  caption?: string
+}) {
   const [asTable, setAsTable] = useState(false)
   const max = Math.max(1, ...counts)
   const total = counts.reduce((a, b) => a + b, 0)
@@ -17,7 +25,7 @@ export function FinishedPerDay({ days, counts }: { days: Date[]; counts: number[
         </button>
       </div>
       <p className="text-[13px] text-ink-3">
-        Last 7 days · {total} {total === 1 ? 'task' : 'tasks'}
+        {caption} · {total} {total === 1 ? 'task' : 'tasks'}
       </p>
 
       {asTable ? (

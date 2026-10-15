@@ -409,6 +409,11 @@ dialog.sheet:not([open])::backdrop {
   }
 }
 
+dialog.sheet.sheet-instant,
+dialog.sheet.sheet-instant::backdrop {
+  transition: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   dialog.sheet,
   dialog.sheet.sheet-sm {
@@ -448,7 +453,7 @@ dialog.sheet:not([open])::backdrop {
   padding-left: 1.4em;
 }
 .prose-editor a {
-  color: var(--accent);
+  color: var(--ink);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -467,7 +472,7 @@ dialog.sheet:not([open])::backdrop {
 .prose-editor ul[data-type="taskList"] li > label input {
   width: 16px;
   height: 16px;
-  accent-color: var(--accent);
+  accent-color: var(--ink);
 }
 .prose-editor ul[data-type="taskList"] li[data-checked="true"] > div {
   color: var(--ink-3);

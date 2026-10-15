@@ -26,6 +26,8 @@ dist-ssr
 # Supabase CLI
 supabase/.temp
 supabase/.branches
+# Local secrets for edge functions (GEMINI_API_KEY)
+supabase/functions/.env
 
 # macOS app build output (npm run app)
 build/

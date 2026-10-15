@@ -1,5 +1,7 @@
 import {
   CalendarBlankIcon,
+  CalendarCheckIcon,
+  ChatTextIcon,
   CheckSquareIcon,
   GearSixIcon,
   HouseIcon,
@@ -17,6 +19,7 @@ import { useDialogs } from '@/lib/dialogs'
 import { useEvents, useProfile, useQuickLinks, useReorderQuickLinks, useTasks, useUpdateProfile } from '@/lib/queries'
 import { supabase } from '@/lib/supabase'
 import { EventDialogHost } from './EventDialog'
+import { QuickAddProvider, shortcutLabel, useOpenQuickAdd } from './QuickAdd'
 import { SortableList } from './SortableList'
 import { TaskDialogHost } from './TaskDialog'
 import { SiteIcon } from './ui'
@@ -26,6 +29,7 @@ const NAV: { to: string; label: string; icon: Icon; mobile: boolean }[] = [
   { to: '/tasks', label: 'Tasks', icon: CheckSquareIcon, mobile: true },
   { to: '/notes', label: 'Notes', icon: NotePencilIcon, mobile: true },
   { to: '/calendar', label: 'Calendar', icon: CalendarBlankIcon, mobile: true },
+  { to: '/review', label: 'Review', icon: CalendarCheckIcon, mobile: false },
   { to: '/links', label: 'Links', icon: LinkSimpleIcon, mobile: false },
   { to: '/settings', label: 'Settings', icon: GearSixIcon, mobile: true },
 ]
@@ -35,23 +39,25 @@ export function AppShell() {
   useInAppReminders()
 
   return (
-    <div className="min-h-dvh">
-      <a
-        href="#main"
-        className="sr-only z-50 rounded-[6px] bg-surface px-3 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
-      >
-        Skip to content
-      </a>
-      <Sidebar />
-      <main id="main" tabIndex={-1} className="pb-24 outline-none md:pb-10 md:pl-60">
-        <div className="mx-auto w-full max-w-[1200px] px-4 pt-5 md:px-8 md:pt-7">
-          <Outlet />
-        </div>
-      </main>
-      <TabBar />
-      <TaskDialogHost />
-      <EventDialogHost />
-    </div>
+    <QuickAddProvider>
+      <div className="min-h-dvh">
+        <a
+          href="#main"
+          className="sr-only z-50 rounded-[6px] bg-surface px-3 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+        >
+          Skip to content
+        </a>
+        <Sidebar />
+        <main id="main" tabIndex={-1} className="pb-24 outline-none md:pb-10 md:pl-60">
+          <div className="mx-auto w-full max-w-[1200px] px-4 pt-5 md:px-8 md:pt-7">
+            <Outlet />
+          </div>
+        </main>
+        <TabBar />
+        <TaskDialogHost />
+        <EventDialogHost />
+      </div>
+    </QuickAddProvider>
   )
 }
 
@@ -59,6 +65,7 @@ function Sidebar() {
   const email = useUserEmail()
   const links = useQuickLinks()
   const reorder = useReorderQuickLinks()
+  const openQuickAdd = useOpenQuickAdd()
 
   return (
     <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-line bg-surface md:flex">
@@ -88,6 +95,15 @@ function Sidebar() {
             </li>
           ))}
         </ul>
+        <button
+          type="button"
+          onClick={() => openQuickAdd()}
+          className="press row-hover mt-2 flex min-h-9 w-full items-center gap-2.5 rounded-[6px] border border-line px-2.5 font-medium text-ink-2"
+        >
+          <ChatTextIcon size={18} weight="bold" />
+          Quick add
+          <kbd className="ml-auto font-sans text-[12px] font-normal text-ink-3">{shortcutLabel()}</kbd>
+        </button>
       </nav>
 
       <section aria-labelledby="quick-links-heading" className="mt-6 min-h-0 flex-1 overflow-y-auto px-3">

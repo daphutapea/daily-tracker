@@ -11,7 +11,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "db:types": "supabase gen types typescript --local > src/lib/database.types.ts",
-    "app": "bash scripts/build-mac-app.sh"
+    "app": "bash scripts/build-mac-app.sh",
+    "test:functions": "node --test supabase/functions/quick-add/logic.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

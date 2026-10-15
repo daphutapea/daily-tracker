@@ -146,7 +146,7 @@ function TelegramSection({ profile }: { profile: Profile }) {
           <Step n={2} title="Link your Telegram chat" done={s!.linked} disabled={!s!.bot_username}>
             <LinkStep status={s!} />
           </Step>
-          <Step n={3} title="Morning summary" disabled={!s!.linked}>
+          <Step n={3} title="Summaries" disabled={!s!.linked}>
             <DigestStep profile={profile} enabled={s!.linked} />
           </Step>
         </ol>
@@ -366,38 +366,93 @@ function LinkStep({ status }: { status: TelegramStatus }) {
   )
 }
 
+const ISO_WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
 function DigestStep({ profile, enabled }: { profile: Profile; enabled: boolean }) {
   const update = useUpdateProfile()
   const [time, setTime] = useState(profile.digest_time.slice(0, 5))
+  const [weeklyTime, setWeeklyTime] = useState(profile.weekly_time.slice(0, 5))
 
   return (
-    <div className="space-y-2">
-      <p className="text-ink-2">A message each morning with what’s overdue, what’s due today, and today’s events.</p>
-      <label className="flex min-h-9 cursor-pointer items-center gap-2">
-        <input
-          type="checkbox"
-          className="size-4 accent-[var(--accent)]"
-          disabled={!enabled}
-          checked={profile.digest_enabled}
-          onChange={(e) => update.mutate({ digest_enabled: e.target.checked })}
-        />
-        Send me a morning summary
-      </label>
-      <div className="flex items-center gap-2">
-        <label htmlFor="digest-time" className="text-ink-2">
-          At
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <label className="flex min-h-9 cursor-pointer items-center gap-2 font-medium">
+          <input
+            type="checkbox"
+            className="size-4 accent-[var(--ink)]"
+            disabled={!enabled}
+            checked={profile.digest_enabled}
+            onChange={(e) => update.mutate({ digest_enabled: e.target.checked })}
+          />
+          Morning summary
         </label>
-        <input
-          id="digest-time"
-          type="time"
-          className="field w-32"
-          disabled={!enabled}
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          onBlur={() => time && time !== profile.digest_time.slice(0, 5) && update.mutate({ digest_time: time })}
-        />
+        <p className="text-ink-2">Each morning: what’s overdue, what’s due today, and today’s events.</p>
+        <div className="flex items-center gap-2">
+          <label htmlFor="digest-time" className="text-ink-2">
+            At
+          </label>
+          <input
+            id="digest-time"
+            type="time"
+            className="field w-32"
+            disabled={!enabled}
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            onBlur={() => time && time !== profile.digest_time.slice(0, 5) && update.mutate({ digest_time: time })}
+          />
+        </div>
       </div>
-      {!enabled && <p className="text-[13px] text-ink-3">Link Telegram first.</p>}
+
+      <div className="space-y-2">
+        <label className="flex min-h-9 cursor-pointer items-center gap-2 font-medium">
+          <input
+            type="checkbox"
+            className="size-4 accent-[var(--ink)]"
+            disabled={!enabled}
+            checked={profile.weekly_enabled}
+            onChange={(e) => update.mutate({ weekly_enabled: e.target.checked })}
+          />
+          Weekly review
+        </label>
+        <p className="text-ink-2">Once a week: what you finished, which deadlines slipped, and what’s due next week.</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor="weekly-day" className="text-ink-2">
+            Every
+          </label>
+          <select
+            id="weekly-day"
+            className="field w-auto"
+            disabled={!enabled}
+            value={profile.weekly_day}
+            onChange={(e) => update.mutate({ weekly_day: Number(e.target.value) })}
+          >
+            {ISO_WEEKDAYS.map((d, i) => (
+              <option key={d} value={i + 1}>
+                {d}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="weekly-time" className="text-ink-2">
+            at
+          </label>
+          <input
+            id="weekly-time"
+            type="time"
+            className="field w-32"
+            disabled={!enabled}
+            value={weeklyTime}
+            onChange={(e) => setWeeklyTime(e.target.value)}
+            onBlur={() =>
+              weeklyTime && weeklyTime !== profile.weekly_time.slice(0, 5) && update.mutate({ weekly_time: weeklyTime })
+            }
+          />
+        </div>
+      </div>
+      {!enabled && (
+        <p className="text-[13px] text-ink-3">
+          Link Telegram first. The same review is always on the Review page in the app.
+        </p>
+      )}
     </div>
   )
 }

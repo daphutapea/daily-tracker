@@ -45,7 +45,10 @@ in all four palettes.
 | `--ok` | `#067647` | `#067647` | `#47CD89` | `#47CD89` | Done |
 
 The accent shows up in four places only: the primary button, the "now" line, the active nav item,
-and the focus ring.
+and the focus ring (plus a faint tint of it behind selected text). Everything else that marks a state
+uses ink: ticked task boxes fill with ink, native checkboxes and the checklist boxes in notes are
+ink, and links inside notes are ink with an underline. Before 15 Oct 2026 those were teal, which made
+the teal spread thin and the "now" line stop standing out.
 
 ## Type
 
@@ -67,10 +70,16 @@ and the focus ring.
 
 - Desktop: left sidebar (navigation plus quick links), content max 1200px.
 - Phone: a bottom tab bar replaces the sidebar; quick links move into Settings > Links.
-- Home order: header (greeting, clock, quick add, day ruler); then Today (the focal point) beside
+- Home order: header (greeting, clock, quick buttons, the Quick add field, day ruler); then Today (the focal point) beside
   Next 7 days; then In progress and waiting beside the month; then Numbers (counts, tasks finished per
   day, deadlines met, open tasks by status and priority). The numbers sit last on purpose: they are
   the review, the agenda is the work.
+- Quick add looks like a text field on Home, because that is what it asks for: a sentence. It opens
+  a dialog where the AI's drafts come back as editable cards, one per item, and nothing is saved until
+  you press Add. Cmd+K (Ctrl+K) opens it from anywhere; the shortcut is shown beside the field and the
+  sidebar button.
+- Weekly review is its own page rather than more panels on Home. Home is for the day; the review is
+  something you read once a week, so it gets the room to list every finished and slipped task.
 - Icons: Phosphor at bold weight, 16 to 18px, only where a label alone is slower to scan (navigation,
   editor toolbar, row actions). Every icon-only button carries a text label for screen readers.
 - Favicon: a placeholder drawn from the day ruler (ink tile, ticks, teal "now" line). Replace it
@@ -89,7 +98,8 @@ and the focus ring.
 - Board drag: the card lifts into a floating copy (shadow, scale 1.02) while the original dims in
   place; on drop the copy settles into its new column in 200ms with ease-out.
 - Switching palettes never animates; colors change in one frame.
-- Nothing loops. Keyboard shortcuts open things instantly with no animation.
+- Nothing loops. Keyboard shortcuts open things instantly with no animation: Quick add opened with
+  Cmd+K skips the dialog's scale and fade, while the same dialog opened by a click still animates.
 - `prefers-reduced-motion`: keep fades, drop movement.
 
 ## Copy

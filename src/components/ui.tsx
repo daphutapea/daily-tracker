@@ -25,7 +25,7 @@ export function TaskCheck({
     >
       <span
         className={`press grid size-[18px] place-items-center rounded-[5px] border-[1.5px] group-active/check:scale-90 ${
-          checked ? 'border-accent bg-accent text-on-accent' : 'border-line-strong bg-surface'
+          checked ? 'border-ink bg-ink text-surface' : 'border-line-strong bg-surface'
         }`}
       >
         <CheckIcon

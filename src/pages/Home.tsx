@@ -1,10 +1,11 @@
-import { CalendarBlankIcon, NotePencilIcon, PlusIcon } from '@phosphor-icons/react'
+import { CalendarBlankIcon, ChatTextIcon, NotePencilIcon, PlusIcon } from '@phosphor-icons/react'
 import { addDays, format, isSameDay, startOfDay } from 'date-fns'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Breakdown, FinishedPerDay, Meter } from '@/components/Charts'
 import { DayRuler } from '@/components/DayRuler'
 import { MiniMonth } from '@/components/MiniMonth'
+import { shortcutLabel, useOpenQuickAdd } from '@/components/QuickAdd'
 import { TaskRow } from '@/components/TaskRow'
 import { Loading, QueryError, SiteIcon, StateMessage } from '@/components/ui'
 import { formatDay, greeting, lastNDays, sameDay, toDate, weekRange } from '@/lib/dates'
@@ -30,6 +31,7 @@ export function HomePage() {
   const { openTask, openEvent } = useDialogs()
   const navigate = useNavigate()
   const createNote = useCreateNote()
+  const openQuickAdd = useOpenQuickAdd()
 
   const projectById = useMemo(() => new Map(projects.data?.map((p) => [p.id, p])), [projects.data])
   const d = useMemo(() => derive(tasks.data ?? [], events.data ?? [], now), [tasks.data, events.data, now])
@@ -96,6 +98,17 @@ export function HomePage() {
             <span className="max-sm:hidden">New note</span>
           </button>
         </div>
+        {/* Looks like a text field because that's what it opens: write a sentence, get items back. */}
+        <button
+          type="button"
+          onClick={() => openQuickAdd()}
+          aria-label="Quick add: describe tasks or events in a sentence"
+          className="field mt-3 flex items-center gap-2 text-left text-ink-3"
+        >
+          <ChatTextIcon size={16} weight="bold" aria-hidden className="shrink-0" />
+          <span className="truncate">Tell me what’s coming up, like “sync with Dennis Tuesday 10am”</span>
+          <kbd className="ml-auto shrink-0 font-sans text-[12px] max-sm:hidden">{shortcutLabel()}</kbd>
+        </button>
         <div className="mt-5">
           <DayRuler now={now} tasks={d.dueToday} events={d.eventsToday} onOpenTask={openTask} onOpenEvent={openEvent} />
         </div>
@@ -212,9 +225,14 @@ export function HomePage() {
           </div>
 
           <section aria-labelledby="numbers-heading" className="space-y-4">
-            <h2 id="numbers-heading" className="text-base font-semibold">
-              Numbers
-            </h2>
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 id="numbers-heading" className="text-base font-semibold">
+                Numbers
+              </h2>
+              <Link to="/review" className="text-[13px] text-ink-2 hover:text-ink">
+                Weekly review
+              </Link>
+            </div>
             <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               <Stat to="/tasks" label="Open tasks" value={d.open.length} />
               <Stat to="/tasks?show=today" label="Due today" value={d.dueToday.filter((t) => t.status !== 'done').length} />

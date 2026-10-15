@@ -52,9 +52,33 @@ In the app, open Settings and find Telegram reminders. The three steps on screen
 1. In Telegram, message [@BotFather](https://t.me/BotFather), send `/newbot`, and paste the token it
    gives you. The token is stored encrypted in Supabase Vault.
 2. Press Get a link code, open your bot, press Start, then press I’ve sent it.
-3. If you want the morning summary, turn it on and pick a time.
+3. Under Summaries, turn on the morning summary or the weekly review message if you want them, and
+   pick when they arrive.
 
 Send a test message confirms everything works.
+
+## Turn on Quick add (free Gemini key)
+
+Quick add sends what you type to Google’s Gemini API through a small server function in your Supabase
+project (`supabase/functions/quick-add`), so the key never reaches the browser or the Mac app.
+
+1. Open [Google AI Studio](https://aistudio.google.com/apikey), sign in with your Google account, and
+   create an API key. No card is needed for the free tier.
+2. In the [Supabase dashboard](https://supabase.com/dashboard/project/huinyzkrpvhiigoywmro/functions/secrets)
+   for `daily-tracker`, go to Edge Functions, then Secrets, and add a secret named `GEMINI_API_KEY` with
+   that key as its value.
+
+That’s all. Open Quick add and try a sentence.
+
+**Which model it uses.** It asks `gemini-3.6-flash` first, the best Flash model on the free tier. If
+that model’s free daily limit is used up, or your key can’t use it, it moves on to `gemini-3.5-flash-lite`
+and then `gemini-3.1-flash-lite`, which have larger free daily allowances. To change the order, add a
+secret named `GEMINI_MODELS` with model names separated by commas, best first. Your current limits are
+listed in AI Studio under rate limits.
+
+**Privacy.** On the free tier, Google’s terms allow it to use what you send to improve its products.
+Quick add only sends the sentence you typed, today’s date and time, your time zone and your project
+names, never your existing tasks or notes. Leave out anything you wouldn’t want shared.
 
 ## 4. Put it online
 
@@ -79,6 +103,9 @@ of sending it.
 
 The morning summary goes out once a day, within two hours after the chosen time, in the time zone saved
 on your profile. The app updates that time zone to match whichever device you open it on.
+
+The weekly review message has its own job, `private.dispatch_weekly_reviews`, which runs every five
+minutes and sends at most once a week, within two hours after the day and time you pick.
 
 ## Working on the code with a local database
 
@@ -106,6 +133,26 @@ against anything but the local stack.
 
 Schema changes go in `supabase/migrations/`. After changing the schema, regenerate the TypeScript types
 with `npm run db:types`, and apply the same migration to the hosted project.
+
+To use Quick add against the local stack, run its function in a second terminal. Without a key it
+answers that the AI isn’t set up, which is enough to test the screens. To call Gemini locally, put
+`GEMINI_API_KEY=...` in `supabase/functions/.env` (Git ignores it) first.
+
+```bash
+npx supabase functions serve quick-add
+```
+
+The function’s parsing and model fallback have tests that run without a key or network:
+
+```bash
+npm run test:functions
+```
+
+After changing the function, deploy it to the hosted project:
+
+```bash
+npx supabase functions deploy quick-add
+```
 
 Before committing, check that types, lint and the production build pass:
 
@@ -137,11 +184,12 @@ client or office work here, check your company’s rules on where that informati
 
 | Path | What it holds |
 |---|---|
-| `src/pages/` | Home, Tasks, Notes, Calendar, Links and Settings |
+| `src/pages/` | Home, Tasks, Notes, Calendar, Links, Weekly review and Settings |
 | `macos/` | The Mac app window and its icon |
 | `scripts/build-mac-app.sh` | Builds, checks and installs the Mac app (`npm run app`) |
-| `src/components/` | The task and event dialogs, the day ruler, charts, the notes editor |
+| `src/components/` | The task and event dialogs, Quick add, the day ruler, charts, the notes editor |
 | `src/lib/queries.ts` | Every read and write to the database |
-| `supabase/migrations/` | Tables, access rules, the Telegram functions and the reminder job |
+| `supabase/migrations/` | Tables, access rules, the Telegram functions, the reminder job and the weekly review job |
+| `supabase/functions/quick-add/` | The server function that sends Quick add notes to Gemini, and its tests |
 | `DESIGN.md` | Colors, type and motion, with the reason for each choice |
 | `anti-slop/` | The design and accessibility checklist the first version was tested against |

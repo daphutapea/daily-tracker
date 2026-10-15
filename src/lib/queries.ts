@@ -316,7 +316,10 @@ export function useUpdateProfile() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (
-      patch: Pick<TablesUpdate<'profiles'>, 'display_name' | 'timezone' | 'digest_enabled' | 'digest_time'>,
+      patch: Pick<
+        TablesUpdate<'profiles'>,
+        'display_name' | 'timezone' | 'digest_enabled' | 'digest_time' | 'weekly_enabled' | 'weekly_day' | 'weekly_time'
+      >,
     ) => {
       const { data: auth } = await supabase.auth.getUser()
       must(await supabase.from('profiles').update(patch).eq('id', auth.user!.id).select('id').single())

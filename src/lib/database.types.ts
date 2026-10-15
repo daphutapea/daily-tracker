@@ -59,14 +59,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string,"digest_enabled": boolean,"digest_time": string,"display_name": string | null,"id": string,"last_digest_on": string | null,"telegram_chat_id": number | null,"telegram_link_code": string | null,"telegram_link_request": number | null,"timezone": string
+                    "created_at": string,"digest_enabled": boolean,"digest_time": string,"display_name": string | null,"id": string,"last_digest_on": string | null,"last_weekly_on": string | null,"telegram_chat_id": number | null,"telegram_link_code": string | null,"telegram_link_request": number | null,"timezone": string,"weekly_day": number,"weekly_enabled": boolean,"weekly_time": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"digest_enabled"?: boolean,"digest_time"?: string,"display_name"?: string | null,"id": string,"last_digest_on"?: string | null,"telegram_chat_id"?: number | null,"telegram_link_code"?: string | null,"telegram_link_request"?: number | null,"timezone"?: string
+                    "created_at"?: string,"digest_enabled"?: boolean,"digest_time"?: string,"display_name"?: string | null,"id": string,"last_digest_on"?: string | null,"last_weekly_on"?: string | null,"telegram_chat_id"?: number | null,"telegram_link_code"?: string | null,"telegram_link_request"?: number | null,"timezone"?: string,"weekly_day"?: number,"weekly_enabled"?: boolean,"weekly_time"?: string
                   }
                   Update: {
-                    "created_at"?: string,"digest_enabled"?: boolean,"digest_time"?: string,"display_name"?: string | null,"id"?: string,"last_digest_on"?: string | null,"telegram_chat_id"?: number | null,"telegram_link_code"?: string | null,"telegram_link_request"?: number | null,"timezone"?: string
+                    "created_at"?: string,"digest_enabled"?: boolean,"digest_time"?: string,"display_name"?: string | null,"id"?: string,"last_digest_on"?: string | null,"last_weekly_on"?: string | null,"telegram_chat_id"?: number | null,"telegram_link_code"?: string | null,"telegram_link_request"?: number | null,"timezone"?: string,"weekly_day"?: number,"weekly_enabled"?: boolean,"weekly_time"?: string
                   }
                   Relationships: [
                     

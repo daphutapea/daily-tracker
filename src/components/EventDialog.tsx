@@ -187,7 +187,7 @@ function EventForm({
       <label className="flex min-h-9 cursor-pointer items-center gap-2 text-ink-2">
         <input
           type="checkbox"
-          className="size-4 accent-[var(--accent)]"
+          className="size-4 accent-[var(--ink)]"
           checked={f.allDay}
           onChange={(e) => toggleAllDay(e.target.checked)}
         />

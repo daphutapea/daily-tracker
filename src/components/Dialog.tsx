@@ -12,6 +12,7 @@ export function Dialog({
   children,
   footer,
   size = 'md',
+  instant = false,
 }: {
   open: boolean
   onRequestClose: () => void
@@ -19,6 +20,8 @@ export function Dialog({
   children: ReactNode
   footer?: ReactNode
   size?: 'sm' | 'md'
+  /** Skip the open/close animation, for dialogs opened by a keyboard shortcut. */
+  instant?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -28,7 +31,12 @@ export function Dialog({
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    if (open && !el.open) el.showModal()
+    if (open && !el.open) {
+      el.showModal()
+      // showModal() focuses the first control (the close button). Content can name a better first stop
+      // with data-autofocus; React's autoFocus only works for content mounted after the dialog opens.
+      el.querySelector<HTMLElement>('[data-autofocus]')?.focus()
+    }
     if (!open && el.open) el.close()
   }, [open])
 
@@ -47,7 +55,7 @@ export function Dialog({
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      className={`sheet ${size === 'sm' ? 'sheet-sm' : ''}`}
+      className={`sheet ${size === 'sm' ? 'sheet-sm' : ''} ${instant ? 'sheet-instant' : ''}`}
       onClick={(e) => {
         // A click whose target is the <dialog> itself landed on the backdrop.
         if (e.target === e.currentTarget) onRequestClose()

@@ -8,6 +8,7 @@ import { CalendarPage } from './pages/Calendar'
 import { HomePage } from './pages/Home'
 import { LinksPage } from './pages/Links'
 import { NotesPage } from './pages/Notes'
+import { ReviewPage } from './pages/Review'
 import { SettingsPage } from './pages/Settings'
 import { lazy, Suspense } from 'react'
 
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
       { path: 'notes', element: <NotesPage /> },
       { path: 'notes/:noteId', element: <NotesPage /> },
       { path: 'calendar', element: <CalendarPage /> },
+      { path: 'review', element: <ReviewPage /> },
       { path: 'links', element: <LinksPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <Navigate to="/" replace /> },
