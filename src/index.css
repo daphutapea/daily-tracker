@@ -1,7 +1,18 @@
 @import "tailwindcss";
 
-/* Tokens live in DESIGN.md; the values here must match it. */
+/*
+ * Tokens live in DESIGN.md; the values here must match it.
+ * Four palettes, two per mode. lib/theme.ts sets data-palette on <html> (the inline script in
+ * index.html does it before first paint). Without it, the media query below picks Sage or Navy.
+ * The selectors work on any element, so Settings can preview a palette inside a small card.
+ */
 :root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+:root,
+[data-palette="sage"] {
   --bg: #f2f5f3;
   --surface: #ffffff;
   --surface-2: #e9eeeb;
@@ -17,13 +28,30 @@
   --ok: #067647;
   --shadow-float: 0 12px 32px rgb(14 30 51 / 0.14), 0 2px 6px rgb(14 30 51 / 0.08);
   --scrim: rgb(14 30 51 / 0.36);
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  color-scheme: light;
+}
+
+[data-palette="white"] {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f2f2f3;
+  --line: #e4e4e7;
+  --line-strong: #7a7a84;
+  --ink: #18181b;
+  --ink-2: #3f3f46;
+  --ink-3: #5e5e68;
+  --accent: #0f766e;
+  --on-accent: #ffffff;
+  --danger: #b42318;
+  --warn: #b54708;
+  --ok: #067647;
+  --shadow-float: 0 12px 32px rgb(24 24 27 / 0.12), 0 2px 6px rgb(24 24 27 / 0.06);
+  --scrim: rgb(24 24 27 / 0.32);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-palette]) {
     --bg: #0b1524;
     --surface: #111e31;
     --surface-2: #17263b;
@@ -43,7 +71,7 @@
   }
 }
 
-:root[data-theme="dark"] {
+[data-palette="navy"] {
   --bg: #0b1524;
   --surface: #111e31;
   --surface-2: #17263b;
@@ -59,6 +87,25 @@
   --ok: #47cd89;
   --shadow-float: 0 16px 40px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3);
   --scrim: rgb(2 6 14 / 0.6);
+  color-scheme: dark;
+}
+
+[data-palette="charcoal"] {
+  --bg: #121212;
+  --surface: #1a1a1a;
+  --surface-2: #252525;
+  --line: #2e2e2e;
+  --line-strong: #727272;
+  --ink: #ededed;
+  --ink-2: #b5b5b5;
+  --ink-3: #8f8f8f;
+  --accent: #2dd4bf;
+  --on-accent: #121212;
+  --danger: #f97066;
+  --warn: #fdb022;
+  --ok: #47cd89;
+  --shadow-float: 0 16px 40px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.4);
+  --scrim: rgb(0 0 0 / 0.6);
   color-scheme: dark;
 }
 
@@ -236,6 +283,30 @@
     background: var(--surface-2);
   }
 
+  /*
+   * Press feedback for anything tappable that isn't a .btn: it sinks slightly while held, so the
+   * interface visibly hears the click. Colors and scale share one transition list because a
+   * Tailwind transition-* class on the same element would replace it.
+   */
+  .press,
+  .chip {
+    transition-property: color, background-color, border-color, box-shadow, scale;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-out);
+  }
+  .press:active:not(:disabled),
+  .chip:active:not(:disabled) {
+    scale: 0.97;
+  }
+
+  /* Content that replaces a loading message fades in once, so the swap isn't a hard cut. */
+  .fade-in {
+    transition: opacity 200ms var(--ease-out);
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
   .section-label {
     font-size: 13px;
     font-weight: 500;
@@ -345,6 +416,10 @@ dialog.sheet:not([open])::backdrop {
   }
   .btn:active:not(:disabled) {
     transform: none;
+  }
+  .press:active:not(:disabled),
+  .chip:active:not(:disabled) {
+    scale: none;
   }
 }
 

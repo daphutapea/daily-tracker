@@ -5,13 +5,16 @@ month calendar and the sites you open every day in one place, and it sends remin
 summary to Telegram.
 
 Setting it up for the first time? Follow [docs/SETUP.md](docs/SETUP.md) to create your account, link
-Telegram and put the app online. After that, starting it on your computer is:
+Telegram and put the app online.
 
-```bash
-npm run dev
-```
+## Opening it
 
-Then open http://localhost:5173 and sign in.
+On your Mac, press Cmd+Space, type Daily Tracker and press Return. It opens in its own window with its
+own Dock icon, and you stay signed in between launches. The app lives in your Applications folder
+(`~/Applications`); `npm run app` builds and installs it, and running it again after a code change
+replaces the installed copy.
+
+Links you click inside the app, such as your quick links, open in your normal browser.
 
 ## Home
 
@@ -119,7 +122,7 @@ in Settings, which updates to match the device you use.
 | You | Set the name used in the greeting, and see the time zone reminders use. |
 | Telegram reminders | Connect your bot, link your chat, send a test message, and turn on the morning summary. |
 | Projects | Add, rename, archive or delete projects. Deleting a project keeps its tasks and notes; they just lose the label. |
-| Appearance | Match your system, or always use Light or Dark. This choice is saved on each device separately. |
+| Appearance | Match your system, or always use Light or Dark. Each mode has two colour sets: Sage or White for light, Navy or Charcoal for dark. Each card shows a small preview. These choices are saved on each device separately. |
 | Account | See which account is signed in, and sign out. |
 
 ## Small things worth knowing

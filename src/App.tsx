@@ -53,7 +53,7 @@ export function App() {
       )}
       <Toaster
         position="bottom-right"
-        theme={theme}
+        theme={theme.scheme}
         closeButton
         toastOptions={{
           style: {

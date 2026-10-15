@@ -152,7 +152,7 @@ function TabBar() {
               to={n.to}
               end={n.to === '/'}
               className={({ isActive }) =>
-                `flex min-h-14 flex-col items-center justify-center gap-0.5 text-[12px] font-medium ${
+                `press flex min-h-14 flex-col items-center justify-center gap-0.5 text-[12px] font-medium ${
                   isActive ? 'text-ink' : 'text-ink-3'
                 }`
               }

@@ -8,10 +8,14 @@
     <meta name="theme-color" content="#0B1524" media="(prefers-color-scheme: dark)" />
     <title>Daily Tracker</title>
     <script>
-      // Apply the saved theme before first paint so the page never flashes the wrong one.
+      // Apply the saved palette before first paint so the page never flashes the wrong one.
+      // Mirrors resolve() in src/lib/theme.ts.
       try {
-        var t = localStorage.getItem('dt-theme')
-        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+        var mode = localStorage.getItem('dt-theme') || 'system'
+        var light = localStorage.getItem('dt-light') === 'white' ? 'white' : 'sage'
+        var dark = localStorage.getItem('dt-dark') === 'charcoal' ? 'charcoal' : 'navy'
+        var isDark = mode === 'dark' || (mode !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.dataset.palette = isDark ? dark : light
       } catch (e) {}
     </script>
   </head>

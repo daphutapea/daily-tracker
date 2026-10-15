@@ -129,7 +129,7 @@ export function LinksPage() {
           <StateMessage title="No links yet." body="Add one above and it appears in the sidebar right away." />
         </div>
       ) : (
-        <ul className="panel divide-y divide-line">
+        <ul className="panel fade-in divide-y divide-line">
           {links.data.map((l, i) =>
             editing === l.id ? (
               <EditRow key={l.id} link={l} onDone={() => setEditing(null)} />

@@ -1,5 +1,7 @@
 import {
+  defaultDropAnimation,
   DndContext,
+  DragOverlay,
   PointerSensor,
   TouchSensor,
   useDraggable,
@@ -7,10 +9,11 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DropAnimation,
 } from '@dnd-kit/core'
 import { MagnifyingGlassIcon, PlusIcon } from '@phosphor-icons/react'
 import { addDays, endOfDay, startOfDay, subDays } from 'date-fns'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { TaskRow } from '@/components/TaskRow'
 import { Loading, PriorityTag, QueryError, Segmented, StateMessage } from '@/components/ui'
@@ -233,7 +236,7 @@ function TaskList({
   }
 
   return (
-    <div className="panel overflow-hidden">
+    <div className="panel fade-in overflow-hidden">
       {groups.map((g) => (
         <section key={g.label} aria-label={g.label} className="border-line not-first:border-t">
           <h2
@@ -314,21 +317,50 @@ function Board({
     useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } }),
   )
   const doneSince = subDays(new Date(), DONE_WINDOW_DAYS)
+  const [activeId, setActiveId] = useState<string | null>(null)
+  // A dropped card's new column, held locally until the save settles. React Query delivers its own
+  // update a tick later, and the drop animation measures the card in the same render as the drop,
+  // so without this the lifted copy flies back to the old column before the card jumps across.
+  const [moved, setMoved] = useState<Record<string, TaskStatus>>({})
+
+  const board = tasks.map((t) => {
+    const status = moved[t.id]
+    if (!status || status === t.status) return t
+    return { ...t, status, completed_at: status === 'done' ? (t.completed_at ?? new Date().toISOString()) : null }
+  })
+  const active = activeId ? board.find((t) => t.id === activeId) : undefined
 
   function onDragEnd(e: DragEndEvent) {
+    setActiveId(null)
     const to = e.over?.id as TaskStatus | undefined
-    const task = tasks.find((t) => t.id === e.active.id)
-    if (to && task && task.status !== to) setStatus.mutate({ id: task.id, status: to })
+    const task = board.find((t) => t.id === e.active.id)
+    if (!to || !task || task.status === to) return
+    setMoved((m) => ({ ...m, [task.id]: to }))
+    setStatus.mutate(
+      { id: task.id, status: to },
+      {
+        onSettled: () =>
+          setMoved((m) => {
+            const { [task.id]: _done, ...rest } = m
+            return rest
+          }),
+      },
+    )
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={(e) => setActiveId(String(e.active.id))}
+      onDragEnd={onDragEnd}
+      onDragCancel={() => setActiveId(null)}
+    >
       <p className="text-[13px] text-ink-3">
         Drag a card to change its status, or open it to edit. Done shows the last {DONE_WINDOW_DAYS} days.
       </p>
       <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-0">
         {STATUSES.map((s) => {
-          const items = tasks
+          const items = board
             .filter((t) => t.status === s.value)
             .filter((t) => s.value !== 'done' || (t.completed_at && toDate(t.completed_at) >= doneSince))
             .sort((a, b) =>
@@ -346,8 +378,22 @@ function Board({
           )
         })}
       </div>
+      {/* The lifted copy follows the pointer; on drop it settles into the card's new place. */}
+      <DragOverlay dropAnimation={DROP_ANIMATION}>
+        {active ? (
+          <div className="scale-[1.02] cursor-grabbing rounded-[6px] shadow-float">
+            <CardFace task={active} project={projectById.get(active.project_id ?? '')} />
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   )
+}
+
+const DROP_ANIMATION: DropAnimation = {
+  ...defaultDropAnimation,
+  duration: 200,
+  easing: 'cubic-bezier(0.23, 1, 0.32, 1)',
 }
 
 function Column({
@@ -381,37 +427,40 @@ function Column({
 }
 
 function Card({ task, project, onOpen }: { task: TaskSummary; project?: Project; onOpen: (id: string) => void }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
-  const now = new Date()
-  const overdue = task.status !== 'done' && task.due_at && toDate(task.due_at) < now
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
   const { role: _role, tabIndex: _tabIndex, ...dragAttributes } = attributes
   return (
-    <li
-      ref={setNodeRef}
-      style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
-      className={`touch-manipulation ${isDragging ? 'relative z-20' : ''}`}
-    >
+    // While its copy is lifted, the card stays put and dims, so you can see where it came from.
+    <li ref={setNodeRef} className={`touch-manipulation transition-opacity duration-150 ${isDragging ? 'opacity-40' : ''}`}>
       <button
         type="button"
         {...dragAttributes}
         {...listeners}
         onClick={() => onOpen(task.id)}
-        className={`block w-full rounded-[6px] border border-line bg-surface p-3 text-left transition-shadow duration-150 ${
-          isDragging ? 'shadow-float' : ''
-        }`}
+        className="press block w-full rounded-[6px] text-left"
       >
-        <span className={`block break-words ${task.status === 'done' ? 'text-ink-3 line-through' : ''}`}>{task.title}</span>
-        <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px]">
-          {task.due_at && (
-            <span className={`tnum ${overdue ? 'font-medium text-danger' : 'text-ink-2'}`}>
-              {overdue ? 'Overdue · ' : ''}
-              {formatWhen(task.due_at, now)}
-            </span>
-          )}
-          {project && <span className="text-ink-3">{project.name}</span>}
-          {task.status !== 'done' && <PriorityTag priority={task.priority} quiet />}
-        </span>
+        <CardFace task={task} project={project} />
       </button>
     </li>
+  )
+}
+
+function CardFace({ task, project }: { task: TaskSummary; project?: Project }) {
+  const now = new Date()
+  const overdue = task.status !== 'done' && task.due_at && toDate(task.due_at) < now
+  return (
+    <span className="block rounded-[6px] border border-line bg-surface p-3">
+      <span className={`block break-words ${task.status === 'done' ? 'text-ink-3 line-through' : ''}`}>{task.title}</span>
+      <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px]">
+        {task.due_at && (
+          <span className={`tnum ${overdue ? 'font-medium text-danger' : 'text-ink-2'}`}>
+            {overdue ? 'Overdue · ' : ''}
+            {formatWhen(task.due_at, now)}
+          </span>
+        )}
+        {project && <span className="text-ink-3">{project.name}</span>}
+        {task.status !== 'done' && <PriorityTag priority={task.priority} quiet />}
+      </span>
+    </span>
   )
 }

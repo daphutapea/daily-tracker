@@ -76,7 +76,7 @@ export function MiniMonth({
               aria-label={parts.join(', ')}
               aria-current={isToday ? 'date' : undefined}
               onClick={() => onPick(d)}
-              className={`row-hover flex h-11 flex-col items-center justify-center rounded-[6px] text-[13px] tnum ${
+              className={`row-hover press flex h-11 flex-col items-center justify-center rounded-[6px] text-[13px] tnum ${
                 inMonth ? 'text-ink' : 'text-ink-3'
               }`}
             >

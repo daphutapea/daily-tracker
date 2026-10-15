@@ -1,4 +1,4 @@
-import { ArrowSquareOutIcon, CaretRightIcon, SignOutIcon, TelegramLogoIcon } from '@phosphor-icons/react'
+import { ArrowSquareOutIcon, CaretRightIcon, CheckIcon, SignOutIcon, TelegramLogoIcon } from '@phosphor-icons/react'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
 import { toast } from 'sonner'
@@ -17,7 +17,7 @@ import {
   useUpdateProfile,
 } from '@/lib/queries'
 import { supabase } from '@/lib/supabase'
-import { setTheme, useTheme, type ThemeChoice } from '@/lib/theme'
+import { updateTheme, useTheme, type DarkPalette, type LightPalette, type Palette, type ThemeMode } from '@/lib/theme'
 import type { Profile, TelegramStatus } from '@/lib/types'
 
 export function SettingsPage() {
@@ -36,7 +36,7 @@ export function SettingsPage() {
       ) : profile.isError ? (
         <QueryError what="your settings" error={profile.error} retry={() => profile.refetch()} />
       ) : (
-        <>
+        <div className="fade-in space-y-6">
           <ProfileSection profile={profile.data} />
           <TelegramSection profile={profile.data} />
           <ProjectsSection />
@@ -46,7 +46,7 @@ export function SettingsPage() {
             <CaretRightIcon size={16} weight="bold" className="text-ink-3" />
           </Link>
           <AccountSection />
-        </>
+        </div>
       )}
     </div>
   )
@@ -501,21 +501,119 @@ function ProjectsSection() {
   )
 }
 
+const LIGHT_PALETTES: { value: LightPalette; label: string; note: string }[] = [
+  { value: 'sage', label: 'Sage', note: 'Soft green-grey paper' },
+  { value: 'white', label: 'White', note: 'Plain white and grey' },
+]
+const DARK_PALETTES: { value: DarkPalette; label: string; note: string }[] = [
+  { value: 'navy', label: 'Navy', note: 'Deep blue ink' },
+  { value: 'charcoal', label: 'Charcoal', note: 'Neutral near-black' },
+]
+
 function AppearanceSection() {
   const theme = useTheme()
   return (
     <Section title="Appearance" intro="Saved on this device only.">
-      <Segmented<ThemeChoice>
-        label="Theme"
-        value={theme}
-        onChange={setTheme}
-        options={[
-          { value: 'system', label: 'Match system' },
-          { value: 'light', label: 'Light' },
-          { value: 'dark', label: 'Dark' },
-        ]}
-      />
+      <div className="space-y-5">
+        <Segmented<ThemeMode>
+          label="Mode"
+          value={theme.mode}
+          onChange={(mode) => updateTheme({ mode })}
+          options={[
+            { value: 'system', label: 'Match system' },
+            { value: 'light', label: 'Light' },
+            { value: 'dark', label: 'Dark' },
+          ]}
+        />
+        <PaletteGroup
+          title="Light colours"
+          hint={theme.mode === 'dark' ? 'Used when you switch to Light.' : undefined}
+          options={LIGHT_PALETTES}
+          value={theme.light}
+          onChange={(light) => updateTheme({ light })}
+        />
+        <PaletteGroup
+          title="Dark colours"
+          hint={theme.mode === 'light' ? 'Used when you switch to Dark.' : undefined}
+          options={DARK_PALETTES}
+          value={theme.dark}
+          onChange={(dark) => updateTheme({ dark })}
+        />
+      </div>
     </Section>
+  )
+}
+
+function PaletteGroup<T extends Palette>({
+  title,
+  hint,
+  options,
+  value,
+  onChange,
+}: {
+  title: string
+  hint?: string
+  options: { value: T; label: string; note: string }[]
+  value: T
+  onChange: (v: T) => void
+}) {
+  return (
+    <fieldset>
+      <legend className="label">
+        {title}
+        {hint && <span className="ml-2 font-normal text-ink-3">{hint}</span>}
+      </legend>
+      <div role="radiogroup" aria-label={title} className="grid gap-3 sm:grid-cols-2">
+        {options.map((o) => {
+          const selected = o.value === value
+          return (
+            <button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onChange(o.value)}
+              className={`press group rounded-[10px] border p-2 text-left ${
+                selected ? 'border-ink' : 'border-line row-hover'
+              }`}
+            >
+              <PalettePreview palette={o.value} />
+              <span className="mt-2 flex items-center justify-between gap-2 px-1">
+                <span>
+                  <span className="block font-medium">{o.label}</span>
+                  <span className="block text-[13px] text-ink-3">{o.note}</span>
+                </span>
+                <span
+                  aria-hidden
+                  className={`grid size-5 shrink-0 place-items-center rounded-full border-[1.5px] ${
+                    selected ? 'border-ink bg-ink text-surface' : 'border-line-strong'
+                  }`}
+                >
+                  {selected && <CheckIcon size={11} weight="bold" />}
+                </span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+}
+
+/** A miniature of the Home header in the palette's own colors: panel, text lines and the day ruler. */
+function PalettePreview({ palette }: { palette: Palette }) {
+  return (
+    <span data-palette={palette} aria-hidden className="block overflow-hidden rounded-[6px] border border-line bg-bg p-2">
+      <span className="block rounded-[4px] border border-line bg-surface p-2">
+        <span className="block h-2 w-16 rounded-full bg-ink" />
+        <span className="mt-1.5 block h-1.5 w-24 rounded-full bg-ink-3" />
+        <span className="relative mt-3 block h-3">
+          <span className="absolute inset-x-0 bottom-0 h-px bg-line-strong" />
+          <span className="absolute bottom-0 left-[62%] h-3 w-0.5 rounded-full bg-accent" />
+          <span className="absolute bottom-1 left-[38%] size-1.5 rotate-45 border border-ink" />
+        </span>
+      </span>
+    </span>
   )
 }
 

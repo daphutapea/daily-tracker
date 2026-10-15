@@ -69,7 +69,7 @@ export function CalendarPage() {
           }}
         />
       ) : (
-        <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
+        <div className="fade-in grid gap-5 xl:grid-cols-[1fr_320px]">
           <section className="panel overflow-hidden" aria-label={format(month, 'MMMM yyyy')}>
             <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-2.5">
               <h2 className="text-base font-semibold" aria-live="polite">

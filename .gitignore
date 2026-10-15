@@ -26,3 +26,6 @@ dist-ssr
 # Supabase CLI
 supabase/.temp
 supabase/.branches
+
+# macOS app build output (npm run app)
+build/

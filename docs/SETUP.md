@@ -29,6 +29,22 @@ npm run dev
 Open http://localhost:5173 and sign in. This uses your real Supabase project, so anything you add is
 saved.
 
+## Install the Mac app
+
+```bash
+npm run app
+```
+
+This builds the tracker, wraps it in a native macOS window (`macos/main.swift`), checks that the page
+loads, and installs `Daily Tracker.app` in `~/Applications`, where Spotlight and Launchpad find it. It
+needs only the Swift compiler from Apple's Command Line Tools, which `xcode-select --install` provides.
+
+The app shows the same pages from inside its bundle and talks to the same Supabase project, so your
+login and data are shared with the browser version. Run `npm run app` again after any code change.
+
+The icon is a placeholder drawn by `macos/make-icon.swift`. To use your own, save a 1024 by 1024 PNG as
+`macos/AppIcon.png` and run `npm run app`.
+
 ## 3. Link Telegram
 
 In the app, open Settings and find Telegram reminders. The three steps on screen walk you through it:
@@ -122,6 +138,8 @@ client or office work here, check your company’s rules on where that informati
 | Path | What it holds |
 |---|---|
 | `src/pages/` | Home, Tasks, Notes, Calendar, Links and Settings |
+| `macos/` | The Mac app window and its icon |
+| `scripts/build-mac-app.sh` | Builds, checks and installs the Mac app (`npm run app`) |
 | `src/components/` | The task and event dialogs, the day ruler, charts, the notes editor |
 | `src/lib/queries.ts` | Every read and write to the database |
 | `supabase/migrations/` | Tables, access rules, the Telegram functions and the reminder job |

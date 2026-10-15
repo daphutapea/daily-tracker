@@ -23,20 +23,26 @@ instrument-panel style, dial ENERGY 1 / RHYTHM 2 / MOTION 2.
 
 Two neutrals plus one accent. Status colors are signals, used only where something needs attention.
 
-| Token | Light | Dark | Use |
-|---|---|---|---|
-| `--bg` | `#F2F5F3` | `#0B1524` | Page |
-| `--surface` | `#FFFFFF` | `#111E31` | Panels, dialogs |
-| `--surface-2` | `#E9EEEB` | `#17263B` | Inputs, hovered rows, chart tracks |
-| `--line` | `#D5DDD8` | `#24364F` | Panel borders, dividers, ruler ticks (decorative) |
-| `--line-strong` | `#76847D` | `#5C7290` | Input and checkbox borders (3:1 against surfaces) |
-| `--ink` | `#0E1E33` | `#E4EBF3` | Text |
-| `--ink-2` | `#3F4D5F` | `#A9B6C6` | Secondary text |
-| `--ink-3` | `#5A6878` | `#8796AA` | Labels, hints (still 4.5:1 on `--bg`) |
-| `--accent` | `#0F766E` | `#2DD4BF` | Primary action, "now" line, active nav, focus ring |
-| `--danger` | `#B42318` | `#F97066` | Overdue, urgent |
-| `--warn` | `#B54708` | `#FDB022` | High priority, waiting |
-| `--ok` | `#067647` | `#47CD89` | Done |
+There are four palettes, two for each mode, picked in Settings → Appearance and saved per device.
+Sage and Navy are the originals, derived from your projects. White and Charcoal were added on
+15 Oct 2026 because you asked for plain white and dark variants. The teal accent stays the same in every
+palette, because the teal "now" line is the identity motif. Every text pair was checked against WCAG AA
+in all four palettes.
+
+| Token | Sage (light) | White (light) | Navy (dark) | Charcoal (dark) | Use |
+|---|---|---|---|---|---|
+| `--bg` | `#F2F5F3` | `#FAFAFA` | `#0B1524` | `#121212` | Page |
+| `--surface` | `#FFFFFF` | `#FFFFFF` | `#111E31` | `#1A1A1A` | Panels, dialogs |
+| `--surface-2` | `#E9EEEB` | `#F2F2F3` | `#17263B` | `#252525` | Inputs, hovered rows, chart tracks |
+| `--line` | `#D5DDD8` | `#E4E4E7` | `#24364F` | `#2E2E2E` | Panel borders, dividers, ruler ticks (decorative) |
+| `--line-strong` | `#76847D` | `#7A7A84` | `#5C7290` | `#727272` | Input and checkbox borders (3:1 against surfaces) |
+| `--ink` | `#0E1E33` | `#18181B` | `#E4EBF3` | `#EDEDED` | Text |
+| `--ink-2` | `#3F4D5F` | `#3F3F46` | `#A9B6C6` | `#B5B5B5` | Secondary text |
+| `--ink-3` | `#5A6878` | `#5E5E68` | `#8796AA` | `#8F8F8F` | Labels, hints (4.5:1 on every surface) |
+| `--accent` | `#0F766E` | `#0F766E` | `#2DD4BF` | `#2DD4BF` | Primary action, "now" line, active nav, focus ring |
+| `--danger` | `#B42318` | `#B42318` | `#F97066` | `#F97066` | Overdue, urgent |
+| `--warn` | `#B54708` | `#B54708` | `#FDB022` | `#FDB022` | High priority, waiting |
+| `--ok` | `#067647` | `#067647` | `#47CD89` | `#47CD89` | Done |
 
 The accent shows up in four places only: the primary button, the "now" line, the active nav item,
 and the focus ring.
@@ -74,8 +80,15 @@ and the focus ring.
 
 - Dialogs: 200ms scale from 0.97 plus fade, ease-out `cubic-bezier(0.23, 1, 0.32, 1)`; exit 150ms.
 - Phone dialogs slide up as a sheet: 260ms, `cubic-bezier(0.32, 0.72, 0, 1)`.
-- Buttons: `scale(0.97)` on press, 120ms.
-- Ticking a task done: the check fills, the row fades to its done state over 180ms.
+- Buttons: `scale(0.97)` on press, 120ms. Everything else you tap gets the same press (chips, view
+  toggles, editor tools, palette cards, stat tiles, calendar days, the phone tab bar) through `.press`,
+  150ms with the ease-out curve. The checkbox box sinks to 0.9 instead, because it is small.
+- Ticking a task done: the check fills, the row fades to its done state over 150ms.
+- Content that replaces a loading message fades in once (opacity only, 200ms) so the swap isn't a
+  hard cut. Refetches don't repeat it.
+- Board drag: the card lifts into a floating copy (shadow, scale 1.02) while the original dims in
+  place; on drop the copy settles into its new column in 200ms with ease-out.
+- Switching palettes never animates; colors change in one frame.
 - Nothing loops. Keyboard shortcuts open things instantly with no animation.
 - `prefers-reduced-motion`: keep fades, drop movement.
 

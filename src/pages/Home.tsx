@@ -102,7 +102,7 @@ export function HomePage() {
       </header>
 
       {dataState ?? (
-        <>
+        <div className="fade-in space-y-6">
           <div className="grid gap-6 lg:grid-cols-12">
             <Panel
               className="lg:col-span-7"
@@ -253,7 +253,7 @@ export function HomePage() {
           </section>
 
           <MobileQuickLinks />
-        </>
+        </div>
       )}
     </div>
   )
@@ -339,7 +339,7 @@ function EventRow({ event, onOpen }: { event: CalEvent; onOpen: (id: string) => 
 function Stat({ to, label, value, danger }: { to: string; label: string; value: number; danger?: boolean }) {
   return (
     <li>
-      <Link to={to} className="panel row-hover block px-4 py-3 transition-colors duration-150">
+      <Link to={to} className="panel row-hover press block px-4 py-3">
         <span className={`block text-2xl font-semibold ${danger ? 'text-danger' : ''}`}>{value}</span>
         <span className="text-[13px] text-ink-2">{label}</span>
       </Link>

@@ -58,7 +58,7 @@ export function NotesPage() {
           />
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-[300px_1fr]">
+        <div className="fade-in grid gap-4 md:grid-cols-[300px_1fr]">
           <aside className={`space-y-3 ${noteId ? 'max-md:hidden' : ''}`} aria-label="All notes">
             <div className="relative">
               <MagnifyingGlassIcon

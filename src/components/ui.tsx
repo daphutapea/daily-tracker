@@ -21,17 +21,17 @@ export function TaskCheck({
         e.stopPropagation()
         onChange(!checked)
       }}
-      className="group -m-2 grid size-9 shrink-0 place-items-center rounded-[6px] pointer-coarse:size-11"
+      className="group/check -m-2 grid size-9 shrink-0 place-items-center rounded-[6px] pointer-coarse:size-11"
     >
       <span
-        className={`grid size-[18px] place-items-center rounded-[5px] border-[1.5px] transition-colors duration-150 ${
+        className={`press grid size-[18px] place-items-center rounded-[5px] border-[1.5px] group-active/check:scale-90 ${
           checked ? 'border-accent bg-accent text-on-accent' : 'border-line-strong bg-surface'
         }`}
       >
         <CheckIcon
           size={12}
           weight="bold"
-          className={`transition-[opacity,scale] duration-150 ${checked ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`}
+          className={`transition-[opacity,scale] duration-150 ease-(--ease-out) ${checked ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`}
         />
       </span>
     </button>
@@ -151,7 +151,7 @@ export function Segmented<T extends string>({
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`min-h-8 rounded-[4px] px-3 text-[13px] font-medium transition-colors duration-150 pointer-coarse:min-h-10 ${
+          className={`press min-h-8 rounded-[4px] px-3 text-[13px] font-medium pointer-coarse:min-h-10 ${
             value === o.value ? 'bg-surface-2 text-ink' : 'text-ink-2'
           }`}
         >
