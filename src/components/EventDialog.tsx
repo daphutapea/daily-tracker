@@ -4,10 +4,11 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { fromLocalInput, toDate, toDateInput, toLocalInput } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
-import { quietly, useDeleteEvent, useEvents, useProfile, useSaveEvent } from '@/lib/queries'
+import { quietly, useDeleteEvent, useEvents, useSaveEvent } from '@/lib/queries'
 import type { CalEvent } from '@/lib/types'
 import { useOfferUndo } from '@/lib/undo'
 import { Dialog } from './Dialog'
+import { ReminderHint } from './ReminderHint'
 import { Loading } from './ui'
 
 export function EventDialogHost() {
@@ -106,7 +107,6 @@ function EventForm({
   const save = useSaveEvent()
   const del = useDeleteEvent()
   const offerUndo = useOfferUndo()
-  const profile = useProfile()
 
   const dirty = JSON.stringify(f) !== JSON.stringify(initial)
   useEffect(() => {
@@ -248,8 +248,10 @@ function EventForm({
             </button>
           )}
         </div>
-        {f.remind && !profile.data?.telegram_chat_id && (
-          <p className="mt-2 text-[13px] text-ink-3">Telegram isn’t linked yet, so this only shows while the app is open.</p>
+        {f.remind && (
+          <p className="mt-2 text-[13px] text-ink-3">
+            <ReminderHint />
+          </p>
         )}
       </div>
       <div>

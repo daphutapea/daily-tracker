@@ -1,14 +1,30 @@
 {
   "now": "2026-10-15T09:00",
   "timezone": "Asia/Jakarta",
-  "projects": ["ATLAS", "FinChat", "Personal"],
+  "projects": [
+    "ATLAS",
+    "FinChat",
+    "Personal"
+  ],
   "cases": [
     {
       "id": "task_by_weekday",
       "kind": "task",
       "text": "Finish the labelling sheet by Friday",
       "expected": [
-        { "title_has": ["labelling"], "title_lacks": ["friday"], "kind": "task", "date": "2026-10-16", "time": null, "priority": "medium", "remind_minutes_before": null }
+        {
+          "title_has": [
+            "labelling"
+          ],
+          "title_lacks": [
+            "friday"
+          ],
+          "kind": "task",
+          "date": "2026-10-16",
+          "time": null,
+          "priority": "medium",
+          "remind_minutes_before": null
+        }
       ],
       "note": "NOW is Thursday 15 Oct, so Friday is tomorrow, 16 Oct. No time given, so time stays null (the app makes it 17:00)."
     },
@@ -17,7 +33,20 @@
       "kind": "event",
       "text": "Sync with Dennis Tuesday 10am",
       "expected": [
-        { "title_has": ["dennis"], "title_lacks": ["tuesday", "10"], "kind": "event", "date": "2026-10-20", "time": "10:00", "end_time": null, "all_day": false }
+        {
+          "title_has": [
+            "dennis"
+          ],
+          "title_lacks": [
+            "tuesday",
+            "10"
+          ],
+          "kind": "event",
+          "date": "2026-10-20",
+          "time": "10:00",
+          "end_time": null,
+          "all_day": false
+        }
       ],
       "note": "The coming Tuesday is 20 Oct. No end was given, so end_time is null. The title leaves the day and time out."
     },
@@ -26,7 +55,16 @@
       "kind": "event",
       "text": "Sync with Dennis Tuesday 10 to 11am, remind me 15 min before",
       "expected": [
-        { "title_has": ["dennis"], "kind": "event", "date": "2026-10-20", "time": "10:00", "end_time": "11:00", "remind_minutes_before": 15 }
+        {
+          "title_has": [
+            "dennis"
+          ],
+          "kind": "event",
+          "date": "2026-10-20",
+          "time": "10:00",
+          "end_time": "11:00",
+          "remind_minutes_before": 15
+        }
       ],
       "note": "\"10 to 11am\" sets both ends; \"15 min before\" is the reminder."
     },
@@ -35,7 +73,16 @@
       "kind": "task",
       "text": "Submit the ATLAS weekly report tomorrow 5pm, high priority",
       "expected": [
-        { "title_has": ["report"], "kind": "task", "date": "2026-10-16", "time": "17:00", "priority": "high", "project": "ATLAS" }
+        {
+          "title_has": [
+            "report"
+          ],
+          "kind": "task",
+          "date": "2026-10-16",
+          "time": "17:00",
+          "priority": "high",
+          "project": "ATLAS"
+        }
       ],
       "note": "ATLAS is in PROJECTS, so it is copied exactly. \"high priority\" is said outright."
     },
@@ -44,7 +91,14 @@
       "kind": "task",
       "text": "URGENT: renew the passport photo by Monday",
       "expected": [
-        { "title_has": ["passport"], "kind": "task", "date": "2026-10-19", "priority": "urgent" }
+        {
+          "title_has": [
+            "passport"
+          ],
+          "kind": "task",
+          "date": "2026-10-19",
+          "priority": "urgent"
+        }
       ],
       "note": "The coming Monday is 19 Oct. \"URGENT\" is the only word that should make it urgent."
     },
@@ -53,8 +107,26 @@
       "kind": "multi",
       "text": "Sync with Dennis Tuesday 10 to 11am, remind me 15 min before. Finish the labelling sheet by Friday, high priority.",
       "expected": [
-        { "title_has": ["dennis"], "kind": "event", "date": "2026-10-20", "time": "10:00", "end_time": "11:00", "remind_minutes_before": 15 },
-        { "title_has": ["labelling"], "kind": "task", "date": "2026-10-16", "time": null, "priority": "high", "remind_minutes_before": null }
+        {
+          "title_has": [
+            "dennis"
+          ],
+          "kind": "event",
+          "date": "2026-10-20",
+          "time": "10:00",
+          "end_time": "11:00",
+          "remind_minutes_before": 15
+        },
+        {
+          "title_has": [
+            "labelling"
+          ],
+          "kind": "task",
+          "date": "2026-10-16",
+          "time": null,
+          "priority": "high",
+          "remind_minutes_before": null
+        }
       ],
       "note": "The example shown in the app. The reminder belongs to the sync only; the priority to the sheet only."
     },
@@ -63,9 +135,30 @@
       "kind": "multi",
       "text": "Dentist Saturday 9:30, call mom Sunday at 7pm, and pay the internet bill by the 20th",
       "expected": [
-        { "title_has": ["dentist"], "kind": "event", "date": "2026-10-17", "time": "09:30" },
-        { "title_has": ["mom"], "kind": "event", "date": "2026-10-18", "time": "19:00" },
-        { "title_has": ["internet"], "kind": "task", "date": "2026-10-20", "time": null }
+        {
+          "title_has": [
+            "dentist"
+          ],
+          "kind": "event",
+          "date": "2026-10-17",
+          "time": "09:30"
+        },
+        {
+          "title_has": [
+            "mom"
+          ],
+          "kind": "event",
+          "date": "2026-10-18",
+          "time": "19:00"
+        },
+        {
+          "title_has": [
+            "internet"
+          ],
+          "kind": "task",
+          "date": "2026-10-20",
+          "time": null
+        }
       ],
       "note": "A call at a set time is an event under the prompt's rules. \"The 20th\" is 20 Oct, still ahead in this month."
     },
@@ -74,7 +167,15 @@
       "kind": "event",
       "text": "Company offsite on Wednesday",
       "expected": [
-        { "title_has": ["offsite"], "kind": "event", "date": "2026-10-21", "all_day": true, "time": null }
+        {
+          "title_has": [
+            "offsite"
+          ],
+          "kind": "event",
+          "date": "2026-10-21",
+          "all_day": true,
+          "time": null
+        }
       ],
       "note": "An event with a day but no time is all day."
     },
@@ -83,7 +184,14 @@
       "kind": "event",
       "text": "Quarterly review meeting next Friday at 2pm",
       "expected": [
-        { "title_has": ["review"], "kind": "event", "date": "2026-10-23", "time": "14:00" }
+        {
+          "title_has": [
+            "review"
+          ],
+          "kind": "event",
+          "date": "2026-10-23",
+          "time": "14:00"
+        }
       ],
       "note": "The prompt defines \"next Friday\" as the Friday of next week: 23 Oct, not tomorrow."
     },
@@ -92,7 +200,14 @@
       "kind": "event",
       "text": "Besok jam 3 sore rapat dengan tim ATLAS",
       "expected": [
-        { "title_has": ["rapat"], "kind": "event", "date": "2026-10-16", "time": "15:00" }
+        {
+          "title_has": [
+            "rapat"
+          ],
+          "kind": "event",
+          "date": "2026-10-16",
+          "time": "15:00"
+        }
       ],
       "note": "Besok is tomorrow; jam 3 sore is 15:00. The title stays in Indonesian."
     },
@@ -101,7 +216,17 @@
       "kind": "task",
       "text": "Kirim laporan ke Pak Budi lusa, penting",
       "expected": [
-        { "title_has": ["laporan"], "kind": "task", "date": "2026-10-17", "priority": ["high", "urgent"] }
+        {
+          "title_has": [
+            "laporan"
+          ],
+          "kind": "task",
+          "date": "2026-10-17",
+          "priority": [
+            "high",
+            "urgent"
+          ]
+        }
       ],
       "note": "Lusa is the day after tomorrow. Penting (important) allows high or urgent."
     },
@@ -110,7 +235,14 @@
       "kind": "event",
       "text": "Meeting sama vendor Kamis depan jam 10",
       "expected": [
-        { "title_has": ["vendor"], "kind": "event", "date": "2026-10-22", "time": "10:00" }
+        {
+          "title_has": [
+            "vendor"
+          ],
+          "kind": "event",
+          "date": "2026-10-22",
+          "time": "10:00"
+        }
       ],
       "note": "Said on a Thursday, Kamis depan (next Thursday) is 22 Oct."
     },
@@ -119,7 +251,15 @@
       "kind": "event",
       "text": "Flight to Singapore Sunday 6:40am, remind me 1 hour before",
       "expected": [
-        { "title_has": ["singapore"], "kind": "event", "date": "2026-10-18", "time": "06:40", "remind_minutes_before": 60 }
+        {
+          "title_has": [
+            "singapore"
+          ],
+          "kind": "event",
+          "date": "2026-10-18",
+          "time": "06:40",
+          "remind_minutes_before": 60
+        }
       ],
       "note": "One hour is 60 minutes."
     },
@@ -128,7 +268,14 @@
       "kind": "task",
       "text": "Pay rent on the 1st, remind me a day before",
       "expected": [
-        { "title_has": ["rent"], "kind": "task", "date": "2026-11-01", "remind_minutes_before": 1440 }
+        {
+          "title_has": [
+            "rent"
+          ],
+          "kind": "task",
+          "date": "2026-11-01",
+          "remind_minutes_before": 1440
+        }
       ],
       "note": "The 1st of this month has passed, so it is 1 Nov. A day is 1440 minutes."
     },
@@ -137,7 +284,15 @@
       "kind": "event",
       "text": "Deploy window tonight 22:00 to 23:30",
       "expected": [
-        { "title_has": ["deploy"], "kind": "event", "date": "2026-10-15", "time": "22:00", "end_time": "23:30" }
+        {
+          "title_has": [
+            "deploy"
+          ],
+          "kind": "event",
+          "date": "2026-10-15",
+          "time": "22:00",
+          "end_time": "23:30"
+        }
       ],
       "note": "Tonight is today. 24-hour times are kept as written."
     },
@@ -146,7 +301,17 @@
       "kind": "either",
       "text": "Call back the bank in 2 hours",
       "expected": [
-        { "title_has": ["bank"], "kind": ["task", "event"], "date": "2026-10-15", "time": "11:00" }
+        {
+          "title_has": [
+            "bank"
+          ],
+          "kind": [
+            "task",
+            "event"
+          ],
+          "date": "2026-10-15",
+          "time": "11:00"
+        }
       ],
       "note": "NOW is 09:00, so two hours later is 11:00. Either kind is acceptable."
     },
@@ -155,7 +320,15 @@
       "kind": "task",
       "text": "Buy a new HDMI cable",
       "expected": [
-        { "title_has": ["hdmi"], "kind": "task", "date": null, "time": null, "priority": "medium" }
+        {
+          "title_has": [
+            "hdmi"
+          ],
+          "kind": "task",
+          "date": null,
+          "time": null,
+          "priority": "medium"
+        }
       ],
       "note": "Nothing says when, so no date is invented."
     },
@@ -164,7 +337,15 @@
       "kind": "task",
       "text": "FinChat: write the eval summary by Monday 9am",
       "expected": [
-        { "title_has": ["eval"], "kind": "task", "date": "2026-10-19", "time": "09:00", "project": "FinChat" }
+        {
+          "title_has": [
+            "eval"
+          ],
+          "kind": "task",
+          "date": "2026-10-19",
+          "time": "09:00",
+          "project": "FinChat"
+        }
       ],
       "note": "FinChat is in PROJECTS and copied with its exact capitalisation."
     },
@@ -173,7 +354,14 @@
       "kind": "task",
       "text": "Plan the team lunch by Friday",
       "expected": [
-        { "title_has": ["lunch"], "kind": "task", "date": "2026-10-16", "project": null }
+        {
+          "title_has": [
+            "lunch"
+          ],
+          "kind": "task",
+          "date": "2026-10-16",
+          "project": null
+        }
       ],
       "note": "No project is mentioned, so none is guessed."
     },
@@ -182,7 +370,17 @@
       "kind": "either",
       "text": "Remind me to stretch at 3pm",
       "expected": [
-        { "title_has": ["stretch"], "kind": ["task", "event"], "date": "2026-10-15", "time": "15:00" }
+        {
+          "title_has": [
+            "stretch"
+          ],
+          "kind": [
+            "task",
+            "event"
+          ],
+          "date": "2026-10-15",
+          "time": "15:00"
+        }
       ],
       "note": "One thing, today at 15:00. It must not be split into a task and a separate reminder."
     },
@@ -191,10 +389,40 @@
       "kind": "multi",
       "text": "Today: standup 9:30, review PR #42 by noon, gym at 6pm, and order groceries",
       "expected": [
-        { "title_has": ["standup"], "kind": "event", "date": "2026-10-15", "time": "09:30" },
-        { "title_has": ["42"], "kind": "task", "date": "2026-10-15", "time": "12:00" },
-        { "title_has": ["gym"], "kind": "event", "date": "2026-10-15", "time": "18:00" },
-        { "title_has": ["groceries"], "kind": "task", "date": ["2026-10-15", null] }
+        {
+          "title_has": [
+            "standup"
+          ],
+          "kind": "event",
+          "date": "2026-10-15",
+          "time": "09:30"
+        },
+        {
+          "title_has": [
+            "42"
+          ],
+          "kind": "task",
+          "date": "2026-10-15",
+          "time": "12:00"
+        },
+        {
+          "title_has": [
+            "gym"
+          ],
+          "kind": "event",
+          "date": "2026-10-15",
+          "time": "18:00"
+        },
+        {
+          "title_has": [
+            "groceries"
+          ],
+          "kind": "task",
+          "date": [
+            "2026-10-15",
+            null
+          ]
+        }
       ],
       "note": "\"Today:\" applies to the whole list. Groceries may carry today or no date."
     },
@@ -218,6 +446,213 @@
       "text": "Had a good call with Dennis this morning",
       "expected": [],
       "note": "Something that already happened is not a task or a future event."
+    },
+    {
+      "id": "typo_user_example",
+      "kind": "typo",
+      "text": "Sync me with mr. dennis at 1500 till 1600, then work on ATLAS imrpovementsd again",
+      "expected": [
+        {
+          "title_has": [
+            "dennis"
+          ],
+          "kind": "event",
+          "date": "2026-10-15",
+          "time": "15:00",
+          "end_time": "16:00"
+        },
+        {
+          "title_has": [
+            "improvements"
+          ],
+          "title_lacks": [
+            "imrpov"
+          ],
+          "kind": "task",
+          "date": [
+            "2026-10-15",
+            null
+          ],
+          "project": "ATLAS"
+        }
+      ],
+      "note": "Your own example. 1500 till 1600 is 15:00 to 16:00 today (no day given, and 15:00 is still ahead at 09:00). The misspelling is fixed in the title, and ATLAS is the project."
+    },
+    {
+      "id": "typo_weekday_and_words",
+      "kind": "typo",
+      "text": "submti the reprot by firday 5pm",
+      "expected": [
+        {
+          "title_has": [
+            "submit",
+            "report"
+          ],
+          "title_lacks": [
+            "submti",
+            "reprot"
+          ],
+          "kind": "task",
+          "date": "2026-10-16",
+          "time": "17:00"
+        }
+      ],
+      "note": "Three misspellings, one of them the day. Firday is Friday, tomorrow."
+    },
+    {
+      "id": "typo_compact_time",
+      "kind": "typo",
+      "text": "Dentist tmrw 0930",
+      "expected": [
+        {
+          "title_has": [
+            "dentist"
+          ],
+          "kind": "event",
+          "date": "2026-10-16",
+          "time": "09:30"
+        }
+      ],
+      "note": "tmrw is tomorrow; 0930 is 09:30."
+    },
+    {
+      "id": "typo_indonesian_slang",
+      "kind": "typo",
+      "text": "rapat sm tim bsk jm 2 siang",
+      "expected": [
+        {
+          "title_has": [
+            "rapat"
+          ],
+          "kind": "event",
+          "date": "2026-10-16",
+          "time": "14:00",
+          "title_lacks": [
+            "sm tim",
+            "bsk"
+          ]
+        }
+      ],
+      "note": "Chat Indonesian: sm is sama, bsk is besok (tomorrow), jm 2 siang is 14:00. The title spells sama out."
+    },
+    {
+      "id": "typo_project_name",
+      "kind": "typo",
+      "text": "atlsa handover notes friday",
+      "expected": [
+        {
+          "title_has": [
+            "handover"
+          ],
+          "kind": "task",
+          "date": "2026-10-16",
+          "project": "ATLAS"
+        }
+      ],
+      "note": "atlsa is a slip for ATLAS, which is in PROJECTS, so it's copied exactly."
+    },
+    {
+      "id": "typo_reminder_phrase",
+      "kind": "typo",
+      "text": "remidn me 15mins before standup at 9:30 tomorow",
+      "expected": [
+        {
+          "title_has": [
+            "standup"
+          ],
+          "title_lacks": [
+            "remidn"
+          ],
+          "kind": [
+            "event",
+            "task"
+          ],
+          "date": "2026-10-16",
+          "time": "09:30",
+          "remind_minutes_before": 15
+        }
+      ],
+      "note": "A misspelled reminder request: one item, the standup, with its reminder 15 minutes before."
+    },
+    {
+      "id": "typo_next_week_abbrev",
+      "kind": "typo",
+      "text": "quarterly reveiw nxt fri 2pm",
+      "expected": [
+        {
+          "title_has": [
+            "review"
+          ],
+          "title_lacks": [
+            "reveiw",
+            "nxt"
+          ],
+          "kind": "event",
+          "date": "2026-10-23",
+          "time": "14:00"
+        }
+      ],
+      "note": "A misspelling and shorthand together. nxt fri is next Friday, which the prompt defines as the Friday of next week: 23 Oct."
+    },
+    {
+      "id": "typo_joined_words",
+      "kind": "typo",
+      "text": "callmom sunday 7pm",
+      "expected": [
+        {
+          "title_has": [
+            "mom"
+          ],
+          "title_lacks": [
+            "callmom"
+          ],
+          "kind": [
+            "event",
+            "task"
+          ],
+          "date": "2026-10-18",
+          "time": "19:00"
+        }
+      ],
+      "note": "Two words run together. Sunday is 18 Oct."
+    },
+    {
+      "id": "typo_dotted_time",
+      "kind": "typo",
+      "text": "gym 5.30pm",
+      "expected": [
+        {
+          "title_has": [
+            "gym"
+          ],
+          "kind": [
+            "event",
+            "task"
+          ],
+          "date": "2026-10-15",
+          "time": "17:30"
+        }
+      ],
+      "note": "5.30pm is 17:30. No day given and it's still ahead at 09:00, so today."
+    },
+    {
+      "id": "typo_indonesian_word",
+      "kind": "typo",
+      "text": "kirim lapran ke pak budi besok pagi jam 9",
+      "expected": [
+        {
+          "title_has": [
+            "laporan"
+          ],
+          "title_lacks": [
+            "lapran"
+          ],
+          "kind": "task",
+          "date": "2026-10-16",
+          "time": "09:00"
+        }
+      ],
+      "note": "lapran is laporan. besok pagi jam 9 is tomorrow at 09:00. The title stays in Indonesian."
     }
   ]
 }

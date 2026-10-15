@@ -1,9 +1,16 @@
 import { useEffect, useEffectEvent, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
-import { onMacMessage, postToMac, useMacBadgeEnabled, useMacRemindersEnabled, type FromMac } from '@/lib/native'
-import { useEvents, useSetTaskStatus, useTasks } from '@/lib/queries'
-import { todaySummary, upcomingReminders } from '@/lib/reminders'
+import {
+  onMacMessage,
+  postToMac,
+  useMacBadgeEnabled,
+  useMacIphoneEnabled,
+  useMacRemindersEnabled,
+  type FromMac,
+} from '@/lib/native'
+import { useEvents, useProfile, useSetTaskStatus, useTasks } from '@/lib/queries'
+import { todaySummary, upcomingReminders, upcomingSummaries } from '@/lib/reminders'
 import { useNow } from '@/lib/useNow'
 import { useOpenQuickAdd } from './quickAddContext'
 
@@ -16,6 +23,8 @@ export function MacAppBridge() {
   const events = useEvents()
   const enabled = useMacRemindersEnabled()
   const badgeOn = useMacBadgeEnabled()
+  const iphone = useMacIphoneEnabled()
+  const profile = useProfile()
   const now = useNow()
   const navigate = useNavigate()
   const setStatus = useSetTaskStatus()
@@ -42,15 +51,20 @@ export function MacAppBridge() {
     }
   }, [])
 
+  // Reminders and the next summaries, handed to macOS (and the iPhone calendar when that's on).
+  // Rechecked every minute too, so a summary that has fired is replaced by the next one.
   const sent = useRef<string | null>(null)
   useEffect(() => {
-    if (!tasks.data || !events.data) return
-    const list = enabled ? upcomingReminders(tasks.data, events.data, new Date()) : []
-    const key = JSON.stringify(list)
+    if (!tasks.data || !events.data || !profile.data) return
+    const list = enabled
+      ? [...upcomingReminders(tasks.data, events.data, now), ...upcomingSummaries(tasks.data, events.data, profile.data, now)]
+      : []
+    const message = { type: 'reminders' as const, reminders: list.sort((a, b) => a.at - b.at), calendar: iphone }
+    const key = JSON.stringify(message)
     if (key === sent.current) return
     sent.current = key
-    postToMac({ type: 'reminders', reminders: list })
-  }, [tasks.data, events.data, enabled])
+    postToMac(message)
+  }, [tasks.data, events.data, profile.data, enabled, iphone, now])
 
   // The menu bar's Today list and the Dock badge. Rechecked every minute, as times pass.
   const sentToday = useRef<string | null>(null)

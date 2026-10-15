@@ -60,7 +60,13 @@ Rules:
 - priority is "urgent" or "high" only when the note says so (urgent, ASAP, important, high
   priority, penting). Otherwise "medium".
 - project must be copied exactly from PROJECTS when the note clearly refers to one; otherwise null.
-- Titles are short and keep the note's language. Leave dates and times out of the title.
+- Notes are typed fast. Expect typos, missing spaces, shorthand (tmrw, nxt, mins, sm, yg, bsk, jm)
+  and loose times (1500, 0930, 5.30pm, jam 2 siang), and read them for what was meant.
+- Titles are short, in the note's language, and written properly: fix misspellings, spell out
+  shorthand, split words run together, and capitalise the first word and people's names. For
+  example "cek invoce yg baru" becomes "Cek invoice yang baru", and "prep slides fr the demo"
+  becomes "Prep slides for the demo". Never copy a typo into a title. Keep codes and project names
+  as written, apart from capitals. Leave dates and times out of the title.
 - One item per thing to do or attend. Never invent items the note doesn't mention. "Remind me"
   sets remind_minutes_before on the item it refers to; it is not an item of its own, and an event
   doesn't need a separate task to go to it.
@@ -151,7 +157,9 @@ export function validateItems(raw: unknown, projects: string[]): ProposedItem[] 
 
   for (const entry of list.slice(0, MAX_ITEMS)) {
     const r = (entry ?? {}) as Record<string, unknown>
-    const title = typeof r.title === 'string' ? r.title.trim().slice(0, 200) : ''
+    const raw = typeof r.title === 'string' ? r.title.trim().slice(0, 200) : ''
+    // A title starts with a capital whatever the model wrote; the rest is left as it is.
+    const title = raw.charAt(0).toUpperCase() + raw.slice(1)
     if (!title) continue
     const kind = r.kind === 'event' ? 'event' : 'task'
     const date = isDate(r.date) ? r.date : null

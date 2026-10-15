@@ -3,15 +3,15 @@ import type { JSONContent } from '@tiptap/react'
 import { format, set, subDays, subHours, subMinutes } from 'date-fns'
 import type { Json } from '@/lib/database.types'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { fromLocalInput, toDate, toLocalInput } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
-import { quietly, useDeleteTask, useProfile, useProjects, useSaveTask, useTask } from '@/lib/queries'
+import { quietly, useDeleteTask, useProjects, useSaveTask, useTask } from '@/lib/queries'
 import { useOfferUndo } from '@/lib/undo'
 import { useNow } from '@/lib/useNow'
 import { PRIORITIES, STATUSES, type Task, type TaskLink, type TaskPriority, type TaskStatus } from '@/lib/types'
 import { Dialog } from './Dialog'
+import { ReminderHint } from './ReminderHint'
 import { RichEditor } from './LazyRichEditor'
 import { Loading, QueryError } from './ui'
 
@@ -115,7 +115,6 @@ function TaskForm({
   const del = useDeleteTask()
   const offerUndo = useOfferUndo()
   const projects = useProjects()
-  const profile = useProfile()
   const formRef = useRef<HTMLFormElement>(null)
 
   const dirty = JSON.stringify(f) !== JSON.stringify(initial)
@@ -128,7 +127,6 @@ function TaskForm({
   const remindDate = f.remind ? new Date(f.remind) : null
   const now = useNow(30_000)
   const remindInPast = remindDate && remindDate.getTime() < now.getTime() - 60_000
-  const telegramLinked = !!profile.data?.telegram_chat_id
 
   async function submit(e?: FormEvent) {
     e?.preventDefault()
@@ -314,15 +312,8 @@ function TaskForm({
             <p className="mt-2 text-[13px] text-ink-3">
               {remindInPast ? (
                 <span className="text-warn">That time has passed, so no reminder will be sent.</span>
-              ) : telegramLinked ? (
-                'You’ll get a Telegram message at this time.'
               ) : (
-                <>
-                  Telegram isn’t linked yet, so this only shows while the app is open.{' '}
-                  <Link to="/settings#telegram" className="text-ink underline underline-offset-2" onClick={onDone}>
-                    Link Telegram
-                  </Link>
-                </>
+                <ReminderHint />
               )}
             </p>
           )}

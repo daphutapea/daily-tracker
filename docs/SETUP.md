@@ -4,8 +4,8 @@ This covers the one-time setup, putting the app online, and working on the code.
 day to day, see the [README](../README.md).
 
 The app is React and TypeScript (built with Vite), styled with Tailwind, with a TipTap editor for
-notes. Data lives in the Supabase project `daily-tracker` (Singapore region). Supabase also runs the
-reminder job and keeps the Telegram bot token in its Vault.
+notes. Data lives in the Supabase project `daily-tracker` (Singapore region). The Mac app turns your
+reminders and summaries into notifications.
 
 ## 1. Create your account
 
@@ -52,17 +52,18 @@ The icon is the Daily Tracker logo, drawn by `scripts/make-logo.swift` into `mac
 changing the logo, run `npm run logo` and then `npm run app`. To use a different icon, replace
 `macos/AppIcon.png` with any 1024 by 1024 PNG and run `npm run app`.
 
-## 3. Link Telegram
+## 3. Reminders, summaries and your iPhone
 
-In the app, open Settings and find Telegram reminders. The three steps on screen walk you through it:
+Reminders and summaries come from the Mac app, so install it first (above).
 
-1. In Telegram, message [@BotFather](https://t.me/BotFather), send `/newbot`, and paste the token it
-   gives you. The token is stored encrypted in Supabase Vault.
-2. Press Get a link code, open your bot, press Start, then press I’ve sent it.
-3. Under Summaries, turn on the morning summary or the weekly review message if you want them, and
-   pick when they arrive.
-
-Send a test message confirms everything works.
+1. The first time a reminder is coming up, macOS asks whether Daily Tracker may show notifications.
+   Allow it. Settings → Mac app → Send a test notification checks it works.
+2. Under Settings → Summaries, turn on the morning summary or the weekly review if you want them,
+   and pick when they arrive.
+3. For alerts on your iPhone, turn on Also alert me on my iPhone in Settings → Mac app and allow
+   Calendar access when macOS asks. The app makes a “Daily Tracker” calendar in iCloud; on the iPhone,
+   allow Calendar notifications and keep that calendar ticked in the Calendar app.
+4. Tick Open at Login in the menu bar menu, so all of this keeps working after a restart.
 
 ## Turn on Quick add (free Gemini key)
 
@@ -104,16 +105,20 @@ You can also import the GitHub repository in the Vercel dashboard instead. No se
 
 ## How reminders work
 
-A database job, `private.dispatch_reminders`, runs every minute through `pg_cron`. For each task or
-event whose reminder time has arrived, it sends one Telegram message through `pg_net` and records that
-it did. It skips finished tasks, and it marks any reminder more than 30 minutes late as missed instead
-of sending it.
+The page works out the reminders and the next morning and weekly summaries from your data
+(`src/lib/reminders.ts`), and hands them to the Mac app (`src/components/MacAppBridge.tsx`). The app
+schedules each one with macOS (`macos/main.swift`), which delivers it at its time even if the app has
+quit. Whenever your data changes, the whole list is replaced, so a finished task's reminder is
+withdrawn and a summary is rewritten. At most 50 reminders from the next two weeks are scheduled at a
+time.
 
-The morning summary goes out once a day, within two hours after the chosen time, in the time zone saved
-on your profile. The app updates that time zone to match whichever device you open it on.
+With iPhone alerts on, the same list goes into the “Daily Tracker” calendar in iCloud instead, one
+five-minute entry with an alert per reminder, keyed by a `dailytracker://reminder/...` link so entries
+are updated rather than duplicated. Turning it off removes the entries still ahead.
 
-The weekly review message has its own job, `private.dispatch_weekly_reviews`, which runs every five
-minutes and sends at most once a week, within two hours after the day and time you pick.
+There is no server job any more: the database only stores the data and the summary settings. Until
+v1.4, reminders went out as Telegram messages from a `pg_cron` job; the
+`20261016000000_remove_telegram.sql` migration removed that.
 
 ## Working on the code with a local database
 
@@ -157,8 +162,8 @@ network:
 npm run test:functions
 ```
 
-To measure how well the AI reads notes, run the gold set of 24 notes against Gemini. It needs the key
-in `supabase/functions/.env` and uses about 24 of the day’s free requests per run;
+To measure how well the AI reads notes, run the gold set of 34 notes against Gemini. It needs the key
+in `supabase/functions/.env` and uses about 34 of the day’s free requests per run;
 [the eval README](../supabase/functions/quick-add/eval/README.md) explains the options and the limits.
 
 ```bash
@@ -214,7 +219,7 @@ Every table has row level security, so only your account can read or change your
 key in `.env.production` is meant to be public; it ships inside the app anyway. The secret keys never
 leave Supabase.
 
-Telegram messages contain task and event titles, so they pass through Telegram’s servers. If you track
+With iPhone alerts on, reminder and summary titles are stored in your iCloud calendar. If you track
 client or office work here, check your company’s rules on where that information may go.
 
 ## Where things are
@@ -226,9 +231,10 @@ client or office work here, check your company’s rules on where that informati
 | `scripts/build-mac-app.sh` | Builds, checks and installs the Mac app (`npm run app`) |
 | `src/components/` | The task and event dialogs, Quick add, the day ruler, charts, the notes editor |
 | `src/lib/queries.ts` | Every read and write to the database |
-| `supabase/migrations/` | Tables, access rules, the Telegram functions, the reminder job and the weekly review job |
+| `supabase/migrations/` | Tables, access rules and the summary settings; the last one removes Telegram |
+| `src/lib/reminders.ts`, `src/components/MacAppBridge.tsx` | What the Mac app schedules: reminders, summaries, the Today list |
 | `supabase/functions/quick-add/` | The server function that sends Quick add notes to Gemini, and its tests |
-| `supabase/functions/quick-add/eval/` | The 24-note gold set, its grader and `npm run eval:quick-add` |
+| `supabase/functions/quick-add/eval/` | The 34-note gold set, its grader and `npm run eval:quick-add` |
 | `e2e/`, `playwright.config.ts` | Browser tests (`npm run test:e2e`) |
 | `.github/workflows/checks.yml` | The checks GitHub runs on every push |
 | `scripts/make-logo.swift`, `docs/brand/` | The logo: one script draws every version (`npm run logo`) |

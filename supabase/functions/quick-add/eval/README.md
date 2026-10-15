@@ -3,8 +3,9 @@
 How often the AI reads a note correctly, measured against notes whose right answer was worked out by
 hand first.
 
-**Latest result: 24/24 on gemini-3.5-flash-lite, one run on 15 Oct 2026.** gemini-3.6-flash has
-not been measured since the fixes below. Read the [Limitations](#limitations) before quoting either.
+**Latest result: 34/34 on gemini-3.5-flash-lite, one run on 16 Oct 2026, typo notes included.**
+gemini-3.6-flash has not been measured since the fixes below. Read the [Limitations](#limitations)
+before quoting either.
 
 ## Why
 
@@ -15,7 +16,7 @@ which kinds of note it gets wrong.
 
 ## The gold set
 
-[`gold_set.json`](gold_set.json) has 24 notes. Every case is read at the same moment: Thursday
+[`gold_set.json`](gold_set.json) has 34 notes. Every case is read at the same moment: Thursday
 15 October 2026, 09:00, Jakarta time, with the projects ATLAS, FinChat and Personal. That way
 "tomorrow" and "next Friday" each have one right answer. The `note` on each case says how that answer
 was reached, so you can check it instead of trusting it.
@@ -27,6 +28,7 @@ was reached, so you can check it instead of trusting it.
 | `multi` | Several items in one note, each keeping its own details | 3 |
 | `either` | Notes that can fairly be a task or an event; the kind isn't graded | 2 |
 | `refusal` | **Notes with nothing to add. It must return no items, not invent one.** | 3 |
+| `typo` | Notes typed fast: misspellings, shorthand (tmrw, nxt, bsk), words run together, times like 1500 or 5.30pm. Titles must come back spelled properly. | 10 |
 
 ## The grader
 
@@ -42,6 +44,8 @@ Titles are checked loosely on purpose (`"title_has": ["dennis"]`), because "Sync
 
 | Date | Model | Passed | Notes |
 |---|---|---:|---|
+| 16 Oct 2026 | gemini-3.5-flash-lite | 34/34 | One run, after the typo round below. Every kind passed, all 10 typo notes included. |
+| 16 Oct 2026 | gemini-3.5-flash-lite | 7/10 typo notes | The typo notes alone, before the typo round: dates and times right, misspellings copied into titles. |
 | 15 Oct 2026 | gemini-3.5-flash-lite | 24/24 | One run, after the fixes below. Every kind passed, including all 3 refusals. |
 | 15 Oct 2026 | gemini-3.6-flash | 5/11 | Before the fixes. 10 more notes got a 503 from Google and were not graded, then the free daily limit of 20 requests stopped the run. |
 
@@ -64,6 +68,21 @@ The first run scored badly, and the reasons were in the code, not the model:
    limit too. The quota id tells them apart, and a per-minute limit now says to try again in a
    minute.
 
+## The typo round
+
+Notes are often typed fast, for example "Sync me with mr. dennis at 1500 till 1600, then work on ATLAS
+imrpovementsd again". Ten notes like that were added. The first six already passed, so four harder
+ones followed, and the grader now also checks that a misspelling doesn't end up in a title.
+
+Before the change, 7 of the 10 passed. In every failure the date and time were right but the title was
+the typo copied over: "quarterly reveiw", "kirim lapran ke pak budi", "Rapat sm tim". The prompt had
+asked for titles that "keep the note's language", which the model took as "keep the words as typed".
+It now says notes are typed fast, lists the kinds of slip to expect, and asks for titles written
+properly in the same language. Its examples are deliberately different from the test notes, so the
+score isn't the prompt grading itself. The function also capitalises the first letter of every
+title. After the change all 34 passed, and the titles read "Quarterly review", "Kirim laporan ke Pak
+Budi", "Rapat sama tim" and "Call Mom" (from "callmom").
+
 ## Running it
 
 Put your key in `supabase/functions/.env`, which Git ignores:
@@ -82,7 +101,7 @@ Options: `--model` (default `gemini-3.6-flash`), `--runs 3` to repeat the set an
 `--pause 6` seconds between requests to stay inside the free tier's per-minute limit, and
 `--only id1,id2` to rerun some cases, and `--part 1/2` to run the first half (then `--part 2/2` on
 another day) for a model whose free allowance is smaller than the set. Parts and `--only` merge into
-the model's results file, so they add up to one score. One run is 24 requests out of the model's free daily
+the model's results file, so they add up to one score. One run is 34 requests out of the model's free daily
 allowance. Each run writes `results.json` with every failure and what the model returned.
 
 It calls the same `proposeItems()` the server function uses, against one model with no fallback, so
@@ -98,11 +117,11 @@ npm run test:functions
 
 - The notes were written for this set, not taken from your own use. Replace or add cases with notes
   you actually type, especially the ones it gets wrong.
-- 24 cases can show a model is unreliable. They can't prove it's reliable.
+- 34 cases can show a model is unreliable. They can't prove it's reliable.
 - Everything is read on one Thursday morning. Notes written late at night, or across a month or year
   end, aren't covered.
 - Free-tier models change without notice. A score is for the model on the day it ran.
 - The 24/24 is one run. Run `--runs 3` to see whether any case passes only sometimes.
-- gemini-3.6-flash allows 20 free requests a day, fewer than the 24 notes, so measuring it takes two
+- gemini-3.6-flash allows 20 free requests a day, fewer than the 34 notes, so measuring it takes two
   days: `--part 1/2`, then `--part 2/2`. Requests answered with 503 (Google busy) count against the
   allowance too, so run it when the model isn't overloaded.

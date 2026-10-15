@@ -218,8 +218,8 @@ function useTimeZoneSync() {
 }
 
 /**
- * While the app is open, show reminders as toasts too. Telegram, and in the Mac app macOS itself,
- * cover the closed case.
+ * While the app is open, show reminders as toasts too. The Mac app's notifications cover the closed
+ * case.
  */
 function useInAppReminders() {
   const tasks = useTasks()

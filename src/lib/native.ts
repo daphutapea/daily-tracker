@@ -6,7 +6,7 @@ import { useSyncExternalStore } from 'react'
 export interface NativeReminder {
   /** Changes when the reminder time changes, so macOS replaces rather than duplicates it. */
   id: string
-  kind: 'task' | 'event'
+  kind: 'task' | 'event' | 'summary'
   taskId: string | null
   title: string
   body: string
@@ -26,10 +26,12 @@ export interface TodayItem {
 
 type ToMac =
   | { type: 'hello' }
-  | { type: 'reminders'; reminders: NativeReminder[] }
+  /** `calendar`: also put them in the Daily Tracker calendar in iCloud, so an iPhone alerts too. */
+  | { type: 'reminders'; reminders: NativeReminder[]; calendar: boolean }
   | { type: 'today'; overdue: number; badge: number; items: TodayItem[] }
   | { type: 'requestPermission' }
   | { type: 'openNotificationSettings' }
+  | { type: 'openCalendarSettings' }
   | { type: 'testNotification' }
   | { type: 'save'; filename: string; content: string }
 
@@ -39,6 +41,7 @@ export type FromMac =
   | { type: 'done'; taskId: string }
   | { type: 'quickAdd' }
   | { type: 'saved'; name: string }
+  | { type: 'calendar'; status: CalendarStatus }
 
 const handler = (window as { webkit?: { messageHandlers?: { dailyTracker?: { postMessage(m: unknown): void } } } }).webkit
   ?.messageHandlers?.dailyTracker
@@ -49,12 +52,17 @@ export function postToMac(message: ToMac) {
   handler?.postMessage(message)
 }
 
+/** Where the iPhone alerts stand: Calendar access, and whether the calendar landed in iCloud. */
+export type CalendarStatus = 'off' | 'granted' | 'denied' | 'undetermined' | 'local' | 'error'
+
 const listeners = new Set<(m: FromMac) => void>()
 let permission: 'granted' | 'denied' | 'undetermined' | null = null
+let calendarStatus: CalendarStatus | null = null
 
 /** The Mac app calls this with evaluateJavaScript. Messages that arrive before the page says hello are held there. */
 ;(window as { dailyTrackerNative?: (m: FromMac) => void }).dailyTrackerNative = (m) => {
   if (m.type === 'permission') permission = m.status
+  if (m.type === 'calendar') calendarStatus = m.status
   listeners.forEach((l) => l(m))
 }
 
@@ -71,13 +79,22 @@ export function useMacPermission() {
   )
 }
 
-/** An on/off preference for the Mac app, saved on this Mac and on by default. */
-function macSetting(key: string) {
+/** The iPhone alerts' state as the Mac app last reported it, or null before it has. */
+export function useMacCalendarStatus() {
+  return useSyncExternalStore(
+    (cb) => onMacMessage((m) => m.type === 'calendar' && cb()),
+    () => calendarStatus,
+  )
+}
+
+/** An on/off preference for the Mac app, saved on this Mac. */
+function macSetting(key: string, byDefault = true) {
   const read = () => {
     try {
-      return localStorage.getItem(key) !== 'off'
+      const saved = localStorage.getItem(key)
+      return saved === null ? byDefault : saved === 'on'
     } catch {
-      return true
+      return byDefault
     }
   }
   const write = (on: boolean) => {
@@ -103,6 +120,11 @@ export const useMacRemindersEnabled = reminders.use
 const badge = macSetting('dt-mac-badge')
 export const setMacBadgeEnabled = badge.write
 export const useMacBadgeEnabled = badge.use
+
+/** Off until you turn it on: it asks for Calendar access and adds a calendar to your iCloud. */
+const iphone = macSetting('dt-mac-iphone', false)
+export const setMacIphoneEnabled = iphone.write
+export const useMacIphoneEnabled = iphone.use
 
 /**
  * Saves a file: through a Save dialog in the Mac app, where a download link does nothing, and as a

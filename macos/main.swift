@@ -4,6 +4,7 @@
 
 import AppKit
 import Carbon.HIToolbox
+import EventKit
 import OSLog
 import ServiceManagement
 import UniformTypeIdentifiers
@@ -179,6 +180,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
   private var nextReminder: Reminder?
   private var todayItems: [TodayItem] = []
   private var overdueCount = 0
+  /// For iPhone alerts: a "Daily Tracker" calendar in iCloud, which brings its alerts to the phone.
+  private let eventStore = EKEventStore()
+  private var calendarWasOn = false
   private var hasShownWindow = false
   /// True once the page has mounted and said hello. Until then, messages for it wait in `heldForPage`.
   private var pageListening = false
@@ -372,7 +376,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
       Task { await reportPermission() }
     case "reminders":
       let reminders = (body["reminders"] as? [Any] ?? []).compactMap(Reminder.init)
-      Task { await schedule(reminders) }
+      let calendar = body["calendar"] as? Bool ?? false
+      Task { await schedule(reminders, calendar: calendar) }
     case "today":
       overdueCount = body["overdue"] as? Int ?? 0
       todayItems = (body["items"] as? [[String: Any]] ?? []).compactMap { d in
@@ -388,6 +393,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     case "openNotificationSettings":
       let id = Bundle.main.bundleIdentifier ?? ""
       if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)") {
+        NSWorkspace.shared.open(url)
+      }
+    case "openCalendarSettings":
+      if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
         NSWorkspace.shared.open(url)
       }
     case "testNotification":
@@ -432,11 +441,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     await reportPermission()
   }
 
-  /// Replaces every reminder handed over earlier with the page's current list.
-  private func schedule(_ reminders: [Reminder]) async {
+  /// Replaces every reminder handed over earlier with the page's current list. With `calendar`, they
+  /// go into the iCloud calendar instead, whose alerts reach both this Mac and the iPhone; this app's
+  /// own notifications then stay quiet, so the Mac never shows two.
+  private func schedule(_ reminders: [Reminder], calendar wantsCalendar: Bool) async {
     let center = UNUserNotificationCenter.current()
     let upcoming = reminders.filter { $0.at > Date() }
-    if !upcoming.isEmpty, await authorizationStatus() == .notDetermined {
+
+    var viaCalendar = false
+    if wantsCalendar {
+      if EKEventStore.authorizationStatus(for: .event) == .notDetermined { _ = await requestCalendarAccess() }
+      let access = calendarAccess()
+      if access == "granted" {
+        do {
+          let (calendar, inICloud) = try trackerCalendar()
+          try syncCalendar(upcoming, into: calendar)
+          viaCalendar = true
+          sendToPage(["type": "calendar", "status": inICloud ? "granted" : "local"])
+        } catch {
+          note("Calendar update failed: \(error.localizedDescription)")
+          sendToPage(["type": "calendar", "status": "error"])
+        }
+      } else {
+        sendToPage(["type": "calendar", "status": access])
+      }
+    } else if calendarWasOn {
+      clearUpcomingCalendarEntries()
+      sendToPage(["type": "calendar", "status": "off"])
+    }
+    calendarWasOn = wantsCalendar
+
+    if !viaCalendar, !upcoming.isEmpty, await authorizationStatus() == .notDetermined {
       await requestPermission()
     }
 
@@ -447,7 +482,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
     center.removePendingNotificationRequests(withIdentifiers: stale)
 
-    for reminder in upcoming {
+    for reminder in viaCalendar ? [] : upcoming {
       let content = UNMutableNotificationContent()
       content.title = reminder.title
       content.body = reminder.body
@@ -464,6 +499,89 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
     nextReminder = upcoming.first
     rebuildStatusMenu()
+  }
+
+  // MARK: iPhone alerts, through a calendar in iCloud
+
+  private func calendarAccess() -> String {
+    switch EKEventStore.authorizationStatus(for: .event) {
+    case .fullAccess: "granted"
+    case .notDetermined: "undetermined"
+    default: "denied"  // denied, restricted, or write-only, which can't tidy up its own entries
+    }
+  }
+
+  private func requestCalendarAccess() async -> Bool {
+    await withCheckedContinuation { continuation in
+      eventStore.requestFullAccessToEvents { granted, _ in continuation.resume(returning: granted) }
+    }
+  }
+
+  /// The "Daily Tracker" calendar, made once in iCloud (where the iPhone sees it) and found again by
+  /// its identifier. Without iCloud it falls back to a calendar on this Mac.
+  private func trackerCalendar() throws -> (EKCalendar, inICloud: Bool) {
+    let key = "TrackerCalendarID"
+    if let id = UserDefaults.standard.string(forKey: key), let existing = eventStore.calendar(withIdentifier: id) {
+      return (existing, existing.source.title == "iCloud")
+    }
+    let iCloud = eventStore.sources.first { $0.sourceType == .calDAV && $0.title == "iCloud" }
+    guard let source = iCloud ?? eventStore.defaultCalendarForNewEvents?.source ?? eventStore.sources.first
+    else { throw CocoaError(.featureUnsupported) }
+    let calendar = EKCalendar(for: .event, eventStore: eventStore)
+    calendar.title = "Daily Tracker"
+    calendar.cgColor = CGColor(srgbRed: 0x2D / 255, green: 0xD4 / 255, blue: 0xBF / 255, alpha: 1)
+    calendar.source = source
+    try eventStore.saveCalendar(calendar, commit: true)
+    UserDefaults.standard.set(calendar.calendarIdentifier, forKey: key)
+    note("Made the Daily Tracker calendar in \(source.title)")
+    return (calendar, iCloud != nil)
+  }
+
+  private func calendarKey(_ reminder: Reminder) -> String {
+    "dailytracker://reminder/" + (reminder.id.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? reminder.id)
+  }
+
+  /// Each reminder becomes a five-minute entry at its time with an alert, keyed by its URL. Entries
+  /// that are no longer wanted go if they're still ahead; past ones stay two days as a record.
+  private func syncCalendar(_ reminders: [Reminder], into calendar: EKCalendar) throws {
+    let now = Date()
+    let window = eventStore.predicateForEvents(
+      withStart: now.addingTimeInterval(-3 * 86_400), end: now.addingTimeInterval(16 * 86_400), calendars: [calendar])
+    var wanted: [String: Reminder] = [:]
+    for reminder in reminders { wanted[calendarKey(reminder)] = reminder }
+    var present = Set<String>()
+    for entry in eventStore.events(matching: window) {
+      let key = entry.url?.absoluteString ?? ""
+      if wanted[key] != nil {
+        present.insert(key)
+      } else if entry.startDate > now || entry.startDate < now.addingTimeInterval(-2 * 86_400) {
+        try eventStore.remove(entry, span: .thisEvent, commit: false)
+      }
+    }
+    for (key, reminder) in wanted where !present.contains(key) {
+      let entry = EKEvent(eventStore: eventStore)
+      entry.calendar = calendar
+      // A phone's alert shows the title and time only, so the title carries the detail.
+      entry.title = reminder.kind == "summary" ? reminder.title : "\(reminder.title) · \(reminder.body)"
+      entry.notes = reminder.body
+      entry.startDate = reminder.at
+      entry.endDate = reminder.at.addingTimeInterval(5 * 60)
+      entry.url = URL(string: key)
+      entry.addAlarm(EKAlarm(relativeOffset: 0))
+      try eventStore.save(entry, span: .thisEvent, commit: false)
+    }
+    try eventStore.commit()
+  }
+
+  /// Turning iPhone alerts off removes the entries still ahead, so no stray alert arrives later.
+  private func clearUpcomingCalendarEntries() {
+    guard calendarAccess() == "granted", let id = UserDefaults.standard.string(forKey: "TrackerCalendarID"),
+      let calendar = eventStore.calendar(withIdentifier: id)
+    else { return }
+    let now = Date()
+    let ahead = eventStore.predicateForEvents(withStart: now, end: now.addingTimeInterval(16 * 86_400), calendars: [calendar])
+    for entry in eventStore.events(matching: ahead) { try? eventStore.remove(entry, span: .thisEvent, commit: false) }
+    try? eventStore.commit()
   }
 
   private func sendTestNotification() async {

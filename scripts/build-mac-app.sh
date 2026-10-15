@@ -23,7 +23,7 @@ cp -R dist "$APP/Contents/Resources/web"
 
 xcrun swiftc -O -swift-version 6 -target "$(uname -m)-apple-macos14.0" \
   macos/main.swift -o "$APP/Contents/MacOS/DailyTracker" \
-  -framework AppKit -framework WebKit -framework Carbon
+  -framework AppKit -framework WebKit -framework Carbon -framework EventKit
 
 xcrun swift macos/make-icon.swift "$BUILD_DIR/AppIcon.iconset"
 iconutil -c icns "$BUILD_DIR/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"
@@ -47,6 +47,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
+  <key>NSCalendarsFullAccessUsageDescription</key><string>Daily Tracker puts your reminders and summaries in a Daily Tracker calendar in iCloud, so your iPhone alerts you too. It only reads and changes that calendar.</string>
+  <key>NSCalendarsUsageDescription</key><string>Daily Tracker puts your reminders and summaries in a Daily Tracker calendar in iCloud, so your iPhone alerts you too.</string>
 </dict>
 </plist>
 PLIST

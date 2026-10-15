@@ -23,14 +23,6 @@ export type Project = Tables<'projects'>
 export type QuickLink = Tables<'quick_links'>
 export type Profile = Tables<'profiles'>
 
-export interface TelegramStatus {
-  bot_configured: boolean
-  bot_username: string | null
-  bot_error: string | null
-  linked: boolean
-  link_code: string | null
-}
-
 export const STATUSES: { value: TaskStatus; label: string }[] = [
   { value: 'todo', label: 'To do' },
   { value: 'in_progress', label: 'In progress' },

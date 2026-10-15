@@ -1,11 +1,9 @@
 import {
-  ArrowSquareOutIcon,
   BellIcon,
   CaretRightIcon,
   CheckIcon,
   DownloadSimpleIcon,
   SignOutIcon,
-  TelegramLogoIcon,
 } from '@phosphor-icons/react'
 import { format } from 'date-fns'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
@@ -19,26 +17,18 @@ import {
   postToMac,
   saveFile,
   setMacBadgeEnabled,
+  setMacIphoneEnabled,
   setMacRemindersEnabled,
   useMacBadgeEnabled,
+  useMacCalendarStatus,
+  useMacIphoneEnabled,
   useMacPermission,
   useMacRemindersEnabled,
 } from '@/lib/native'
-import {
-  quietly,
-  telegram,
-  telegramSettled,
-  useDeleteProject,
-  useProfile,
-  useProjects,
-  useSaveProject,
-  useTelegramAction,
-  useTelegramStatus,
-  useUpdateProfile,
-} from '@/lib/queries'
+import { quietly, useDeleteProject, useProfile, useProjects, useSaveProject, useUpdateProfile } from '@/lib/queries'
 import { must, supabase } from '@/lib/supabase'
 import { updateTheme, useTheme, type DarkPalette, type LightPalette, type Palette, type ThemeMode } from '@/lib/theme'
-import type { Profile, TelegramStatus } from '@/lib/types'
+import type { Profile } from '@/lib/types'
 
 export function SettingsPage() {
   const profile = useProfile()
@@ -59,7 +49,7 @@ export function SettingsPage() {
         <div className="fade-in space-y-6">
           <ProfileSection profile={profile.data} />
           {inMacApp && <MacAppSection />}
-          <TelegramSection profile={profile.data} />
+          <SummariesSection profile={profile.data} />
           <ProjectsSection />
           <AppearanceSection />
           <Link to="/links" className="panel row-hover flex min-h-12 items-center justify-between px-4 md:hidden">
@@ -138,267 +128,35 @@ function ProfileSection({ profile }: { profile: Profile }) {
   )
 }
 
-// ---------------------------------------------------------------- telegram
-
-function TelegramSection({ profile }: { profile: Profile }) {
-  const [tokenSaved, setTokenSaved] = useState(false)
-  const status = useTelegramStatus(tokenSaved)
-  const s = status.data
-  const checkingToken = tokenSaved && !telegramSettled(s)
-
-  return (
-    <Section
-      id="telegram"
-      title="Telegram reminders"
-      intro="Reminders and an optional morning summary arrive as Telegram messages from your own bot, even when this app is closed."
-    >
-      {status.isPending ? (
-        <Loading what="Telegram status" />
-      ) : status.isError ? (
-        <QueryError what="Telegram status" error={status.error} retry={() => status.refetch()} />
-      ) : (
-        <ol className="space-y-5">
-          <Step n={1} title="Create your bot" done={!!s!.bot_username}>
-            <BotStep status={s!} onSaved={() => setTokenSaved(true)} checking={checkingToken} />
-          </Step>
-          <Step n={2} title="Link your Telegram chat" done={s!.linked} disabled={!s!.bot_username}>
-            <LinkStep status={s!} />
-          </Step>
-          <Step n={3} title="Summaries" disabled={!s!.linked}>
-            <DigestStep profile={profile} enabled={s!.linked} />
-          </Step>
-        </ol>
-      )}
-    </Section>
-  )
-}
-
-function Step({
-  n,
-  title,
-  done,
-  disabled,
-  children,
-}: {
-  n: number
-  title: string
-  done?: boolean
-  disabled?: boolean
-  children: ReactNode
-}) {
-  return (
-    <li className="grid grid-cols-[28px_1fr] gap-3">
-      <span
-        aria-hidden
-        className={`grid size-7 place-items-center rounded-full border text-[13px] font-semibold tnum ${
-          done ? 'border-ink bg-ink text-surface' : 'border-line-strong text-ink-2'
-        }`}
-      >
-        {n}
-      </span>
-      <div className={disabled ? 'opacity-60' : ''}>
-        <h3 className="font-medium">
-          {title}
-          {done && <span className="ml-2 text-[13px] font-normal text-ok">Done</span>}
-        </h3>
-        <div className="mt-1.5">{children}</div>
-      </div>
-    </li>
-  )
-}
-
-function BotStep({ status, onSaved, checking }: { status: TelegramStatus; onSaved: () => void; checking: boolean }) {
-  const [token, setToken] = useState('')
-  const [replacing, setReplacing] = useState(false)
-  const save = useTelegramAction(telegram.setToken)
-
-  async function submit(e: FormEvent) {
-    e.preventDefault()
-    await save.mutateAsync([token.trim()])
-    setToken('')
-    setReplacing(false)
-    onSaved()
-  }
-
-  if (status.bot_username && !replacing) {
-    return (
-      <p className="text-ink-2">
-        Using <span className="font-medium text-ink">@{status.bot_username}</span>.{' '}
-        <button type="button" className="underline underline-offset-2" onClick={() => setReplacing(true)}>
-          Use a different bot
-        </button>
-      </p>
-    )
-  }
-
-  return (
-    <div className="space-y-3">
-      <ol className="list-decimal space-y-1 pl-5 text-ink-2">
-        <li>
-          In Telegram, open{' '}
-          <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="font-medium text-ink underline underline-offset-2">
-            @BotFather
-          </a>{' '}
-          and send <code className="rounded bg-surface-2 px-1">/newbot</code>.
-        </li>
-        <li>Pick any name, then a username ending in “bot”.</li>
-        <li>BotFather replies with a token. Paste it below. It’s stored encrypted in your database’s vault.</li>
-      </ol>
-      <form onSubmit={quietly(submit)} className="flex flex-wrap gap-2">
-        <label htmlFor="bot-token" className="sr-only">
-          Bot token
-        </label>
-        <input
-          id="bot-token"
-          type="password"
-          autoComplete="off"
-          spellCheck={false}
-          placeholder="123456789:AA…"
-          className="field min-w-0 flex-1 basis-64 font-mono"
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-        />
-        <button type="submit" className="btn btn-primary" disabled={!token.trim() || save.isPending}>
-          {save.isPending ? 'Saving…' : 'Save token'}
-        </button>
-        {replacing && (
-          <button type="button" className="btn btn-quiet" onClick={() => setReplacing(false)}>
-            Cancel
-          </button>
-        )}
-      </form>
-      {checking && !status.bot_error && (
-        <p role="status" className="text-ink-3">
-          Checking the token with Telegram…
-        </p>
-      )}
-      {status.bot_error && (
-        <p role="alert" className="text-danger">
-          Telegram didn’t accept that token ({status.bot_error}). Copy it again from BotFather.
-        </p>
-      )}
-    </div>
-  )
-}
-
-function LinkStep({ status }: { status: TelegramStatus }) {
-  const [code, setCode] = useState<string | null>(status.link_code)
-  const [phase, setPhase] = useState<'idle' | 'checking' | 'not_found'>('idle')
-  const getCode = useTelegramAction(telegram.linkCode)
-  const sendTest = useTelegramAction(telegram.sendTest)
-  const unlink = useTelegramAction(telegram.unlink)
-  const poll = useTelegramAction(telegram.poll)
-
-  if (status.linked) {
-    return (
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="mr-2 text-ink-2">Reminders go to your Telegram chat.</p>
-        <button
-          type="button"
-          className="btn btn-quiet"
-          disabled={sendTest.isPending}
-          onClick={quietly(async () => {
-            await sendTest.mutateAsync([])
-            toast.success('Test message sent. Check Telegram.')
-          })}
-        >
-          <TelegramLogoIcon size={16} weight="bold" />
-          Send a test message
-        </button>
-        <button
-          type="button"
-          className="btn btn-danger"
-          onClick={quietly(async () => {
-            if (!window.confirm('Stop sending reminders to this Telegram chat?')) return
-            await unlink.mutateAsync([])
-            setCode(null)
-          })}
-        >
-          Unlink
-        </button>
-      </div>
-    )
-  }
-
-  if (!status.bot_username) return <p className="text-ink-3">Finish step 1 first.</p>
-
-  async function check() {
-    setPhase('checking')
-    try {
-      for (let i = 0; i < 10; i++) {
-        const result = await poll.mutateAsync([])
-        if (result === 'linked') {
-          toast.success('Telegram linked')
-          setPhase('idle')
-          return
-        }
-        if (result === 'not_found') {
-          setPhase('not_found')
-          return
-        }
-        await new Promise((r) => setTimeout(r, 1200))
-      }
-      setPhase('not_found')
-    } catch (e) {
-      setPhase('idle')
-      throw e
-    }
-  }
-
-  if (!code) {
-    return (
-      <button
-        type="button"
-        className="btn btn-primary"
-        disabled={getCode.isPending}
-        onClick={quietly(async () => setCode(await getCode.mutateAsync([])))}
-      >
-        Get a link code
-      </button>
-    )
-  }
-
-  const deepLink = `https://t.me/${status.bot_username}?start=${code}`
-  return (
-    <div className="space-y-3">
-      <p className="text-ink-2">
-        Open your bot and press <span className="font-medium text-ink">Start</span>. That sends your code{' '}
-        <code className="rounded bg-surface-2 px-1 font-semibold text-ink">{code}</code> to it. You can also type the code
-        as a message.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <a href={deepLink} target="_blank" rel="noreferrer" className="btn btn-quiet">
-          <ArrowSquareOutIcon size={16} weight="bold" />
-          Open @{status.bot_username}
-        </a>
-        <button type="button" className="btn btn-primary" onClick={quietly(check)} disabled={phase === 'checking'}>
-          {phase === 'checking' ? 'Checking…' : 'I’ve sent it'}
-        </button>
-      </div>
-      {phase === 'not_found' && (
-        <p role="alert" className="text-warn">
-          Didn’t find {code} in your bot’s recent messages yet. Send it, wait a few seconds, then press “I’ve sent it” again.
-        </p>
-      )}
-    </div>
-  )
-}
+// ---------------------------------------------------------------- summaries
 
 const ISO_WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
-function DigestStep({ profile, enabled }: { profile: Profile; enabled: boolean }) {
+/**
+ * When the morning summary and the weekly review arrive. Saved with your account, so every device
+ * agrees; the Mac app turns them into notifications (and, with iPhone alerts on, calendar alerts).
+ */
+function SummariesSection({ profile }: { profile: Profile }) {
   const update = useUpdateProfile()
   const [time, setTime] = useState(profile.digest_time.slice(0, 5))
   const [weeklyTime, setWeeklyTime] = useState(profile.weekly_time.slice(0, 5))
 
   return (
+    <Section
+      id="summaries"
+      title="Summaries"
+      intro={
+        inMacApp
+          ? 'They arrive as notifications from this Mac app, at the times you pick.'
+          : 'They arrive as notifications from the Daily Tracker app on your Mac, at the times you pick.'
+      }
+    >
     <div className="space-y-5">
       <div className="space-y-2">
         <label className="flex min-h-9 cursor-pointer items-center gap-2 font-medium">
           <input
             type="checkbox"
             className="size-4 accent-[var(--ink)]"
-            disabled={!enabled}
             checked={profile.digest_enabled}
             onChange={(e) => update.mutate({ digest_enabled: e.target.checked })}
           />
@@ -413,7 +171,6 @@ function DigestStep({ profile, enabled }: { profile: Profile; enabled: boolean }
             id="digest-time"
             type="time"
             className="field w-32"
-            disabled={!enabled}
             value={time}
             onChange={(e) => setTime(e.target.value)}
             onBlur={() => time && time !== profile.digest_time.slice(0, 5) && update.mutate({ digest_time: time })}
@@ -426,7 +183,6 @@ function DigestStep({ profile, enabled }: { profile: Profile; enabled: boolean }
           <input
             type="checkbox"
             className="size-4 accent-[var(--ink)]"
-            disabled={!enabled}
             checked={profile.weekly_enabled}
             onChange={(e) => update.mutate({ weekly_enabled: e.target.checked })}
           />
@@ -440,7 +196,6 @@ function DigestStep({ profile, enabled }: { profile: Profile; enabled: boolean }
           <select
             id="weekly-day"
             className="field w-auto"
-            disabled={!enabled}
             value={profile.weekly_day}
             onChange={(e) => update.mutate({ weekly_day: Number(e.target.value) })}
           >
@@ -457,7 +212,6 @@ function DigestStep({ profile, enabled }: { profile: Profile; enabled: boolean }
             id="weekly-time"
             type="time"
             className="field w-32"
-            disabled={!enabled}
             value={weeklyTime}
             onChange={(e) => setWeeklyTime(e.target.value)}
             onBlur={() =>
@@ -466,12 +220,9 @@ function DigestStep({ profile, enabled }: { profile: Profile; enabled: boolean }
           />
         </div>
       </div>
-      {!enabled && (
-        <p className="text-[13px] text-ink-3">
-          Link Telegram first. The same review is always on the Review page in the app.
-        </p>
-      )}
+      <p className="text-[13px] text-ink-3">The same review is always on the Review page.</p>
     </div>
+    </Section>
   )
 }
 
@@ -694,11 +445,13 @@ function MacAppSection() {
   const permission = useMacPermission()
   const enabled = useMacRemindersEnabled()
   const badge = useMacBadgeEnabled()
+  const iphone = useMacIphoneEnabled()
+  const calendar = useMacCalendarStatus()
   return (
     <Section
       id="mac"
       title="Mac app"
-      intro="Reminders for the next two weeks are handed to macOS, so they arrive even when the window is closed or the app has quit. Each one can be marked done or snoozed for 10 minutes from the notification."
+      intro="Reminders and summaries for the next two weeks are handed to macOS, so they arrive even when the window is closed or the app has quit. Each reminder can be marked done or snoozed for 10 minutes from the notification."
     >
       <div className="space-y-3">
         <p className="text-ink-2">
@@ -723,6 +476,47 @@ function MacAppSection() {
           />
           Show how many tasks are overdue on the Dock icon
         </label>
+        <div className="space-y-1">
+          <label className="flex min-h-9 cursor-pointer items-center gap-2 font-medium">
+            <input
+              type="checkbox"
+              className="size-4 accent-[var(--ink)]"
+              checked={iphone}
+              disabled={!enabled}
+              onChange={(e) => setMacIphoneEnabled(e.target.checked)}
+            />
+            Also alert me on my iPhone
+          </label>
+          <p className="pl-6 text-[13px] text-ink-2">
+            Puts each reminder and summary in a “Daily Tracker” calendar in your iCloud, and iCloud brings its alerts to
+            your iPhone. Your Mac then gets the calendar’s alert instead of its own, so you never get two.
+          </p>
+          {iphone && calendar === 'granted' && (
+            <p className="pl-6 text-[13px] text-ok">On. Check that Calendar alerts are allowed on your iPhone.</p>
+          )}
+          {iphone && calendar === 'undetermined' && (
+            <p className="pl-6 text-[13px] text-ink-2">macOS will ask once whether Daily Tracker may use Calendar.</p>
+          )}
+          {iphone && calendar === 'denied' && (
+            <div className="space-y-2 pl-6">
+              <p className="text-[13px] text-warn">
+                Calendar access is off for Daily Tracker, so nothing reaches your iPhone. Reminders still show on this Mac.
+              </p>
+              <button type="button" className="btn btn-quiet" onClick={() => postToMac({ type: 'openCalendarSettings' })}>
+                Open System Settings
+              </button>
+            </div>
+          )}
+          {iphone && calendar === 'local' && (
+            <p className="pl-6 text-[13px] text-warn">
+              This Mac has no iCloud calendar account, so the calendar stays on this Mac. Turn on Calendars in System
+              Settings → your name → iCloud.
+            </p>
+          )}
+          {iphone && calendar === 'error' && (
+            <p className="pl-6 text-[13px] text-warn">The calendar couldn’t be updated. Reminders still show on this Mac.</p>
+          )}
+        </div>
         {permission === 'denied' && (
           <div className="space-y-2">
             <p className="text-warn">Notifications are turned off for Daily Tracker in System Settings, so none will show.</p>
@@ -801,7 +595,6 @@ function DataSection() {
         <DownloadSimpleIcon size={16} weight="bold" />
         {busy ? 'Preparing…' : 'Download a copy'}
       </button>
-      <p className="mt-2 text-[13px] text-ink-3">Your Telegram bot token isn’t included; it stays encrypted in Supabase.</p>
     </Section>
   )
 }

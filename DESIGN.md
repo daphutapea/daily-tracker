@@ -152,6 +152,6 @@ the teal spread thin and the "now" line stop standing out.
 
 ## Copy
 
-- English, plain, short. Buttons say what they do: "Add task", "Save task", "Link Telegram".
+- English, plain, short. Buttons say what they do: "Add task", "Save task", "Download a copy".
 - Empty states say why it's empty and give the one action that fills it.
 - No emoji in the interface.

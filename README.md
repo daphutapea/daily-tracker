@@ -6,11 +6,11 @@
 # Daily Tracker
 
 A personal board for one person. It keeps your tasks and their deadlines, your notes, your events, a
-month calendar and the sites you open every day in one place, and it sends reminders and a morning
-summary to Telegram.
+month calendar and the sites you open every day in one place. The Mac app sends reminders and a morning
+and weekly summary as notifications, and can pass them to your iPhone through Apple Calendar.
 
-Setting it up for the first time? Follow [docs/SETUP.md](docs/SETUP.md) to create your account, link
-Telegram and put the app online. What changed in each version is in [CHANGELOG.md](CHANGELOG.md); the
+Setting it up for the first time? Follow [docs/SETUP.md](docs/SETUP.md) to create your account,
+install the Mac app and turn on Quick add. What changed in each version is in [CHANGELOG.md](CHANGELOG.md); the
 version you are running is shown at the bottom of Settings.
 
 ## Opening it
@@ -72,7 +72,9 @@ from the field on Home, the Quick add button in the sidebar, or Cmd+K (Ctrl+K on
 
 For example: “Sync with Dennis Tuesday 10 to 11am, remind me 15 min before. Finish the labelling sheet
 by Friday, high priority.” English, Bahasa Indonesia or a mix all work, and one note can hold several
-things.
+things. Type as fast as you like: typos, shorthand and loose times are read for what you meant, so
+“Sync me with mr. dennis at 1500 till 1600, then work on ATLAS imrpovementsd again” becomes “Sync with
+Mr. Dennis” today from 15:00 to 16:00 and “Work on ATLAS improvements again”, filed under ATLAS.
 
 Press Read it (or Cmd+Enter). While it reads, a thin line moves along the bottom of your note; it
 usually takes a second or two. Each item comes back as a card you can change before anything is saved:
@@ -88,7 +90,7 @@ it. Only when all of them are used up does the app say so, and then you add item
 next day. Quick add needs a one-time setup, described in
 [docs/SETUP.md](docs/SETUP.md).
 
-How often the AI reads notes correctly is measured with a set of 24 test notes. How to run it, and
+How often the AI reads notes correctly is measured with a set of 34 test notes, ten of them full of typos. How to run it, and
 what it does and doesn't prove, is in
 [supabase/functions/quick-add/eval/README.md](supabase/functions/quick-add/eval/README.md).
 
@@ -168,26 +170,42 @@ page, drag the grip at the left of a row, or press and hold it on a phone. From 
 grip, press Space, move with the arrow keys, and press Space again to drop it. The new order saves at
 once and shows on every device.
 
-## Reminders
+## Reminders and summaries
 
-Once Telegram is linked, every reminder time you set sends a message from your own bot. Finished tasks
-don’t send one. A reminder more than 30 minutes late, for example because you picked a time that had
-already passed, is skipped instead of arriving late.
-
-On your Mac, the app hands every reminder in the next two weeks to macOS, so it arrives as a normal
-Mac notification even when the window is closed or the app has quit. A task’s notification has Mark
-done and Snooze 10 minutes; an event’s has Snooze 10 minutes; clicking either opens it. The first time
-a reminder is coming up, macOS asks whether Daily Tracker may show notifications. Settings → Mac
-notifications can turn them off or send a test.
+The Mac app hands every reminder in the next two weeks to macOS, so it arrives as a normal Mac
+notification even when the window is closed or the app has quit. A task’s notification has Mark done
+and Snooze 10 minutes; an event’s has Snooze 10 minutes; clicking either opens it. Finished tasks
+don’t send one. The first time a reminder is coming up, macOS asks whether Daily Tracker may show
+notifications. Settings → Mac app can turn them off or send a test.
 
 While you’re looking at the app, a reminder appears in the corner of the window instead, with an Open
-button. In a browser, that pop-up is the only reminder you get until Telegram is linked.
+button, so you never get both. In a browser, that pop-up is the only reminder you get.
 
-The morning summary is optional. It lists overdue tasks, today’s deadlines and today’s events, and it
-arrives once a day within two hours after the time you choose. The weekly review message is optional
-too: on the day and time you pick, it sends what you finished that week, which deadlines slipped, and
-what’s due the week after. Reminder times follow the time zone shown in Settings, which updates to match
-the device you use.
+Two summaries are optional, under Settings → Summaries:
+
+| Summary | When | What it says |
+|---|---|---|
+| Morning summary | Every day at the time you pick | How many tasks are overdue, how many are due and how many events you have, then the first few by time. Clicking it opens Home. |
+| Weekly review | On the day and time you pick | What you finished that week, how many deadlines slipped, and what’s planned for the week after. Clicking it opens the Review page. |
+
+The app rewrites each summary whenever your tasks change, so what arrives matches the day. If the app
+was closed when something changed, the summary shows things as they were when it last ran.
+
+### On your iPhone
+
+Notifications can’t jump from a Mac to an iPhone, but calendar alerts can. Turn on **Also alert me on
+my iPhone** in Settings → Mac app and the app keeps a “Daily Tracker” calendar in your iCloud: each
+reminder and summary becomes a five-minute entry with an alert, and iCloud brings the alert to your
+iPhone (and an Apple Watch). macOS asks once whether Daily Tracker may use Calendar.
+
+- Your Mac then shows that calendar’s alert instead of the app’s own notification, so you never get two.
+  Calendar alerts have no Mark done or Snooze buttons; open the app for those.
+- The Mac app has to be running to bring changes into the calendar. Alerts already there still reach
+  your phone when the Mac is asleep or off.
+- On the iPhone, Calendar alerts must be allowed (Settings → Notifications → Calendar), and the Daily
+  Tracker calendar must be ticked in the Calendar app’s list of calendars.
+
+Reminder times follow the time zone shown in Settings, which updates to match the device you use.
 
 ## Weekly review
 
@@ -210,8 +228,8 @@ Monday, keeping each one’s time. Undo works here too.
 | Section | What you can do there |
 |---|---|
 | You | Set the name used in the greeting, and see the time zone reminders use. |
-| Mac app | In the Mac app only: turn reminder notifications on or off, let macOS show them, send a test, and choose whether the Dock icon shows how many tasks are overdue. |
-| Telegram reminders | Connect your bot, link your chat, send a test message, and turn on the morning summary and the weekly review message. |
+| Mac app | In the Mac app only: turn reminder notifications on or off, let macOS show them, send a test, choose whether the Dock icon shows how many tasks are overdue, and turn on iPhone alerts. |
+| Summaries | Turn the morning summary and the weekly review on or off, and choose when they arrive. |
 | Projects | Add, rename, archive or delete projects. Deleting a project keeps its tasks and notes; they just lose the label. |
 | Appearance | Match your system, or always use Light or Dark. Each mode has two colour sets: Sage or White for light, Navy or Charcoal for dark. Each card shows a small preview. These choices are saved on each device separately. |
 | Your data | Download a copy of everything you’ve added as one JSON file. Keep one somewhere safe now and then. |

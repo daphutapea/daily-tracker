@@ -22,6 +22,8 @@ test('Download a copy saves everything as one JSON file', async ({ page }) => {
     expect.arrayContaining(['version', 'exported_at', 'tasks', 'events', 'notes', 'projects', 'quick_links', 'settings']),
   )
   expect(data.tasks.map((t: { title: string }) => t.title)).toContain(task.title)
-  // Telegram link details stay out of the file.
-  expect(Object.keys(data.settings)).not.toContain('telegram_chat_id')
+  // Only preferences, nothing that identifies the account beyond your display name.
+  expect(Object.keys(data.settings).sort()).toEqual(
+    ['created_at', 'digest_enabled', 'digest_time', 'display_name', 'timezone', 'weekly_day', 'weekly_enabled', 'weekly_time'],
+  )
 })

@@ -7,6 +7,7 @@ import {
   proposeItems,
   QuickAddError,
   RESPONSE_SCHEMA,
+  SYSTEM_PROMPT,
   validateItems,
   type QuickAddRequest,
 } from './logic.ts'
@@ -120,6 +121,16 @@ test('a bad request stops instead of sending it to more models', async () => {
   const { fetch, calls } = fakeFetch([{ status: 400, body: { error: { message: 'Invalid schema' } } }, { status: 200 }])
   await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a', 'b'], fetch }), (e: QuickAddError) => e.code === 'model')
   assert.equal(calls.length, 1)
+})
+
+test('titles start with a capital letter, and the rest is left alone', () => {
+  const [item] = validateItems({ items: [{ kind: 'task', title: 'kirim laporan ke Pak Budi', all_day: false, priority: 'medium' }] }, [])
+  assert.equal(item.title, 'Kirim laporan ke Pak Budi')
+})
+
+test('the prompt asks for typos to be read through and kept out of titles', () => {
+  assert.match(SYSTEM_PROMPT, /typos/)
+  assert.match(SYSTEM_PROMPT, /Never copy a typo into a title/)
 })
 
 test('every item field is required and written in an order that settles the time before all_day', () => {

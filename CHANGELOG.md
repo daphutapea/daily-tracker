@@ -1,5 +1,30 @@
 # Changelog
 
+## v1.5 (2026-10-16)
+
+### Added
+- A morning summary and a weekly review as Mac notifications, at the times you pick under Settings → Summaries. The morning one says how many tasks are overdue and due and how many events you have, then lists the first few by time. The weekly one says what you finished, how many deadlines slipped, and what’s planned for the week after.
+- Also alert me on my iPhone, in Settings → Mac app. Reminders and summaries go into a “Daily Tracker” calendar in your iCloud, and iCloud brings each alert to your iPhone and an Apple Watch. Turning it off removes the entries still ahead.
+- Under a reminder, the task and event dialogs say where it will reach you.
+- Quick add reads notes typed in a hurry: misspellings, shorthand such as tmrw, nxt or bsk, words run together, and times like 1500, 0930 or 5.30pm. Titles come back spelled properly, in the note’s language.
+- Ten typo-heavy notes in the Quick add test set, which now has 34. gemini-3.5-flash-lite passes all 34.
+
+### Removed
+- Telegram: the Settings section, linking a bot and a chat, the server jobs that sent the messages, and their database functions and columns. No chat was ever linked, so nothing was lost.
+
+### Changed
+- The summary settings no longer wait for Telegram to be linked; they work as soon as the Mac app is installed.
+- Every title Quick add drafts starts with a capital letter.
+
+### Fixed
+- Quick add copied misspellings into titles, for example “quarterly reveiw” or “kirim lapran ke pak budi”. Dates and times were already read correctly.
+
+### Known limitations
+- Summaries are written by the Mac app from your data as it last saw it. If the app was closed when something changed, a summary can be out of date.
+- With iPhone alerts on, your Mac shows the calendar’s alert instead of the app’s own notification, so those alerts have no Mark done or Snooze buttons.
+- The Mac app has to be running to bring changes into the calendar. Alerts already there still reach the iPhone while the Mac sleeps.
+- Without iCloud Calendars turned on for this Mac, the calendar stays on the Mac and nothing reaches the iPhone.
+
 ## v1.4 (2026-10-16)
 
 ### Added

@@ -59,14 +59,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string,"digest_enabled": boolean,"digest_time": string,"display_name": string | null,"id": string,"last_digest_on": string | null,"last_weekly_on": string | null,"telegram_chat_id": number | null,"telegram_link_code": string | null,"telegram_link_request": number | null,"timezone": string,"weekly_day": number,"weekly_enabled": boolean,"weekly_time": string
+                    "created_at": string,"digest_enabled": boolean,"digest_time": string,"display_name": string | null,"id": string,"timezone": string,"weekly_day": number,"weekly_enabled": boolean,"weekly_time": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"digest_enabled"?: boolean,"digest_time"?: string,"display_name"?: string | null,"id": string,"last_digest_on"?: string | null,"last_weekly_on"?: string | null,"telegram_chat_id"?: number | null,"telegram_link_code"?: string | null,"telegram_link_request"?: number | null,"timezone"?: string,"weekly_day"?: number,"weekly_enabled"?: boolean,"weekly_time"?: string
+                    "created_at"?: string,"digest_enabled"?: boolean,"digest_time"?: string,"display_name"?: string | null,"id": string,"timezone"?: string,"weekly_day"?: number,"weekly_enabled"?: boolean,"weekly_time"?: string
                   }
                   Update: {
-                    "created_at"?: string,"digest_enabled"?: boolean,"digest_time"?: string,"display_name"?: string | null,"id"?: string,"last_digest_on"?: string | null,"last_weekly_on"?: string | null,"telegram_chat_id"?: number | null,"telegram_link_code"?: string | null,"telegram_link_request"?: number | null,"timezone"?: string,"weekly_day"?: number,"weekly_enabled"?: boolean,"weekly_time"?: string
+                    "created_at"?: string,"digest_enabled"?: boolean,"digest_time"?: string,"display_name"?: string | null,"id"?: string,"timezone"?: string,"weekly_day"?: number,"weekly_enabled"?: boolean,"weekly_time"?: string
                   }
                   Relationships: [
                     
@@ -125,24 +125,7 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "telegram_link_code":
-{ Args: Record<PropertyKey, never>; Returns: string
-                           },
-"telegram_link_poll":
-{ Args: Record<PropertyKey, never>; Returns: string
-                           },
-"telegram_send_test":
-{ Args: Record<PropertyKey, never>; Returns: undefined
-                           },
-"telegram_set_token":
-{ Args: { "p_token": string }; Returns: undefined
-                           },
-"telegram_status":
-{ Args: Record<PropertyKey, never>; Returns: Json
-                           },
-"telegram_unlink":
-{ Args: Record<PropertyKey, never>; Returns: undefined
-                           }
+            [_ in never]: never
           }
           Enums: {
             "task_priority": "urgent"|"high"|"medium"|"low","task_status": "todo"|"in_progress"|"waiting"|"done"

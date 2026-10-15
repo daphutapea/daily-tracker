@@ -11,7 +11,6 @@ import type {
   Task,
   TaskStatus,
   TaskSummary,
-  TelegramStatus,
 } from './types'
 
 const TASK_SUMMARY_COLUMNS =
@@ -39,7 +38,6 @@ export const keys = {
   projects: ['projects'] as const,
   links: ['links'] as const,
   profile: ['profile'] as const,
-  telegram: ['telegram'] as const,
 }
 
 // ---------------------------------------------------------------- tasks
@@ -357,7 +355,7 @@ export function useDeleteQuickLink() {
   })
 }
 
-// ---------------------------------------------------------------- profile & telegram
+// ---------------------------------------------------------------- profile
 
 export function useProfile() {
   return useQuery({
@@ -382,34 +380,3 @@ export function useUpdateProfile() {
   })
 }
 
-/** Telegram has answered a token check: no token, a bot name, or an error. */
-export const telegramSettled = (s: TelegramStatus | undefined) =>
-  !!s && (!s.bot_configured || !!s.bot_username || !!s.bot_error)
-
-/** With `poll`, checks every 1.5 seconds until Telegram has answered the token check, then stops. */
-export function useTelegramStatus(poll = false) {
-  return useQuery({
-    queryKey: keys.telegram,
-    queryFn: async () => must(await supabase.rpc('telegram_status')) as unknown as TelegramStatus,
-    refetchInterval: (query) => (poll && !telegramSettled(query.state.data) ? 1500 : false),
-  })
-}
-
-export function useTelegramAction<A extends unknown[], R>(fn: (...args: A) => Promise<R>) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (args: A) => fn(...args),
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: keys.telegram })
-      qc.invalidateQueries({ queryKey: keys.profile })
-    },
-  })
-}
-
-export const telegram = {
-  setToken: async (token: string) => must(await supabase.rpc('telegram_set_token', { p_token: token })),
-  linkCode: async () => must(await supabase.rpc('telegram_link_code')) as string,
-  poll: async () => must(await supabase.rpc('telegram_link_poll')) as 'pending' | 'linked' | 'not_found',
-  sendTest: async () => must(await supabase.rpc('telegram_send_test')),
-  unlink: async () => must(await supabase.rpc('telegram_unlink')),
-}
