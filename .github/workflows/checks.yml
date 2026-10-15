@@ -1,4 +1,6 @@
 # Runs on every push and pull request. The same commands work on your Mac; docs/SETUP.md lists them.
+# Pinned to Ubuntu 24.04 rather than ubuntu-latest, so a new Ubuntu release can't change the
+# machine under the checks without a deliberate update here.
 name: Checks
 
 on:
@@ -12,7 +14,7 @@ concurrency:
 jobs:
   checks:
     name: Types, lint, tests and build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -27,7 +29,7 @@ jobs:
 
   browser:
     name: Browser tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
