@@ -124,6 +124,7 @@ export function SiteIcon({ url, label, size = 16 }: { url: string; label: string
         width={size - 4}
         height={size - 4}
         loading="lazy"
+        draggable={false}
         referrerPolicy="no-referrer"
         onError={() => setFailed(true)}
       />

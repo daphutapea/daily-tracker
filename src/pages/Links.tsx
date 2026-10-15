@@ -1,6 +1,7 @@
-import { ArrowDownIcon, ArrowSquareOutIcon, ArrowUpIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react'
+import { ArrowSquareOutIcon, DotsSixVerticalIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
+import { SortableList } from '@/components/SortableList'
 import { Loading, QueryError, SiteIcon, StateMessage } from '@/components/ui'
 import { quietly, useDeleteQuickLink, useQuickLinks, useReorderQuickLinks, useSaveQuickLink } from '@/lib/queries'
 import type { QuickLink } from '@/lib/types'
@@ -47,13 +48,6 @@ export function LinksPage() {
     setUrl('')
     toast.success('Link added')
     document.getElementById('link-label')?.focus()
-  }
-
-  function move(index: number, by: -1 | 1) {
-    const list = [...(links.data ?? [])]
-    const [item] = list.splice(index, 1)
-    list.splice(index + by, 0, item)
-    reorder.mutate(list)
   }
 
   const existing = new Set(links.data?.map((l) => new URL(l.url).hostname))
@@ -130,49 +124,54 @@ export function LinksPage() {
         </div>
       ) : (
         <ul className="panel fade-in divide-y divide-line">
-          {links.data.map((l, i) =>
-            editing === l.id ? (
-              <EditRow key={l.id} link={l} onDone={() => setEditing(null)} />
-            ) : (
-              <li key={l.id} className="flex items-center gap-3 px-3 py-2">
-                <SiteIcon url={l.url} label={l.label} size={20} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{l.label}</p>
-                  <p className="truncate text-[13px] text-ink-3">{l.url}</p>
-                </div>
-                <a href={l.url} target="_blank" rel="noreferrer" className="btn btn-ghost btn-icon" aria-label={`Open ${l.label}`}>
-                  <ArrowSquareOutIcon size={16} weight="bold" />
-                </a>
-                <button type="button" className="btn btn-ghost btn-icon max-sm:hidden" aria-label={`Move ${l.label} up`} disabled={i === 0} onClick={() => move(i, -1)}>
-                  <ArrowUpIcon size={16} weight="bold" />
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-icon max-sm:hidden"
-                  aria-label={`Move ${l.label} down`}
-                  disabled={i === links.data.length - 1}
-                  onClick={() => move(i, 1)}
+          <SortableList items={links.data} getLabel={(l) => l.label} onReorder={(next) => reorder.mutate(next)} keyboard>
+            {(l, { setNodeRef, style, isDragging, handle, handleAttributes }) =>
+              editing === l.id ? (
+                <li ref={setNodeRef} style={style}>
+                  <EditRow link={l} onDone={() => setEditing(null)} />
+                </li>
+              ) : (
+                <li
+                  ref={setNodeRef}
+                  style={style}
+                  className={`flex items-center gap-2 bg-surface py-2 pr-3 pl-1 ${isDragging ? 'rounded-[6px] shadow-float' : ''}`}
                 >
-                  <ArrowDownIcon size={16} weight="bold" />
-                </button>
-                <button type="button" className="btn btn-ghost btn-icon" aria-label={`Edit ${l.label}`} onClick={() => setEditing(l.id)}>
-                  <PencilSimpleIcon size={16} weight="bold" />
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger btn-icon"
-                  aria-label={`Delete ${l.label}`}
-                  onClick={quietly(async () => {
-                    if (!window.confirm(`Remove ${l.label} from your links?`)) return
-                    await del.mutateAsync(l.id)
-                    toast.success(`${l.label} removed`)
-                  })}
-                >
-                  <TrashIcon size={16} weight="bold" />
-                </button>
-              </li>
-            ),
-          )}
+                  <button
+                    type="button"
+                    {...handleAttributes}
+                    {...handle}
+                    aria-label={`Reorder ${l.label}`}
+                    className={`btn btn-ghost btn-icon touch-none text-ink-3 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                  >
+                    <DotsSixVerticalIcon size={18} weight="bold" />
+                  </button>
+                  <SiteIcon url={l.url} label={l.label} size={20} />
+                  <div className="ml-1 min-w-0 flex-1">
+                    <p className="truncate font-medium">{l.label}</p>
+                    <p className="truncate text-[13px] text-ink-3">{l.url}</p>
+                  </div>
+                  <a href={l.url} target="_blank" rel="noreferrer" className="btn btn-ghost btn-icon" aria-label={`Open ${l.label}`}>
+                    <ArrowSquareOutIcon size={16} weight="bold" />
+                  </a>
+                  <button type="button" className="btn btn-ghost btn-icon" aria-label={`Edit ${l.label}`} onClick={() => setEditing(l.id)}>
+                    <PencilSimpleIcon size={16} weight="bold" />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-icon"
+                    aria-label={`Delete ${l.label}`}
+                    onClick={quietly(async () => {
+                      if (!window.confirm(`Remove ${l.label} from your links?`)) return
+                      await del.mutateAsync(l.id)
+                      toast.success(`${l.label} removed`)
+                    })}
+                  >
+                    <TrashIcon size={16} weight="bold" />
+                  </button>
+                </li>
+              )
+            }
+          </SortableList>
         </ul>
       )}
     </div>
@@ -194,7 +193,7 @@ function EditRow({ link, onDone }: { link: QuickLink; onDone: () => void }) {
   }
 
   return (
-    <li className="px-3 py-3">
+    <div className="px-3 py-3">
       <form onSubmit={quietly(submit)} className="space-y-2" onKeyDown={(e) => e.key === 'Escape' && onDone()}>
         <div className="grid gap-2 sm:grid-cols-[160px_1fr]">
           <input aria-label="Name" className="field" maxLength={40} value={label} autoFocus onChange={(e) => setLabel(e.target.value)} />
@@ -214,6 +213,6 @@ function EditRow({ link, onDone }: { link: QuickLink; onDone: () => void }) {
           </button>
         </div>
       </form>
-    </li>
+    </div>
   )
 }

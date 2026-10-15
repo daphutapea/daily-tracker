@@ -100,7 +100,12 @@ before) and room for details.
 
 These are the sites you open every day. On a computer they sit in the sidebar; on a phone they appear at
 the bottom of Home and under Settings. Add one with a name and an address, or press one of the
-suggestions. On a computer, the arrows change the order. The pencil edits a link and the bin removes it.
+suggestions. The pencil edits a link and the bin removes it.
+
+To change the order, drag a link up or down in the sidebar; a plain click still opens it. On the Links
+page, drag the grip at the left of a row, or press and hold it on a phone. From the keyboard, tab to a
+grip, press Space, move with the arrow keys, and press Space again to drop it. The new order saves at
+once and shows on every device.
 
 ## Reminders
 

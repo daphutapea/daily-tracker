@@ -14,9 +14,10 @@ import { toast } from 'sonner'
 import { useUserEmail } from '@/auth/session'
 import { deviceTimeZone, toDate } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
-import { useEvents, useProfile, useQuickLinks, useTasks, useUpdateProfile } from '@/lib/queries'
+import { useEvents, useProfile, useQuickLinks, useReorderQuickLinks, useTasks, useUpdateProfile } from '@/lib/queries'
 import { supabase } from '@/lib/supabase'
 import { EventDialogHost } from './EventDialog'
+import { SortableList } from './SortableList'
 import { TaskDialogHost } from './TaskDialog'
 import { SiteIcon } from './ui'
 
@@ -57,6 +58,7 @@ export function AppShell() {
 function Sidebar() {
   const email = useUserEmail()
   const links = useQuickLinks()
+  const reorder = useReorderQuickLinks()
 
   return (
     <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-line bg-surface md:flex">
@@ -104,20 +106,28 @@ function Sidebar() {
             Add the sites you open every day. <NavLink to="/links" className="underline underline-offset-2">Add a link</NavLink>
           </p>
         ) : (
+          // Drag a link up or down to reorder; a plain click still opens it. Keyboard reordering lives
+          // on the Links page, so Enter on a link here always opens the site.
           <ul className="space-y-0.5">
-            {links.data?.map((l) => (
-              <li key={l.id}>
-                <a
-                  href={l.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="row-hover flex min-h-8 items-center gap-2.5 rounded-[6px] px-2.5 text-ink-2"
-                >
-                  <SiteIcon url={l.url} label={l.label} />
-                  <span className="truncate">{l.label}</span>
-                </a>
-              </li>
-            ))}
+            <SortableList items={links.data ?? []} getLabel={(l) => l.label} onReorder={(next) => reorder.mutate(next)}>
+              {(l, { setNodeRef, style, isDragging, handle }) => (
+                <li ref={setNodeRef} style={style}>
+                  <a
+                    {...handle}
+                    href={l.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    draggable={false}
+                    className={`row-hover flex min-h-8 touch-manipulation items-center gap-2.5 rounded-[6px] px-2.5 text-ink-2 [-webkit-user-drag:none] ${
+                      isDragging ? 'cursor-grabbing bg-surface shadow-float' : ''
+                    }`}
+                  >
+                    <SiteIcon url={l.url} label={l.label} />
+                    <span className="truncate">{l.label}</span>
+                  </a>
+                </li>
+              )}
+            </SortableList>
           </ul>
         )}
       </section>
