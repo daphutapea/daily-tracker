@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     return json(200, result)
   } catch (e) {
     if (e instanceof QuickAddError) {
-      const status = { bad_request: 400, quota: 429, key: 502, model: 502 }[e.code]
+      const status = { bad_request: 400, quota: 429, busy: 503, key: 502, model: 502 }[e.code]
       return json(status, { error: e.code, message: e.message })
     }
     console.error('quick-add failed', e instanceof Error ? e.message : e)

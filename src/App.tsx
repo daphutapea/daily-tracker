@@ -1,39 +1,31 @@
+import type { ComponentType } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
 import { Toaster } from 'sonner'
 import { SignIn } from './auth/SignIn'
-import { useSession } from './auth/session'
+import { useSession } from './auth/sessionContext'
 import { AppShell } from './components/AppShell'
 import { useTheme } from './lib/theme'
-import { CalendarPage } from './pages/Calendar'
 import { HomePage } from './pages/Home'
-import { LinksPage } from './pages/Links'
-import { NotesPage } from './pages/Notes'
-import { ReviewPage } from './pages/Review'
-import { SettingsPage } from './pages/Settings'
-import { lazy, Suspense } from 'react'
 
-// The board's drag-and-drop library only loads when Tasks is opened.
-const TasksPage = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.TasksPage })))
+// Home is in the first download; every other page loads its code the first time you open it. The
+// router waits for that code before switching, so the current page stays up instead of a blank
+// "Loading" screen, and the page's code is cached after the first visit.
+const page = <K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) => async () => ({
+  Component: (await load())[name],
+})
 
 const router = createBrowserRouter([
   {
     element: <AppShell />,
     children: [
       { index: true, element: <HomePage /> },
-      {
-        path: 'tasks',
-        element: (
-          <Suspense fallback={<p className="py-8 text-center text-ink-3">Loading tasks…</p>}>
-            <TasksPage />
-          </Suspense>
-        ),
-      },
-      { path: 'notes', element: <NotesPage /> },
-      { path: 'notes/:noteId', element: <NotesPage /> },
-      { path: 'calendar', element: <CalendarPage /> },
-      { path: 'review', element: <ReviewPage /> },
-      { path: 'links', element: <LinksPage /> },
-      { path: 'settings', element: <SettingsPage /> },
+      { path: 'tasks', lazy: page(() => import('./pages/Tasks'), 'TasksPage') },
+      { path: 'notes', lazy: page(() => import('./pages/Notes'), 'NotesPage') },
+      { path: 'notes/:noteId', lazy: page(() => import('./pages/Notes'), 'NotesPage') },
+      { path: 'calendar', lazy: page(() => import('./pages/Calendar'), 'CalendarPage') },
+      { path: 'review', lazy: page(() => import('./pages/Review'), 'ReviewPage') },
+      { path: 'links', lazy: page(() => import('./pages/Links'), 'LinksPage') },
+      { path: 'settings', lazy: page(() => import('./pages/Settings'), 'SettingsPage') },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

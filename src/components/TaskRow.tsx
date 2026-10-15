@@ -1,6 +1,9 @@
 import { BellIcon } from '@phosphor-icons/react'
+import { addDays, startOfDay } from 'date-fns'
 import { formatWhen, toDate } from '@/lib/dates'
 import { useSetTaskStatus } from '@/lib/queries'
+import { useMoveTasks } from '@/lib/reschedule'
+import { useNow } from '@/lib/useNow'
 import { statusLabel, type Project, type TaskSummary } from '@/lib/types'
 import { PriorityTag, TaskCheck } from './ui'
 
@@ -10,7 +13,7 @@ export function TaskRow({
   onOpen,
   showStatus = true,
   timeOnly = false,
-  now = new Date(),
+  now: nowProp,
 }: {
   task: TaskSummary
   project?: Project
@@ -20,6 +23,9 @@ export function TaskRow({
   now?: Date
 }) {
   const setStatus = useSetTaskStatus()
+  const moveTasks = useMoveTasks()
+  const ticking = useNow()
+  const now = nowProp ?? ticking
   const done = task.status === 'done'
   const overdue = !done && task.due_at && toDate(task.due_at) < now
   const when = task.due_at
@@ -67,6 +73,31 @@ export function TaskRow({
           {!done && <PriorityTag priority={task.priority} quiet />}
         </span>
       </button>
+      {overdue && (
+        <button
+          type="button"
+          className="press -my-0.5 shrink-0 rounded-[6px] px-2 py-1 text-[13px] font-medium text-ink-2 hover:bg-surface-2 hover:text-ink"
+          aria-label={`Move “${task.title}” to tomorrow`}
+          onClick={() => moveTasks([task], addDays(startOfDay(now), 1), now)}
+        >
+          Tomorrow
+        </button>
+      )}
     </li>
+  )
+}
+
+/** For the heading of an overdue list: moves every task in it to tomorrow, with Undo. */
+export function MoveAllToTomorrow({ tasks, now }: { tasks: TaskSummary[]; now: Date }) {
+  const moveTasks = useMoveTasks()
+  if (tasks.length < 2) return null
+  return (
+    <button
+      type="button"
+      className="press -my-1 shrink-0 rounded-[6px] px-2 py-1 text-[13px] font-medium text-ink-2 hover:bg-surface hover:text-ink"
+      onClick={() => moveTasks(tasks, addDays(startOfDay(now), 1), now)}
+    >
+      Move all to tomorrow
+    </button>
   )
 }

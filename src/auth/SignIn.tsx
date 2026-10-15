@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '@/lib/supabase'
+import { LogoMark } from '@/components/Logo'
 
 export function SignIn() {
   const [email, setEmail] = useState('')
@@ -25,7 +26,8 @@ export function SignIn() {
   return (
     <main className="grid min-h-dvh place-items-center px-4 py-10">
       <div className="w-full max-w-sm">
-        <h1 className="text-xl font-semibold">Daily Tracker</h1>
+        <LogoMark size={40} />
+        <h1 className="mt-4 text-xl font-semibold">Daily Tracker</h1>
         <p className="mt-1 text-ink-2">Sign in to see your day.</p>
 
         <form onSubmit={submit} className="panel mt-6 space-y-4 p-5" noValidate>

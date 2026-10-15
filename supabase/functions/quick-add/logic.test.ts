@@ -1,7 +1,15 @@
 // Run with: npm run test:functions
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { buildUserMessage, parseRequest, proposeItems, QuickAddError, validateItems, type QuickAddRequest } from './logic.ts'
+import {
+  buildUserMessage,
+  parseRequest,
+  proposeItems,
+  QuickAddError,
+  RESPONSE_SCHEMA,
+  validateItems,
+  type QuickAddRequest,
+} from './logic.ts'
 
 const req: QuickAddRequest = {
   text: 'sync with Dennis Tuesday 10am, remind me 15 min before; finish labelling by Friday, high priority',
@@ -80,27 +88,45 @@ test('proposeItems returns validated items from the first model that answers', a
   assert.equal(calls.length, 1)
 })
 
-test('quota and unavailable models fall through to the next model', async () => {
+const perDay = { error: { details: [{ violations: [{ quotaId: 'GenerateRequestsPerDayPerProjectPerModel-FreeTier' }] }] } }
+const perMinute = { error: { details: [{ violations: [{ quotaId: 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier' }] }] } }
+
+test('quota, busy and unavailable models fall through to the next model', async () => {
   const { fetch, calls } = fakeFetch([
-    { status: 429 },
+    { status: 429, body: perDay },
+    { status: 503 },
     { status: 404 },
     { status: 200, body: geminiReply({ items: [], reply: 'Nothing to add in that note.' }) },
   ])
-  const result = await proposeItems(req, { apiKey: 'k', models: ['best', 'missing', 'lite'], fetch })
+  const result = await proposeItems(req, { apiKey: 'k', models: ['best', 'busy', 'missing', 'lite'], fetch })
   assert.equal(result.model, 'lite')
   assert.equal(result.reply, 'Nothing to add in that note.')
-  assert.equal(calls.length, 3)
+  assert.equal(calls.length, 4)
 })
 
-test('every model out of quota is reported as a quota error', async () => {
-  const { fetch } = fakeFetch([{ status: 429 }, { status: 429 }])
+test('every daily allowance used up is a quota error', async () => {
+  const { fetch } = fakeFetch([{ status: 429, body: perDay }, { status: 429, body: perDay }])
   await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a', 'b'], fetch }), (e: QuickAddError) => e.code === 'quota')
 })
 
-test('a server error stops instead of trying more models', async () => {
-  const { fetch, calls } = fakeFetch([{ status: 500 }, { status: 200 }])
+test('a per-minute limit or a busy model is reported as busy, not as the day being used up', async () => {
+  const minute = fakeFetch([{ status: 429, body: perDay }, { status: 429, body: perMinute }])
+  await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a', 'b'], fetch: minute.fetch }), (e: QuickAddError) => e.code === 'busy')
+  const busy = fakeFetch([{ status: 503 }, { status: 500 }])
+  await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a', 'b'], fetch: busy.fetch }), (e: QuickAddError) => e.code === 'busy')
+})
+
+test('a bad request stops instead of sending it to more models', async () => {
+  const { fetch, calls } = fakeFetch([{ status: 400, body: { error: { message: 'Invalid schema' } } }, { status: 200 }])
   await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a', 'b'], fetch }), (e: QuickAddError) => e.code === 'model')
   assert.equal(calls.length, 1)
+})
+
+test('every item field is required and written in an order that settles the time before all_day', () => {
+  const item = RESPONSE_SCHEMA.properties.items.items
+  assert.deepEqual([...item.required].sort(), Object.keys(item.properties).sort())
+  assert.deepEqual(item.propertyOrdering, item.required)
+  assert.ok(item.propertyOrdering.indexOf('time') < item.propertyOrdering.indexOf('all_day'))
 })
 
 test('a rejected API key is reported as a key problem', async () => {

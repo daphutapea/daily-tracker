@@ -1,7 +1,7 @@
 import { WarningIcon, XIcon } from '@phosphor-icons/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { addHours, format, subMinutes } from 'date-fns'
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import type { ProposedItem, QuickAddResult } from '../../supabase/functions/quick-add/logic.ts'
 import { deviceTimeZone, toDate } from '@/lib/dates'
@@ -9,12 +9,10 @@ import { keys, useEvents, useProjects } from '@/lib/queries'
 import { must, supabase } from '@/lib/supabase'
 import { PRIORITIES, type CalEvent } from '@/lib/types'
 import { Dialog } from './Dialog'
+import { OpenQuickAdd } from './quickAddContext'
 import { Segmented } from './ui'
 
 // ---------------------------------------------------------------- opening it from anywhere
-
-const OpenQuickAdd = createContext<(opts?: { instant?: boolean }) => void>(() => {})
-export const useOpenQuickAdd = () => useContext(OpenQuickAdd)
 
 /** Mounted once in the app shell. Cmd+K (Ctrl+K elsewhere) opens it from any page. */
 export function QuickAddProvider({ children }: { children: ReactNode }) {
@@ -54,15 +52,16 @@ export function QuickAddProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export const shortcutLabel = () => (/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K')
-
 // ---------------------------------------------------------------- the dialog
 
 interface Draft extends ProposedItem {
   key: number
 }
 
-type Phase = { name: 'compose' } | { name: 'reading' } | { name: 'review'; model: string; reply: string | null }
+type Phase =
+  | { name: 'compose' }
+  | { name: 'reading' }
+  | { name: 'review'; model: string; reply: string | null; found: number }
 
 const REMINDER_OPTIONS = [
   { value: '', label: 'No reminder' },
@@ -98,6 +97,12 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // Set when Edit note brings the note back, so it fades in then but not on first open.
+  const [returned, setReturned] = useState(false)
+  const noteRef = useRef<HTMLTextAreaElement>(null)
+  const reviewRef = useRef<HTMLDivElement>(null)
+  const editNoteRef = useRef<HTMLButtonElement>(null)
+  const focusAfterRemove = useRef<number | null>(null)
 
   const activeProjects = (projects.data ?? []).filter((p) => !p.archived)
   const ready = drafts.length > 0 && drafts.every((d) => draftProblem(d) === null)
@@ -109,7 +114,7 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
     try {
       const result = await readNote(text, activeProjects.map((p) => p.name))
       setDrafts(result.items.map((item, i) => ({ ...item, key: i })))
-      setPhase({ name: 'review', model: result.model, reply: result.reply })
+      setPhase({ name: 'review', model: result.model, reply: result.reply, found: result.items.length })
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       setPhase({ name: 'compose' })
@@ -138,16 +143,51 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
   const update = (key: number, patch: Partial<ProposedItem>) =>
     setDrafts((ds) => ds.map((d) => (d.key === key ? normalise({ ...d, ...patch }) : d)))
 
+  function remove(key: number) {
+    focusAfterRemove.current = drafts.findIndex((d) => d.key === key)
+    setDrafts((ds) => ds.filter((d) => d.key !== key))
+  }
+
+  // Removing a card removes the button that had focus. Move it to the card that took its place, the
+  // one above if it was the last, or Edit note when none are left.
+  useEffect(() => {
+    const index = focusAfterRemove.current
+    if (index === null) return
+    focusAfterRemove.current = null
+    const buttons = reviewRef.current?.querySelectorAll<HTMLButtonElement>('[data-remove]') ?? []
+    ;(buttons[Math.min(index, buttons.length - 1)] ?? editNoteRef.current)?.focus()
+  }, [drafts])
+
+  // Switching views removes the element that had focus. The review starts from the top, so Tab
+  // reaches the first card; Edit note puts you back in the note.
+  useEffect(() => {
+    if (phase.name === 'review') reviewRef.current?.focus({ preventScroll: true })
+    if (phase.name === 'compose' && returned) noteRef.current?.focus()
+  }, [phase.name, returned])
+
+  function editNote() {
+    setReturned(true)
+    setPhase({ name: 'compose' })
+  }
+
+  const reading = phase.name === 'reading'
+
   const footer =
     phase.name === 'review' ? (
       <>
         <span className="text-[12px] text-ink-3">Read by {phase.model}</span>
         <div className="ml-auto flex gap-2">
-          <button type="button" className="btn btn-quiet" onClick={() => setPhase({ name: 'compose' })}>
+          <button ref={editNoteRef} type="button" className="btn btn-quiet" onClick={editNote}>
             Edit note
           </button>
           <button type="button" className="btn btn-primary" disabled={!ready || saving} onClick={save}>
-            {saving ? 'Adding…' : drafts.length === 1 ? 'Add 1 item' : `Add ${drafts.length} items`}
+            {saving
+              ? 'Adding…'
+              : drafts.length === 0
+                ? 'Add'
+                : drafts.length === 1
+                  ? 'Add 1 item'
+                  : `Add ${drafts.length} items`}
           </button>
         </div>
       </>
@@ -157,32 +197,46 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
         <button
           type="button"
           className="btn btn-primary ml-auto"
-          disabled={!text.trim() || phase.name === 'reading'}
+          disabled={!text.trim() || reading}
           onClick={read}
         >
-          {phase.name === 'reading' ? 'Reading…' : 'Read it'}
+          {reading ? 'Reading…' : 'Read it'}
         </button>
       </>
     )
 
   return (
-    <Dialog open={open} onRequestClose={onClose} title="Quick add" footer={footer} instant={instant}>
+    <Dialog open={open} onRequestClose={onClose} title="Quick add" footer={footer} instant={instant} placement="top">
+      <p className="sr-only" aria-live="polite">
+        {reading
+          ? 'Reading your note.'
+          : phase.name === 'review'
+            ? phase.found === 0
+              ? 'No items found.'
+              : `Found ${phase.found} ${phase.found === 1 ? 'item' : 'items'}. Check them, then add.`
+            : ''}
+      </p>
       {phase.name === 'review' ? (
-        <div className="space-y-3">
-          {phase.reply && <p className="text-ink-2">{phase.reply}</p>}
+        <div ref={reviewRef} tabIndex={-1} className="space-y-3 outline-none">
+          {phase.reply && <p className="draft-in text-ink-2">{phase.reply}</p>}
           {drafts.length === 0 ? (
-            <p className="py-6 text-center text-ink-2">
-              {phase.reply ? 'Nothing to add yet.' : 'I couldn’t find a task or event in that note. Say what it is and when.'}
+            <p className="draft-in py-6 text-center text-ink-2">
+              {phase.found > 0
+                ? 'You removed every item. Edit the note to try again, or close this.'
+                : phase.reply
+                  ? 'Nothing to add yet.'
+                  : 'I couldn’t find a task or event in that note. Say what it is and when.'}
             </p>
           ) : (
-            drafts.map((d) => (
+            drafts.map((d, i) => (
               <DraftCard
                 key={d.key}
+                index={phase.reply ? i + 1 : i}
                 draft={d}
                 projects={activeProjects.map((p) => p.name)}
                 clash={d.kind === 'event' ? findClash(d, events.data ?? []) : null}
                 onChange={(patch) => update(d.key, patch)}
-                onRemove={() => setDrafts((ds) => ds.filter((x) => x.key !== d.key))}
+                onRemove={() => remove(d.key)}
               />
             ))
           )}
@@ -193,30 +247,36 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
           )}
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className={`space-y-2 ${returned ? 'fade-in' : ''}`}>
           <label htmlFor="quick-add-text" className="label">
             What’s coming up?
           </label>
-          <textarea
-            id="quick-add-text"
-            data-autofocus
-            rows={4}
-            maxLength={2000}
-            className="field resize-y"
-            placeholder={EXAMPLE}
-            value={text}
-            disabled={phase.name === 'reading'}
-            onChange={(e) => setText(e.target.value)}
+          {/* Read-only rather than disabled while reading, so focus stays in the note. */}
+          <div className="relative">
+            <textarea
+              ref={noteRef}
+              id="quick-add-text"
+              data-autofocus
+              rows={4}
+              maxLength={2000}
+              className={`field block ${reading ? 'resize-none text-ink-2' : 'resize-y'}`}
+              placeholder={EXAMPLE}
+              value={text}
+              readOnly={reading}
+              aria-busy={reading}
+              onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault()
                 read()
               }
             }}
-          />
+            />
+            {reading && <span aria-hidden className="working-line" />}
+          </div>
           <p className="text-[13px] text-ink-3">
-            Write it the way you’d say it, in English or Bahasa Indonesia. Several things at once is fine. Cmd+Enter
-            reads it.
+            Write it the way you’d say it, in English or Bahasa Indonesia. Several things at once is fine.
+            <span className="pointer-coarse:hidden"> Cmd+Enter reads it.</span>
           </p>
           {error && (
             <p role="alert" className="text-danger">
@@ -232,12 +292,14 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
 // ---------------------------------------------------------------- one proposed item
 
 function DraftCard({
+  index,
   draft: d,
   projects,
   clash,
   onChange,
   onRemove,
 }: {
+  index: number
   draft: Draft
   projects: string[]
   clash: CalEvent | null
@@ -251,7 +313,11 @@ function DraftCard({
     : [...REMINDER_OPTIONS, { value: String(d.remind_minutes_before), label: `${d.remind_minutes_before} min before` }]
 
   return (
-    <section aria-label={d.title} className="rounded-[10px] border border-line p-3">
+    <section
+      aria-label={d.title}
+      className="draft-in rounded-[10px] border border-line p-3"
+      style={{ '--i': index } as CSSProperties}
+    >
       <div className="flex items-center gap-2">
         <Segmented<ProposedItem['kind']>
           label="Type"
@@ -262,7 +328,13 @@ function DraftCard({
             { value: 'event', label: 'Event' },
           ]}
         />
-        <button type="button" className="btn btn-ghost btn-icon ml-auto" aria-label={`Remove ${d.title}`} onClick={onRemove}>
+        <button
+          type="button"
+          data-remove
+          className="btn btn-ghost btn-icon ml-auto"
+          aria-label={`Remove ${d.title}`}
+          onClick={onRemove}
+        >
           <XIcon size={16} weight="bold" />
         </button>
       </div>

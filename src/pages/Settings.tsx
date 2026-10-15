@@ -1,13 +1,33 @@
-import { ArrowSquareOutIcon, CaretRightIcon, CheckIcon, SignOutIcon, TelegramLogoIcon } from '@phosphor-icons/react'
+import {
+  ArrowSquareOutIcon,
+  BellIcon,
+  CaretRightIcon,
+  CheckIcon,
+  DownloadSimpleIcon,
+  SignOutIcon,
+  TelegramLogoIcon,
+} from '@phosphor-icons/react'
+import { format } from 'date-fns'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
 import { toast } from 'sonner'
-import { useUserEmail } from '@/auth/session'
+import { useUserEmail } from '@/auth/sessionContext'
 import { Loading, QueryError, Segmented } from '@/components/ui'
 import { deviceTimeZone } from '@/lib/dates'
 import {
+  inMacApp,
+  postToMac,
+  saveFile,
+  setMacBadgeEnabled,
+  setMacRemindersEnabled,
+  useMacBadgeEnabled,
+  useMacPermission,
+  useMacRemindersEnabled,
+} from '@/lib/native'
+import {
   quietly,
   telegram,
+  telegramSettled,
   useDeleteProject,
   useProfile,
   useProjects,
@@ -16,7 +36,7 @@ import {
   useTelegramStatus,
   useUpdateProfile,
 } from '@/lib/queries'
-import { supabase } from '@/lib/supabase'
+import { must, supabase } from '@/lib/supabase'
 import { updateTheme, useTheme, type DarkPalette, type LightPalette, type Palette, type ThemeMode } from '@/lib/theme'
 import type { Profile, TelegramStatus } from '@/lib/types'
 
@@ -38,6 +58,7 @@ export function SettingsPage() {
       ) : (
         <div className="fade-in space-y-6">
           <ProfileSection profile={profile.data} />
+          {inMacApp && <MacAppSection />}
           <TelegramSection profile={profile.data} />
           <ProjectsSection />
           <AppearanceSection />
@@ -45,6 +66,7 @@ export function SettingsPage() {
             <span className="font-medium">Quick links</span>
             <CaretRightIcon size={16} weight="bold" className="text-ink-3" />
           </Link>
+          <DataSection />
           <AccountSection />
         </div>
       )}
@@ -119,14 +141,10 @@ function ProfileSection({ profile }: { profile: Profile }) {
 // ---------------------------------------------------------------- telegram
 
 function TelegramSection({ profile }: { profile: Profile }) {
-  const [checkingToken, setCheckingToken] = useState(false)
-  const status = useTelegramStatus(checkingToken)
+  const [tokenSaved, setTokenSaved] = useState(false)
+  const status = useTelegramStatus(tokenSaved)
   const s = status.data
-
-  useEffect(() => {
-    // Stop polling once Telegram has answered the token check.
-    if (s && (!s.bot_configured || s.bot_username || s.bot_error)) setCheckingToken(false)
-  }, [s])
+  const checkingToken = tokenSaved && !telegramSettled(s)
 
   return (
     <Section
@@ -141,7 +159,7 @@ function TelegramSection({ profile }: { profile: Profile }) {
       ) : (
         <ol className="space-y-5">
           <Step n={1} title="Create your bot" done={!!s!.bot_username}>
-            <BotStep status={s!} onSaved={() => setCheckingToken(true)} checking={checkingToken} />
+            <BotStep status={s!} onSaved={() => setTokenSaved(true)} checking={checkingToken} />
           </Step>
           <Step n={2} title="Link your Telegram chat" done={s!.linked} disabled={!s!.bot_username}>
             <LinkStep status={s!} />
@@ -672,6 +690,122 @@ function PalettePreview({ palette }: { palette: Palette }) {
   )
 }
 
+function MacAppSection() {
+  const permission = useMacPermission()
+  const enabled = useMacRemindersEnabled()
+  const badge = useMacBadgeEnabled()
+  return (
+    <Section
+      id="mac"
+      title="Mac app"
+      intro="Reminders for the next two weeks are handed to macOS, so they arrive even when the window is closed or the app has quit. Each one can be marked done or snoozed for 10 minutes from the notification."
+    >
+      <div className="space-y-3">
+        <p className="text-ink-2">
+          Press <kbd className="font-sans font-medium text-ink">⌥⌘T</kbd> in any app to open Quick add. The menu bar icon
+          lists what’s left today.
+        </p>
+        <label className="flex min-h-9 cursor-pointer items-center gap-2 font-medium">
+          <input
+            type="checkbox"
+            className="size-4 accent-[var(--ink)]"
+            checked={enabled}
+            onChange={(e) => setMacRemindersEnabled(e.target.checked)}
+          />
+          Show reminders as Mac notifications
+        </label>
+        <label className="flex min-h-9 cursor-pointer items-center gap-2 font-medium">
+          <input
+            type="checkbox"
+            className="size-4 accent-[var(--ink)]"
+            checked={badge}
+            onChange={(e) => setMacBadgeEnabled(e.target.checked)}
+          />
+          Show how many tasks are overdue on the Dock icon
+        </label>
+        {permission === 'denied' && (
+          <div className="space-y-2">
+            <p className="text-warn">Notifications are turned off for Daily Tracker in System Settings, so none will show.</p>
+            <button type="button" className="btn btn-quiet" onClick={() => postToMac({ type: 'openNotificationSettings' })}>
+              Open System Settings
+            </button>
+          </div>
+        )}
+        {permission === 'undetermined' && enabled && (
+          <div className="space-y-2">
+            <p className="text-ink-2">macOS hasn’t been asked yet. It asks once, when the first reminder is coming up, or now:</p>
+            <button type="button" className="btn btn-quiet" onClick={() => postToMac({ type: 'requestPermission' })}>
+              Allow notifications
+            </button>
+          </div>
+        )}
+        {permission === 'granted' && enabled && (
+          <button type="button" className="btn btn-quiet" onClick={() => postToMac({ type: 'testNotification' })}>
+            <BellIcon size={16} weight="bold" />
+            Send a test notification
+          </button>
+        )}
+        <p className="text-[13px] text-ink-3">
+          Closing the window keeps Daily Tracker in the menu bar, so reminders stay up to date. Changes made on another
+          device reach this Mac the next time the app is running.
+        </p>
+      </div>
+    </Section>
+  )
+}
+
+/** Everything you've added, as one file. The Telegram bot token stays in Supabase Vault. */
+function DataSection() {
+  const [busy, setBusy] = useState(false)
+
+  async function download() {
+    setBusy(true)
+    try {
+      const [tasks, events, notes, projects, quickLinks, settings] = await Promise.all([
+        supabase.from('tasks').select('*').order('created_at'),
+        supabase.from('events').select('*').order('starts_at'),
+        supabase.from('notes').select('*').order('created_at'),
+        supabase.from('projects').select('*').order('created_at'),
+        supabase.from('quick_links').select('*').order('position'),
+        supabase
+          .from('profiles')
+          .select('display_name,timezone,digest_enabled,digest_time,weekly_enabled,weekly_day,weekly_time,created_at')
+          .single(),
+      ])
+      const data = {
+        app: 'Daily Tracker',
+        version: __APP_VERSION__,
+        exported_at: new Date().toISOString(),
+        tasks: must(tasks),
+        events: must(events),
+        notes: must(notes),
+        projects: must(projects),
+        quick_links: must(quickLinks),
+        settings: must(settings),
+      }
+      saveFile(`daily-tracker-${format(new Date(), 'yyyy-MM-dd')}.json`, JSON.stringify(data, null, 2), 'application/json')
+      if (!inMacApp) toast.success('Downloaded a copy of your data')
+    } catch (e) {
+      toast.error(`Couldn’t make the copy: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Section
+      title="Your data"
+      intro="A copy of everything you’ve added: tasks, notes, events, projects, quick links and your settings, as one JSON file. Keep one somewhere safe now and then; Supabase holds the only other copy."
+    >
+      <button type="button" className="btn btn-quiet" disabled={busy} onClick={download}>
+        <DownloadSimpleIcon size={16} weight="bold" />
+        {busy ? 'Preparing…' : 'Download a copy'}
+      </button>
+      <p className="mt-2 text-[13px] text-ink-3">Your Telegram bot token isn’t included; it stays encrypted in Supabase.</p>
+    </Section>
+  )
+}
+
 function AccountSection() {
   const email = useUserEmail()
   return (
@@ -685,6 +819,7 @@ function AccountSection() {
           Sign out
         </button>
       </div>
+      <p className="mt-3 text-[13px] text-ink-3">Daily Tracker v{__APP_VERSION__.split('.').slice(0, 2).join('.')}</p>
     </Section>
   )
 }

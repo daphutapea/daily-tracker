@@ -2,24 +2,25 @@ import { CaretLeftIcon, CaretRightIcon, PlusIcon } from '@phosphor-icons/react'
 import { addMonths, format, isSameDay, isSameMonth, isValid, parseISO, startOfMonth } from 'date-fns'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { monthGrid, WEEKDAYS } from '@/components/MiniMonth'
+import { monthGrid, WEEKDAYS } from '@/lib/month'
 import { TaskRow } from '@/components/TaskRow'
 import { Loading, QueryError, StateMessage } from '@/components/ui'
 import { sameDay, toDate } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
 import { useEvents, useProjects, useTasks } from '@/lib/queries'
+import { useNow } from '@/lib/useNow'
 import type { CalEvent, Project, TaskSummary } from '@/lib/types'
 
 export function CalendarPage() {
   const [params, setParams] = useSearchParams()
+  const today = useNow()
   const parsed = params.get('date') ? parseISO(params.get('date')!) : null
-  const selected = parsed && isValid(parsed) ? parsed : new Date()
+  const selected = parsed && isValid(parsed) ? parsed : today
   const [month, setMonth] = useState(() => startOfMonth(selected))
   const tasks = useTasks()
   const events = useEvents()
   const projects = useProjects()
   const { openTask, openEvent } = useDialogs()
-  const today = new Date()
   const selectedKey = format(selected, 'yyyy-MM-dd')
 
   const days = useMemo(() => monthGrid(month), [month])

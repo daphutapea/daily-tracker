@@ -62,6 +62,8 @@
     --ink-3: #8796aa;
     --accent: #2dd4bf;
     --on-accent: #0b1524;
+    /* A faint edge so the logo's ink tile holds its shape on dark surfaces. */
+    --logo-edge: rgb(255 255 255 / 0.16);
     --danger: #f97066;
     --warn: #fdb022;
     --ok: #47cd89;
@@ -82,6 +84,8 @@
   --ink-3: #8796aa;
   --accent: #2dd4bf;
   --on-accent: #0b1524;
+  /* A faint edge so the logo's ink tile holds its shape on dark surfaces. */
+  --logo-edge: rgb(255 255 255 / 0.16);
   --danger: #f97066;
   --warn: #fdb022;
   --ok: #47cd89;
@@ -101,6 +105,8 @@
   --ink-3: #8f8f8f;
   --accent: #2dd4bf;
   --on-accent: #121212;
+  /* A faint edge so the logo's ink tile holds its shape on dark surfaces. */
+  --logo-edge: rgb(255 255 255 / 0.16);
   --danger: #f97066;
   --warn: #fdb022;
   --ok: #47cd89;
@@ -307,6 +313,64 @@
     }
   }
 
+  /*
+   * Items the AI drafted rise into place one after another, so they read as separate things to
+   * check. --i is the item's position; the stagger stops growing after the fourth.
+   */
+  .draft-in {
+    transition:
+      opacity 200ms var(--ease-out),
+      transform 200ms var(--ease-out);
+    transition-delay: calc(min(var(--i, 0), 4) * 40ms);
+    @starting-style {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+
+  /*
+   * While the AI reads a note (one to several seconds), a short line sweeps along the bottom of the
+   * note so the wait doesn't look frozen. It is the only looping motion in the app and exists only
+   * while a request is in flight. It shows after 300ms, so a quick answer never flashes it.
+   */
+  .working-line {
+    position: absolute;
+    inset-inline: 1px;
+    bottom: 1px;
+    height: 2px;
+    overflow: hidden;
+    border-radius: 0 0 var(--radius-control) var(--radius-control);
+    opacity: 0;
+    animation: working-show 150ms var(--ease-out) 300ms forwards;
+  }
+  .working-line::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    width: 30%;
+    background: var(--ink-2);
+    /* -100% to 333% of its own width carries it from just off the left edge to just off the right. */
+    animation: working-sweep 1.2s linear infinite;
+  }
+}
+
+@keyframes working-show {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes working-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(333%);
+  }
+}
+
+@layer components {
+
   .section-label {
     font-size: 13px;
     font-weight: 500;
@@ -352,6 +416,14 @@ dialog.sheet {
 }
 dialog.sheet.sheet-sm {
   width: min(520px, calc(100vw - 32px));
+}
+/* Pinned near the top so a dialog whose content grows (Quick add's drafts) extends downward. Phones
+   keep the bottom sheet. */
+@media (min-width: 640px) {
+  dialog.sheet.sheet-top {
+    margin-top: min(12vh, 96px);
+    max-height: min(860px, calc(100dvh - min(12vh, 96px) - 24px));
+  }
 }
 dialog.sheet:not([open]) {
   opacity: 0;
@@ -425,6 +497,15 @@ dialog.sheet.sheet-instant::backdrop {
   .press:active:not(:disabled),
   .chip:active:not(:disabled) {
     scale: none;
+  }
+  /* Drafts still fade in, without rising. The busy line goes; the button keeps saying Reading…. */
+  .draft-in {
+    @starting-style {
+      transform: none;
+    }
+  }
+  .working-line {
+    display: none;
   }
 }
 

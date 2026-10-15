@@ -8,6 +8,8 @@ import { toast } from 'sonner'
 import { fromLocalInput, toDate, toLocalInput } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
 import { quietly, useDeleteTask, useProfile, useProjects, useSaveTask, useTask } from '@/lib/queries'
+import { useOfferUndo } from '@/lib/undo'
+import { useNow } from '@/lib/useNow'
 import { PRIORITIES, STATUSES, type Task, type TaskLink, type TaskPriority, type TaskStatus } from '@/lib/types'
 import { Dialog } from './Dialog'
 import { RichEditor } from './LazyRichEditor'
@@ -19,10 +21,9 @@ export function TaskDialogHost() {
   const [shown, setShown] = useState<{ id: string; due: string | null } | null>(null)
   const dirtyRef = useRef(false)
 
-  // Keep the last task rendered while the dialog animates closed.
-  useEffect(() => {
-    if (taskId) setShown({ id: taskId, due })
-  }, [taskId, due])
+  // Keep the last task rendered while the dialog animates closed. Adjusting state during render
+  // (rather than in an effect) avoids rendering the old task once more first.
+  if (taskId && (shown?.id !== taskId || shown.due !== due)) setShown({ id: taskId, due })
 
   const requestClose = () => {
     if (dirtyRef.current && !window.confirm('Discard your changes to this task?')) return
@@ -112,6 +113,7 @@ function TaskForm({
   const [error, setError] = useState<string | null>(null)
   const save = useSaveTask()
   const del = useDeleteTask()
+  const offerUndo = useOfferUndo()
   const projects = useProjects()
   const profile = useProfile()
   const formRef = useRef<HTMLFormElement>(null)
@@ -124,7 +126,8 @@ function TaskForm({
   const up = <K extends keyof FormState>(k: K, v: FormState[K]) => setF((s) => ({ ...s, [k]: v }))
   const dueDate = f.due ? new Date(f.due) : null
   const remindDate = f.remind ? new Date(f.remind) : null
-  const remindInPast = remindDate && remindDate.getTime() < Date.now() - 60_000
+  const now = useNow(30_000)
+  const remindInPast = remindDate && remindDate.getTime() < now.getTime() - 60_000
   const telegramLinked = !!profile.data?.telegram_chat_id
 
   async function submit(e?: FormEvent) {
@@ -169,17 +172,17 @@ function TaskForm({
   }
 
   async function remove() {
-    if (!task || !window.confirm('Delete this task? This can’t be undone.')) return
+    if (!task) return
     await del.mutateAsync(task.id)
     dirtyRef.current = false
-    toast.success('Task deleted')
+    offerUndo(`Deleted “${task.title}”`, 'tasks', task)
     onDone()
   }
 
   return (
     <form
       ref={formRef}
-      onSubmit={quietly(submit)}
+      onSubmit={(e) => quietly(submit)(e)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
           e.preventDefault()
@@ -383,7 +386,7 @@ function TaskForm({
       {/* -bottom-4 cancels the scroll area's bottom padding so the bar sits flush with the dialog edge. */}
       <div className="safe-bottom sticky -bottom-4 -mx-5 -mb-4 flex flex-wrap items-center gap-2 border-t border-line bg-surface px-5 py-3">
         {task && (
-          <button type="button" className="btn btn-danger -ml-2" onClick={quietly(remove)} disabled={del.isPending}>
+          <button type="button" className="btn btn-danger -ml-2" onClick={() => quietly(remove)()} disabled={del.isPending}>
             <TrashIcon size={16} weight="bold" />
             Delete
           </button>

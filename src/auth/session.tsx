@@ -1,11 +1,7 @@
-import type { Session } from '@supabase/supabase-js'
 import { useQueryClient } from '@tanstack/react-query'
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
-
-type SessionState = { status: 'loading' } | { status: 'signed-out' } | { status: 'signed-in'; session: Session }
-
-const SessionContext = createContext<SessionState>({ status: 'loading' })
+import { SessionContext, type SessionState } from './sessionContext'
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient()
@@ -23,11 +19,4 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [qc])
 
   return <SessionContext.Provider value={state}>{children}</SessionContext.Provider>
-}
-
-export const useSession = () => useContext(SessionContext)
-
-export function useUserEmail() {
-  const s = useSession()
-  return s.status === 'signed-in' ? (s.session.user.email ?? '') : ''
 }

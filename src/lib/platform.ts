@@ -1,0 +1,2 @@
+/** The Quick add shortcut as this keyboard shows it. */
+export const shortcutLabel = () => (/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K')

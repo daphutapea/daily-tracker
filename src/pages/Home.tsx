@@ -1,26 +1,19 @@
 import { CalendarBlankIcon, ChatTextIcon, NotePencilIcon, PlusIcon } from '@phosphor-icons/react'
 import { addDays, format, isSameDay, startOfDay } from 'date-fns'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Breakdown, FinishedPerDay, Meter } from '@/components/Charts'
 import { DayRuler } from '@/components/DayRuler'
 import { MiniMonth } from '@/components/MiniMonth'
-import { shortcutLabel, useOpenQuickAdd } from '@/components/QuickAdd'
-import { TaskRow } from '@/components/TaskRow'
+import { useOpenQuickAdd } from '@/components/quickAddContext'
+import { MoveAllToTomorrow, TaskRow } from '@/components/TaskRow'
 import { Loading, QueryError, SiteIcon, StateMessage } from '@/components/ui'
 import { formatDay, greeting, lastNDays, sameDay, toDate, weekRange } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
+import { shortcutLabel } from '@/lib/platform'
 import { quietly, useCreateNote, useEvents, useProfile, useProjects, useQuickLinks, useTasks } from '@/lib/queries'
 import { PRIORITIES, PRIORITY_RANK, STATUSES, type CalEvent, type TaskSummary } from '@/lib/types'
-
-function useNow(intervalMs: number) {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), intervalMs)
-    return () => window.clearInterval(id)
-  }, [intervalMs])
-  return now
-}
+import { useNow } from '@/lib/useNow'
 
 export function HomePage() {
   const now = useNow(30_000)
@@ -136,7 +129,9 @@ export function HomePage() {
                 <>
                   {d.overdue.length > 0 && (
                     <>
-                      <SubHead tone="danger">Overdue · {d.overdue.length}</SubHead>
+                      <SubHead tone="danger" action={<MoveAllToTomorrow tasks={d.overdue} now={now} />}>
+                        Overdue · {d.overdue.length}
+                      </SubHead>
                       <ul className="divide-y divide-line">
                         {d.overdue.map((t) => (
                           <TaskRow key={t.id} task={t} project={projectById.get(t.project_id ?? '')} onOpen={openTask} now={now} />
@@ -321,15 +316,12 @@ function Panel({
   )
 }
 
-function SubHead({ children, tone }: { children: ReactNode; tone?: 'danger' }) {
+function SubHead({ children, tone, action }: { children: ReactNode; tone?: 'danger'; action?: ReactNode }) {
   return (
-    <h3
-      className={`border-t border-line bg-surface-2/50 px-4 py-1.5 text-[13px] font-medium ${
-        tone === 'danger' ? 'text-danger' : 'text-ink-2'
-      }`}
-    >
-      {children}
-    </h3>
+    <div className="flex items-center justify-between gap-2 border-t border-line bg-surface-2/50 px-4 py-1.5">
+      <h3 className={`text-[13px] font-medium ${tone === 'danger' ? 'text-danger' : 'text-ink-2'}`}>{children}</h3>
+      {action}
+    </div>
   )
 }
 

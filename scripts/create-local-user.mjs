@@ -1,9 +1,7 @@
 // Creates the owner account on the LOCAL Supabase stack (npx supabase start) for development.
 // Never point this at the hosted project: there you create your own account in the dashboard.
 import { execSync } from "node:child_process";
-
-const LOCAL_EMAIL = "owner@daily-tracker.test";
-const LOCAL_PASSWORD = "local-dev-only-7f3k";
+import { LOCAL_EMAIL, LOCAL_PASSWORD } from "./local-user.mjs";
 
 const env = Object.fromEntries(
   execSync("npx supabase status -o env", { encoding: "utf8" })

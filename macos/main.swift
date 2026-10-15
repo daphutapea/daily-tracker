@@ -3,6 +3,11 @@
 // from Supabase over the network, so the app and the browser version share everything.
 
 import AppKit
+import Carbon.HIToolbox
+import OSLog
+import ServiceManagement
+import UniformTypeIdentifiers
+import UserNotifications
 import WebKit
 
 private let appScheme = "dailytracker"
@@ -85,10 +90,99 @@ final class BundleSchemeHandler: NSObject, WKURLSchemeHandler {
   }
 }
 
+/// A reminder the page handed over (src/lib/native.ts). macOS keeps it and shows it at `at`, even if
+/// the window is closed or the app has quit.
+private struct Reminder: Sendable {
+  let id: String
+  let kind: String
+  let taskId: String?
+  let title: String
+  let body: String
+  let at: Date
+  let path: String
+
+  init?(_ raw: Any) {
+    guard let d = raw as? [String: Any],
+      let id = d["id"] as? String, let kind = d["kind"] as? String, let title = d["title"] as? String,
+      let body = d["body"] as? String, let at = d["at"] as? Double, let path = d["path"] as? String
+    else { return nil }
+    self.id = id
+    self.kind = kind
+    self.taskId = d["taskId"] as? String
+    self.title = title
+    self.body = body
+    self.at = Date(timeIntervalSince1970: at / 1000)
+    self.path = path
+  }
+}
+
+/// Reminders scheduled from the page carry this prefix, so a refresh replaces them and nothing else.
+private let reminderPrefix = "reminder:"
+
+/// One line of the menu bar's Today list (src/lib/reminders.ts, todaySummary).
+private struct TodayItem {
+  let when: String
+  let title: String
+  let path: String
+}
+
+private let log = Logger(subsystem: "com.daphutapea.dailytracker", category: "app")
+
+/// Writes a line to the system log and to ~/Library/Logs/DailyTracker.log, which Console.app lists
+/// under Log Reports and which can be read without special permissions.
+private func note(_ message: String) {
+  log.notice("\(message, privacy: .public)")
+  let url = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library/Logs/DailyTracker.log")
+  let line = Data("\(ISO8601DateFormatter().string(from: Date())) \(message)\n".utf8)
+  if let handle = try? FileHandle(forWritingTo: url) {
+    _ = try? handle.seekToEnd()
+    try? handle.write(contentsOf: line)
+    try? handle.close()
+  } else {
+    try? line.write(to: url)
+  }
+}
+
+/// ⌥⌘T from any app opens Quick add. Carbon's hot keys need no Accessibility permission, unlike
+/// watching every key press. The handler is a C function, so it reaches the app through `shared`.
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate {
+private enum QuickAddHotKey {
+  static weak var shared: AppDelegate?
+  private static var ref: EventHotKeyRef?
+
+  static func register(for delegate: AppDelegate) {
+    shared = delegate
+    var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+    // The event dispatcher target, as the HotKey library uses, receives the press whichever app is
+    // in front; the application target is only guaranteed while this app is active.
+    let handler = InstallEventHandler(GetEventDispatcherTarget(), { _, _, _ in
+      note("⌥⌘T pressed")
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated { QuickAddHotKey.shared?.quickAddFromAnywhere() }
+      }
+      return noErr
+    }, 1, &spec, nil, nil)
+    let id = EventHotKeyID(signature: OSType(0x4454_4B31), id: 1)  // "DTK1"
+    let status = RegisterEventHotKey(
+      UInt32(kVK_ANSI_T), UInt32(cmdKey | optionKey), id, GetEventDispatcherTarget(), 0, &ref)
+    note("⌥⌘T shortcut: handler \(handler), registration \(status) (0 means ready)")
+  }
+}
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler,
+  UNUserNotificationCenterDelegate
+{
   private var window: NSWindow!
   private var webView: WKWebView!
+  private var statusItem: NSStatusItem?
+  private var nextReminder: Reminder?
+  private var todayItems: [TodayItem] = []
+  private var overdueCount = 0
+  private var hasShownWindow = false
+  /// True once the page has mounted and said hello. Until then, messages for it wait in `heldForPage`.
+  private var pageListening = false
+  private var heldForPage: [[String: String]] = []
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     NSApp.mainMenu = makeMainMenu()
@@ -97,6 +191,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     let configuration = WKWebViewConfiguration()
     configuration.setURLSchemeHandler(BundleSchemeHandler(root: webRoot), forURLScheme: appScheme)
     configuration.websiteDataStore = .default()  // keeps you signed in between launches
+    configuration.userContentController.add(self, name: "dailyTracker")
 
     webView = WKWebView(frame: .zero, configuration: configuration)
     webView.navigationDelegate = self
@@ -126,10 +221,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
       return
     }
 
+    let center = UNUserNotificationCenter.current()
+    center.delegate = self
+    center.setNotificationCategories([
+      UNNotificationCategory(
+        identifier: "task",
+        actions: [
+          UNNotificationAction(identifier: "done", title: "Mark done", options: []),
+          UNNotificationAction(identifier: "snooze", title: "Snooze 10 minutes", options: []),
+        ],
+        intentIdentifiers: []
+      ),
+      UNNotificationCategory(
+        identifier: "event",
+        actions: [UNNotificationAction(identifier: "snooze", title: "Snooze 10 minutes", options: [])],
+        intentIdentifiers: []
+      ),
+    ])
+    makeStatusItem()
+    QuickAddHotKey.register(for: self)
+
     // Stay hidden until the first page paints so dark mode never flashes white. The timer is a
     // fallback in case the load is slow.
     Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { [weak self] _ in
-      MainActor.assumeIsolated { self?.showWindow() }
+      MainActor.assumeIsolated { self?.showWindowOnce() }
     }
   }
 
@@ -142,14 +257,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
       print("SMOKE TEST FAILED: the page rendered nothing")
       exit(1)
     }
+    // Reminders, the menu bar and Save all depend on the page seeing this message handler.
+    let bridge = (try? await webView.evaluateJavaScript("typeof window.webkit?.messageHandlers?.dailyTracker?.postMessage")) as? String
+    if bridge != "function" {
+      print("SMOKE TEST FAILED: the page can't reach the app (no dailyTracker message handler)")
+      exit(1)
+    }
     print("SMOKE TEST OK: \(summary)")
     exit(0)
   }
 
-  func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+  /// Closing the window keeps the app running in the menu bar, so reminders stay in step with your
+  /// data. Quit with Cmd+Q; reminders already handed to macOS still arrive after that.
+  func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
-  private func showWindow() {
-    guard !window.isVisible else { return }
+  func applicationWillTerminate(_ notification: Notification) {
+    if !isSmokeTest { note("Quit") }
+  }
+
+  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+    bringToFront()
+    return true
+  }
+
+  /// The first show after launch. Later page loads (a reload, a crashed web process) leave a closed
+  /// window closed.
+  private func showWindowOnce() {
+    guard !hasShownWindow else { return }
+    hasShownWindow = true
+    bringToFront()
+  }
+
+  private func bringToFront() {
     window.makeKeyAndOrderFront(nil)
     NSApp.activate()
   }
@@ -160,12 +299,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
   // MARK: Navigation
 
+  func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+    pageListening = false
+  }
+
   func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
     if isSmokeTest {
       Task { await reportSmokeTest() }
       return
     }
-    showWindow()
+    showWindowOnce()
   }
 
   func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: any Error) {
@@ -173,7 +316,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
       print("SMOKE TEST FAILED: \(error.localizedDescription)")
       exit(1)
     }
-    showWindow()
+    showWindowOnce()
   }
 
   func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
@@ -216,6 +359,300 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     _ = await alert.beginSheetModal(for: window)
   }
 
+  // MARK: Messages from and to the page (src/lib/native.ts)
+
+  func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+    guard let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
+    switch type {
+    case "hello":
+      pageListening = true
+      let held = heldForPage
+      heldForPage = []
+      held.forEach(sendToPage)
+      Task { await reportPermission() }
+    case "reminders":
+      let reminders = (body["reminders"] as? [Any] ?? []).compactMap(Reminder.init)
+      Task { await schedule(reminders) }
+    case "today":
+      overdueCount = body["overdue"] as? Int ?? 0
+      todayItems = (body["items"] as? [[String: Any]] ?? []).compactMap { d in
+        guard let when = d["when"] as? String, let title = d["title"] as? String, let path = d["path"] as? String
+        else { return nil }
+        return TodayItem(when: when, title: title, path: path)
+      }
+      let badge = body["badge"] as? Int ?? 0
+      NSApp.dockTile.badgeLabel = badge > 0 ? String(badge) : nil
+      rebuildStatusMenu()
+    case "requestPermission":
+      Task { await requestPermission() }
+    case "openNotificationSettings":
+      let id = Bundle.main.bundleIdentifier ?? ""
+      if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)") {
+        NSWorkspace.shared.open(url)
+      }
+    case "testNotification":
+      Task { await sendTestNotification() }
+    case "save":
+      save(filename: body["filename"] as? String ?? "daily-tracker.json", content: body["content"] as? String ?? "")
+    default:
+      break
+    }
+  }
+
+  private func sendToPage(_ message: [String: String]) {
+    guard pageListening else {
+      heldForPage.append(message)
+      return
+    }
+    guard let data = try? JSONSerialization.data(withJSONObject: message), let json = String(data: data, encoding: .utf8)
+    else { return }
+    webView.evaluateJavaScript("window.dailyTrackerNative && window.dailyTrackerNative(\(json))", completionHandler: nil)
+  }
+
+  // MARK: Notifications
+
+  private func authorizationStatus() async -> UNAuthorizationStatus {
+    await withCheckedContinuation { continuation in
+      UNUserNotificationCenter.current().getNotificationSettings { continuation.resume(returning: $0.authorizationStatus) }
+    }
+  }
+
+  private func reportPermission() async {
+    let status =
+      switch await authorizationStatus() {
+      case .authorized, .provisional: "granted"
+      case .denied: "denied"
+      default: "undetermined"
+      }
+    sendToPage(["type": "permission", "status": status])
+  }
+
+  private func requestPermission() async {
+    _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+    await reportPermission()
+  }
+
+  /// Replaces every reminder handed over earlier with the page's current list.
+  private func schedule(_ reminders: [Reminder]) async {
+    let center = UNUserNotificationCenter.current()
+    let upcoming = reminders.filter { $0.at > Date() }
+    if !upcoming.isEmpty, await authorizationStatus() == .notDetermined {
+      await requestPermission()
+    }
+
+    let stale: [String] = await withCheckedContinuation { continuation in
+      center.getPendingNotificationRequests { requests in
+        continuation.resume(returning: requests.map(\.identifier).filter { $0.hasPrefix(reminderPrefix) })
+      }
+    }
+    center.removePendingNotificationRequests(withIdentifiers: stale)
+
+    for reminder in upcoming {
+      let content = UNMutableNotificationContent()
+      content.title = reminder.title
+      content.body = reminder.body
+      content.sound = .default
+      content.categoryIdentifier = reminder.kind
+      content.userInfo = ["path": reminder.path, "taskId": reminder.taskId ?? ""]
+      let when = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: reminder.at)
+      let request = UNNotificationRequest(
+        identifier: reminderPrefix + reminder.id,
+        content: content,
+        trigger: UNCalendarNotificationTrigger(dateMatching: when, repeats: false)
+      )
+      try? await center.add(request)
+    }
+    nextReminder = upcoming.first
+    rebuildStatusMenu()
+  }
+
+  private func sendTestNotification() async {
+    if await authorizationStatus() == .notDetermined { await requestPermission() }
+    let content = UNMutableNotificationContent()
+    content.title = "Daily Tracker"
+    content.body = "Notifications work. Your reminders will look like this."
+    content.sound = .default
+    content.userInfo = ["test": "1"]
+    let request = UNNotificationRequest(
+      identifier: "test:\(Date().timeIntervalSince1970)",
+      content: content,
+      trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+    )
+    try? await UNUserNotificationCenter.current().add(request)
+  }
+
+  /// While you're looking at the app, the page shows the reminder itself, so macOS stays quiet.
+  /// The test notification always shows, since showing it is the point.
+  nonisolated func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification
+  ) async -> UNNotificationPresentationOptions {
+    if notification.request.content.userInfo["test"] != nil { return [.banner, .sound] }
+    let watching = await MainActor.run { NSApp.isActive && self.window.isVisible && !self.window.isMiniaturized }
+    return watching ? [] : [.banner, .sound, .list]
+  }
+
+  nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+    let request = response.notification.request
+    let path = request.content.userInfo["path"] as? String
+    let taskId = request.content.userInfo["taskId"] as? String
+    switch response.actionIdentifier {
+    case "snooze":
+      guard let content = request.content.mutableCopy() as? UNMutableNotificationContent else { return }
+      let snoozed = UNNotificationRequest(
+        identifier: "snooze:\(request.identifier):\(Date().timeIntervalSince1970)",
+        content: content,
+        trigger: UNTimeIntervalNotificationTrigger(timeInterval: 600, repeats: false)
+      )
+      try? await center.add(snoozed)
+    case "done":
+      guard let taskId, !taskId.isEmpty else { return }
+      await MainActor.run { self.sendToPage(["type": "done", "taskId": taskId]) }
+    case UNNotificationDefaultActionIdentifier:
+      await MainActor.run {
+        self.bringToFront()
+        if let path { self.sendToPage(["type": "open", "path": path]) }
+      }
+    default:
+      break
+    }
+  }
+
+  // MARK: Menu bar item
+
+  private func makeStatusItem() {
+    let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    item.button?.image = NSImage(systemSymbolName: "checklist", accessibilityDescription: "Daily Tracker")
+    statusItem = item
+    rebuildStatusMenu()
+  }
+
+  /// Rebuilt whenever the page sends a new Today list or reminder schedule, so it's never stale.
+  private func rebuildStatusMenu() {
+    guard let statusItem else { return }
+    let menu = NSMenu()
+    menu.autoenablesItems = false
+    menu.addItem(menuItem("Open Daily Tracker", #selector(openFromMenu(_:))))
+    let quickAdd = menuItem("Quick Add…", #selector(quickAddFromMenu(_:)))
+    quickAdd.keyEquivalent = "t"
+    quickAdd.keyEquivalentModifierMask = [.command, .option]
+    menu.addItem(quickAdd)
+    menu.addItem(.separator())
+
+    menu.addItem(info("Today"))
+    if todayItems.isEmpty {
+      menu.addItem(info("Nothing left today"))
+    }
+    for entry in todayItems {
+      let title = entry.title.count > 44 ? entry.title.prefix(43) + "…" : Substring(entry.title)
+      let row = menuItem("\(entry.when)   \(title)", #selector(openTodayItem(_:)))
+      row.representedObject = entry.path
+      menu.addItem(row)
+    }
+    if overdueCount > 0 {
+      let overdue = menuItem("\(overdueCount) overdue", #selector(openTodayItem(_:)))
+      overdue.representedObject = "/tasks?show=overdue"
+      menu.addItem(overdue)
+    }
+    menu.addItem(.separator())
+
+    if let reminder = nextReminder {
+      let format = DateFormatter()
+      format.dateFormat = Calendar.current.isDateInToday(reminder.at) ? "HH:mm" : "EEE d MMM, HH:mm"
+      let title = reminder.title.count > 36 ? reminder.title.prefix(35) + "…" : Substring(reminder.title)
+      menu.addItem(info("Next reminder: \(title), \(format.string(from: reminder.at))"))
+    } else {
+      menu.addItem(info("No reminders in the next two weeks"))
+    }
+    menu.addItem(.separator())
+
+    let login = menuItem("Open at Login", #selector(toggleOpenAtLogin(_:)))
+    login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+    menu.addItem(login)
+    menu.addItem(.separator())
+    menu.addItem(NSMenuItem(title: "Quit Daily Tracker", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
+    statusItem.menu = menu
+  }
+
+  private func menuItem(_ title: String, _ action: Selector) -> NSMenuItem {
+    let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+    item.target = self
+    return item
+  }
+
+  /// A line of text in the menu that isn't a command.
+  private func info(_ title: String) -> NSMenuItem {
+    let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+    item.isEnabled = false
+    return item
+  }
+
+  @objc private func openTodayItem(_ sender: NSMenuItem) {
+    guard let path = sender.representedObject as? String else { return }
+    bringToFront()
+    sendToPage(["type": "open", "path": path])
+  }
+
+  /// The global shortcut: whatever app you're in, Daily Tracker comes forward with Quick add open.
+  func quickAddFromAnywhere() {
+    note("Opening Quick add (page listening: \(pageListening), window loaded: \(webView.url != nil))")
+    quickAddFromMenu(nil)
+  }
+
+  @objc private func openFromMenu(_ sender: Any?) {
+    bringToFront()
+  }
+
+  @objc private func quickAddFromMenu(_ sender: Any?) {
+    bringToFront()
+    sendToPage(["type": "quickAdd"])
+  }
+
+  @objc private func openSettings(_ sender: Any?) {
+    bringToFront()
+    sendToPage(["type": "open", "path": "/settings"])
+  }
+
+  @objc private func toggleOpenAtLogin(_ sender: NSMenuItem) {
+    let service = SMAppService.mainApp
+    do {
+      if service.status == .enabled { try service.unregister() } else { try service.register() }
+    } catch {
+      let alert = NSAlert()
+      alert.messageText = "Couldn’t change Open at Login"
+      alert.informativeText = error.localizedDescription
+      alert.runModal()
+    }
+    if service.status == .requiresApproval {
+      // macOS asks you to allow it once in System Settings → General → Login Items.
+      SMAppService.openSystemSettingsLoginItems()
+    }
+    sender.state = service.status == .enabled ? .on : .off
+  }
+
+  // MARK: Saving files (the export in Settings)
+
+  private func save(filename: String, content: String) {
+    let panel = NSSavePanel()
+    panel.nameFieldStringValue = filename
+    panel.canCreateDirectories = true
+    if let type = UTType(filenameExtension: (filename as NSString).pathExtension) {
+      panel.allowedContentTypes = [type]
+    }
+    Task {
+      guard await panel.beginSheetModal(for: window) == .OK, let url = panel.url else { return }
+      do {
+        try content.write(to: url, atomically: true, encoding: .utf8)
+        sendToPage(["type": "saved", "name": url.lastPathComponent])
+      } catch {
+        let alert = NSAlert()
+        alert.messageText = "Couldn’t save the file"
+        alert.informativeText = error.localizedDescription
+        _ = await alert.beginSheetModal(for: window)
+      }
+    }
+  }
+
   // MARK: Menus (the Edit menu is what makes Cmd+C, Cmd+V and Cmd+Z work in text fields)
 
   private func makeMainMenu() -> NSMenu {
@@ -223,6 +660,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
     let app = NSMenu()
     app.addItem(withTitle: "About Daily Tracker", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+    app.addItem(.separator())
+    app.addItem(withTitle: "Settings…", action: #selector(openSettings(_:)), keyEquivalent: ",").target = self
     app.addItem(.separator())
     app.addItem(withTitle: "Hide Daily Tracker", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
     let hideOthers = app.addItem(withTitle: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")

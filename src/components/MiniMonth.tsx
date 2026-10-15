@@ -1,26 +1,8 @@
 import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react'
-import {
-  addMonths,
-  eachDayOfInterval,
-  endOfMonth,
-  endOfWeek,
-  format,
-  isSameDay,
-  isSameMonth,
-  startOfMonth,
-  startOfWeek,
-} from 'date-fns'
+import { addMonths, format, isSameDay, isSameMonth, startOfMonth } from 'date-fns'
 import { useMemo, useState } from 'react'
-import { WEEK_STARTS_ON } from '@/lib/dates'
-
-export function monthGrid(month: Date) {
-  return eachDayOfInterval({
-    start: startOfWeek(startOfMonth(month), { weekStartsOn: WEEK_STARTS_ON }),
-    end: endOfWeek(endOfMonth(month), { weekStartsOn: WEEK_STARTS_ON }),
-  })
-}
-
-export const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+import { monthGrid, WEEKDAYS } from '@/lib/month'
+import { useNow } from '@/lib/useNow'
 
 /** Small month view; a mark under a day means something is due or scheduled. */
 export function MiniMonth({
@@ -32,7 +14,7 @@ export function MiniMonth({
 }) {
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
   const days = useMemo(() => monthGrid(month), [month])
-  const today = new Date()
+  const today = useNow()
 
   return (
     <div>

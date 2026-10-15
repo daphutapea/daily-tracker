@@ -6,6 +6,7 @@ import { fromLocalInput, toDate, toDateInput, toLocalInput } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
 import { quietly, useDeleteEvent, useEvents, useProfile, useSaveEvent } from '@/lib/queries'
 import type { CalEvent } from '@/lib/types'
+import { useOfferUndo } from '@/lib/undo'
 import { Dialog } from './Dialog'
 import { Loading } from './ui'
 
@@ -15,9 +16,8 @@ export function EventDialogHost() {
   const dirtyRef = useRef(false)
   const events = useEvents()
 
-  useEffect(() => {
-    if (eventId) setShown({ id: eventId, date })
-  }, [eventId, date])
+  // Keep the last event rendered while the dialog animates closed (see TaskDialogHost).
+  if (eventId && (shown?.id !== eventId || shown.date !== date)) setShown({ id: eventId, date })
 
   const requestClose = () => {
     if (dirtyRef.current && !window.confirm('Discard your changes to this event?')) return
@@ -105,6 +105,7 @@ function EventForm({
   const [error, setError] = useState<string | null>(null)
   const save = useSaveEvent()
   const del = useDeleteEvent()
+  const offerUndo = useOfferUndo()
   const profile = useProfile()
 
   const dirty = JSON.stringify(f) !== JSON.stringify(initial)
@@ -150,10 +151,10 @@ function EventForm({
   }
 
   async function remove() {
-    if (!event || !window.confirm('Delete this event? This can’t be undone.')) return
+    if (!event) return
     await del.mutateAsync(event.id)
     dirtyRef.current = false
-    toast.success('Event deleted')
+    offerUndo(`Deleted “${event.title}”`, 'events', event)
     onDone()
   }
 
@@ -161,7 +162,7 @@ function EventForm({
 
   return (
     <form
-      onSubmit={quietly(submit)}
+      onSubmit={(e) => quietly(submit)(e)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
           e.preventDefault()
@@ -272,7 +273,7 @@ function EventForm({
       {/* -bottom-4 cancels the scroll area's bottom padding so the bar sits flush with the dialog edge. */}
       <div className="safe-bottom sticky -bottom-4 -mx-5 -mb-4 flex items-center gap-2 border-t border-line bg-surface px-5 py-3">
         {event && (
-          <button type="button" className="btn btn-danger -ml-2" onClick={quietly(remove)} disabled={del.isPending}>
+          <button type="button" className="btn btn-danger -ml-2" onClick={() => quietly(remove)()} disabled={del.isPending}>
             <TrashIcon size={16} weight="bold" />
             Delete
           </button>

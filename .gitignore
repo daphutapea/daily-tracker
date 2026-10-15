@@ -31,3 +31,8 @@ supabase/functions/.env
 
 # macOS app build output (npm run app)
 build/
+
+# Browser tests (npm run test:e2e)
+test-results/
+playwright-report/
+e2e/.auth/

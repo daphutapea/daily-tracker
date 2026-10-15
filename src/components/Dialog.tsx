@@ -1,5 +1,5 @@
 import { XIcon } from '@phosphor-icons/react'
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useEffect, useEffectEvent, useId, useRef, type ReactNode } from 'react'
 
 /**
  * Native <dialog>: focus trap, Escape and the top layer come from the browser. The element stays
@@ -13,6 +13,7 @@ export function Dialog({
   footer,
   size = 'md',
   instant = false,
+  placement = 'center',
 }: {
   open: boolean
   onRequestClose: () => void
@@ -22,11 +23,19 @@ export function Dialog({
   size?: 'sm' | 'md'
   /** Skip the open/close animation, for dialogs opened by a keyboard shortcut. */
   instant?: boolean
+  /**
+   * 'top' pins the dialog near the top on a computer, so content that grows it extends downward
+   * instead of re-centering the whole dialog. Phones always get the bottom sheet.
+   */
+  placement?: 'center' | 'top'
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
-  const closeRef = useRef(onRequestClose)
-  closeRef.current = onRequestClose
+  // Escape fires 'cancel'; the listener is added once and always calls the newest onRequestClose.
+  const onCancel = useEffectEvent((e: Event) => {
+    e.preventDefault()
+    onRequestClose()
+  })
 
   useEffect(() => {
     const el = ref.current
@@ -43,19 +52,16 @@ export function Dialog({
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const onCancel = (e: Event) => {
-      e.preventDefault()
-      closeRef.current()
-    }
-    el.addEventListener('cancel', onCancel)
-    return () => el.removeEventListener('cancel', onCancel)
+    const listener = (e: Event) => onCancel(e)
+    el.addEventListener('cancel', listener)
+    return () => el.removeEventListener('cancel', listener)
   }, [])
 
   return (
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      className={`sheet ${size === 'sm' ? 'sheet-sm' : ''} ${instant ? 'sheet-instant' : ''}`}
+      className={`sheet ${size === 'sm' ? 'sheet-sm' : ''} ${instant ? 'sheet-instant' : ''} ${placement === 'top' ? 'sheet-top' : ''}`}
       onClick={(e) => {
         // A click whose target is the <dialog> itself landed on the backdrop.
         if (e.target === e.currentTarget) onRequestClose()

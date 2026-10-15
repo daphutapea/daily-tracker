@@ -32,7 +32,7 @@ export interface QuickAddResult {
 }
 
 export class QuickAddError extends Error {
-  readonly code: 'quota' | 'model' | 'bad_request' | 'key'
+  readonly code: 'quota' | 'busy' | 'model' | 'bad_request' | 'key'
   constructor(code: QuickAddError['code'], message: string) {
     super(message)
     this.code = code
@@ -61,11 +61,23 @@ Rules:
   priority, penting). Otherwise "medium".
 - project must be copied exactly from PROJECTS when the note clearly refers to one; otherwise null.
 - Titles are short and keep the note's language. Leave dates and times out of the title.
-- One item per thing to do or attend. Never invent items the note doesn't mention.
+- One item per thing to do or attend. Never invent items the note doesn't mention. "Remind me"
+  sets remind_minutes_before on the item it refers to; it is not an item of its own, and an event
+  doesn't need a separate task to go to it.
 - If the note contains nothing to add, return no items and use reply to say why in one sentence.
   Also use reply, briefly, when you had to guess something important.`
 
-/** Gemini's OpenAPI-style response schema. */
+/**
+ * The order Gemini writes an item's fields in. Without it, Gemini writes them alphabetically, so it
+ * decided all_day before the title or the time and marked timed events as all day. Here the time
+ * comes first and all_day follows from it.
+ */
+const ITEM_FIELDS = ['kind', 'title', 'date', 'time', 'end_time', 'all_day', 'remind_minutes_before', 'priority', 'project', 'location']
+
+/**
+ * Gemini's OpenAPI-style response schema. Every field is required, with null allowed where a field
+ * can be empty: Gemini left optional fields out even when the note gave them, such as a reminder.
+ */
 export const RESPONSE_SCHEMA = {
   type: 'OBJECT',
   properties: {
@@ -85,12 +97,14 @@ export const RESPONSE_SCHEMA = {
           remind_minutes_before: { type: 'INTEGER', nullable: true },
           location: { type: 'STRING', nullable: true },
         },
-        required: ['kind', 'title', 'all_day', 'priority'],
+        required: ITEM_FIELDS,
+        propertyOrdering: ITEM_FIELDS,
       },
     },
     reply: { type: 'STRING', nullable: true },
   },
-  required: ['items'],
+  required: ['items', 'reply'],
+  propertyOrdering: ['items', 'reply'],
 }
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -181,14 +195,15 @@ type FetchLike = (url: string, init: { method: string; headers: Record<string, s
 }>
 
 /**
- * Tries each model in order. A quota error (429) or a model this key can't use (404, 403) moves on to
- * the next one; anything else stops, because the next model would fail the same way.
+ * Tries each model in order. A model that is out of quota (429), busy (500, 502, 503, 504) or not
+ * available to this key (403, 404) moves on to the next one. A bad request stops, because the next
+ * model would be sent the same request.
  */
 export async function proposeItems(
   req: QuickAddRequest,
   opts: { apiKey: string; models: string[]; fetch: FetchLike },
 ): Promise<QuickAddResult> {
-  let lastStatus = 0
+  const failures = new Set<'day' | 'minute' | 'busy' | 'unavailable'>()
   for (const model of opts.models) {
     const res = await opts.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
@@ -207,8 +222,17 @@ export async function proposeItems(
       }
       throw new QuickAddError('model', `The AI service returned an error (${res.status}). Try rephrasing the note.`)
     }
-    if (res.status === 429 || res.status === 404 || res.status === 403) {
-      lastStatus = res.status
+    if (res.status === 429) {
+      // Google sends 429 for its per-minute and its per-day limits alike; only the quota id differs.
+      failures.add(/PerDay/i.test(String(await res.text())) ? 'day' : 'minute')
+      continue
+    }
+    if (res.status === 500 || res.status === 502 || res.status === 503 || res.status === 504) {
+      failures.add('busy')
+      continue
+    }
+    if (res.status === 403 || res.status === 404) {
+      failures.add('unavailable')
       continue
     }
     if (!res.ok) {
@@ -233,7 +257,11 @@ export async function proposeItems(
     }
   }
 
-  if (lastStatus === 429) {
+  // A busy model or a per-minute limit may clear in a minute; a used-up daily allowance won't.
+  if (failures.has('busy') || failures.has('minute')) {
+    throw new QuickAddError('busy', 'The AI is busy right now. Try again in a minute.')
+  }
+  if (failures.has('day')) {
     throw new QuickAddError('quota', "Today's free AI allowance is used up. Add items by hand, or try again tomorrow.")
   }
   throw new QuickAddError('model', 'None of the configured AI models are available to this API key.')

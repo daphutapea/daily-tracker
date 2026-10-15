@@ -10,16 +10,21 @@ import {
   SignOutIcon,
   type Icon,
 } from '@phosphor-icons/react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import { toast } from 'sonner'
-import { useUserEmail } from '@/auth/session'
+import { useUserEmail } from '@/auth/sessionContext'
 import { deviceTimeZone, toDate } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
+import { inMacApp } from '@/lib/native'
+import { shortcutLabel } from '@/lib/platform'
 import { useEvents, useProfile, useQuickLinks, useReorderQuickLinks, useTasks, useUpdateProfile } from '@/lib/queries'
 import { supabase } from '@/lib/supabase'
 import { EventDialogHost } from './EventDialog'
-import { QuickAddProvider, shortcutLabel, useOpenQuickAdd } from './QuickAdd'
+import { LogoMark } from './Logo'
+import { MacAppBridge } from './MacAppBridge'
+import { QuickAddProvider } from './QuickAdd'
+import { useOpenQuickAdd } from './quickAddContext'
 import { SortableList } from './SortableList'
 import { TaskDialogHost } from './TaskDialog'
 import { SiteIcon } from './ui'
@@ -56,6 +61,7 @@ export function AppShell() {
         <TabBar />
         <TaskDialogHost />
         <EventDialogHost />
+        {inMacApp && <MacAppBridge />}
       </div>
     </QuickAddProvider>
   )
@@ -69,7 +75,8 @@ function Sidebar() {
 
   return (
     <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-line bg-surface md:flex">
-      <div className="px-5 pt-5 pb-4">
+      <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
+        <LogoMark size={22} />
         <span className="text-[15px] font-semibold tracking-tight">Daily Tracker</span>
       </div>
       <nav aria-label="Main" className="px-3">
@@ -210,38 +217,41 @@ function useTimeZoneSync() {
   }, [profile.data, update])
 }
 
-/** While the app is open, show reminders as toasts too (Telegram covers the closed case). */
+/**
+ * While the app is open, show reminders as toasts too. Telegram, and in the Mac app macOS itself,
+ * cover the closed case.
+ */
 function useInAppReminders() {
   const tasks = useTasks()
   const events = useEvents()
   const { openTask, openEvent } = useDialogs()
-  const lastCheck = useRef(Date.now())
-  const latest = useRef({ tasks: tasks.data, events: events.data, openTask, openEvent })
-  latest.current = { tasks: tasks.data, events: events.data, openTask, openEvent }
+
+  // Toasts every reminder whose time fell between two checks.
+  const showDue = useEffectEvent((from: number, to: number) => {
+    const due = (iso: string | null) => {
+      if (!iso) return false
+      const t = toDate(iso).getTime()
+      return t > from && t <= to
+    }
+    tasks.data
+      ?.filter((t) => t.status !== 'done' && due(t.remind_at))
+      .forEach((t) =>
+        toast(`Reminder: ${t.title}`, { duration: 60_000, action: { label: 'Open', onClick: () => openTask(t.id) } }),
+      )
+    events.data
+      ?.filter((e) => due(e.remind_at))
+      .forEach((e) =>
+        toast(`Coming up: ${e.title}`, { duration: 60_000, action: { label: 'Open', onClick: () => openEvent(e.id) } }),
+      )
+  })
 
   useEffect(() => {
-    const tick = () => {
+    let last = Date.now()
+    const id = window.setInterval(() => {
       const now = Date.now()
-      const from = lastCheck.current
-      lastCheck.current = now
-      const due = (iso: string | null) => {
-        if (!iso) return false
-        const t = toDate(iso).getTime()
-        return t > from && t <= now
-      }
-      const { tasks, events, openTask, openEvent } = latest.current
-      tasks
-        ?.filter((t) => t.status !== 'done' && due(t.remind_at))
-        .forEach((t) =>
-          toast(`Reminder: ${t.title}`, { duration: 60_000, action: { label: 'Open', onClick: () => openTask(t.id) } }),
-        )
-      events
-        ?.filter((e) => due(e.remind_at))
-        .forEach((e) =>
-          toast(`Coming up: ${e.title}`, { duration: 60_000, action: { label: 'Open', onClick: () => openEvent(e.id) } }),
-        )
-    }
-    const id = window.setInterval(tick, 15_000)
+      showDue(last, now)
+      last = now
+    }, 15_000)
     return () => window.clearInterval(id)
   }, [])
 }

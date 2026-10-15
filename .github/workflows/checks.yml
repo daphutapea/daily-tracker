@@ -1,0 +1,49 @@
+# Runs on every push and pull request. The same commands work on your Mac; docs/SETUP.md lists them.
+name: Checks
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Types, lint, tests and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  browser:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # A throwaway local database with every migration applied, and the local test login.
+      - run: npx supabase start
+      - run: node scripts/create-local-user.mjs
+      - run: npx playwright install --with-deps --no-shell chromium
+      # The tests fake the AI, so no Gemini key is needed here.
+      - run: npm run test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-traces
+          path: test-results/
+          retention-days: 7

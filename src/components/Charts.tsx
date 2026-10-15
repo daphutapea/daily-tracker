@@ -1,5 +1,6 @@
 import { format, isSameDay } from 'date-fns'
 import { useState } from 'react'
+import { useNow } from '@/lib/useNow'
 
 /** Columns for "tasks finished per day". One series, so no legend; the title names it. */
 export function FinishedPerDay({
@@ -14,7 +15,7 @@ export function FinishedPerDay({
   const [asTable, setAsTable] = useState(false)
   const max = Math.max(1, ...counts)
   const total = counts.reduce((a, b) => a + b, 0)
-  const today = new Date()
+  const today = useNow()
 
   return (
     <div>

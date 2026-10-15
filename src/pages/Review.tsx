@@ -8,7 +8,9 @@ import { Loading, QueryError, StateMessage } from '@/components/ui'
 import { toDate, WEEK_STARTS_ON } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
 import { useEvents, useProjects, useTasks } from '@/lib/queries'
-import type { CalEvent } from '@/lib/types'
+import { dayName, nextWeekStart, useMoveTasks } from '@/lib/reschedule'
+import type { CalEvent, TaskSummary } from '@/lib/types'
+import { useNow } from '@/lib/useNow'
 
 const inRange = (iso: string | null, from: Date, to: Date) => {
   if (!iso) return false
@@ -30,8 +32,9 @@ export function ReviewPage() {
   const events = useEvents()
   const projects = useProjects()
   const { openTask, openEvent } = useDialogs()
+  const moveTasks = useMoveTasks()
 
-  const now = new Date()
+  const now = useNow()
   const thisMonday = startOfWeek(now, { weekStartsOn: WEEK_STARTS_ON })
   const requested = params.get('week') ? parseISO(params.get('week')!) : null
   const monday = requested && isValid(requested) ? startOfWeek(requested, { weekStartsOn: WEEK_STARTS_ON }) : thisMonday
@@ -43,31 +46,12 @@ export function ReviewPage() {
     setParams(isSameDay(d, thisMonday) ? {} : { week: format(d, 'yyyy-MM-dd') }, { replace: true })
 
   const projectById = useMemo(() => new Map(projects.data?.map((p) => [p.id, p])), [projects.data])
-  const week = useMemo(() => {
-    const all = tasks.data ?? []
-    const finished = all
-      .filter((t) => inRange(t.completed_at, monday, nextMonday))
-      .sort((a, b) => a.completed_at!.localeCompare(b.completed_at!))
-    // A deadline slipped if it fell in this week, has passed, and the task wasn't done in time.
-    const slipped = all
-      .filter(
-        (t) =>
-          inRange(t.due_at, monday, nextMonday) &&
-          toDate(t.due_at!) < now &&
-          (t.status !== 'done' || (t.completed_at !== null && t.completed_at > t.due_at!)),
-      )
-      .sort((a, b) => a.due_at!.localeCompare(b.due_at!))
-    const after = addDays(nextMonday, 7)
-    const coming = [
-      ...all.filter((t) => t.status !== 'done' && inRange(t.due_at, nextMonday, after)).map((t) => ({ kind: 'task' as const, at: t.due_at!, task: t })),
-      ...(events.data ?? []).filter((e) => inRange(e.starts_at, nextMonday, after)).map((e) => ({ kind: 'event' as const, at: e.starts_at, event: e })),
-    ].sort((a, b) => a.at.localeCompare(b.at))
-    const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i))
-    const counts = days.map((d) => finished.filter((t) => isSameDay(toDate(t.completed_at!), d)).length)
-    return { finished, slipped, coming, days, counts }
-  }, [tasks.data, events.data, monday.getTime()])
+  // A few filters over your tasks; cheap enough to run on every render.
+  const week = summarizeWeek(tasks.data ?? [], events.data ?? [], monday, now)
 
   const n = week.finished.length
+  const stillOpen = week.slipped.filter((t) => t.status !== 'done')
+  const carryTo = nextWeekStart(now)
   const summary = notStarted
     ? 'This week hasn’t started yet. Deadlines and events already planned for the week after it are below.'
     : `You finished ${n} ${n === 1 ? 'task' : 'tasks'}${isCurrent ? ' so far' : ''}. ${
@@ -138,6 +122,17 @@ export function ReviewPage() {
               title="Slipped"
               count={week.slipped.length}
               hint="Deadlines this week that passed before the task was done."
+              action={
+                stillOpen.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-quiet"
+                    onClick={() => moveTasks(stillOpen, carryTo, now)}
+                  >
+                    Move {stillOpen.length === 1 ? 'the open one' : `${stillOpen.length} open`} to {dayName(carryTo, now)}
+                  </button>
+                )
+              }
             >
               {week.slipped.length === 0 ? (
                 <p className="px-4 py-6 text-center text-ink-2">Every deadline that has passed this week was met.</p>
@@ -178,26 +173,59 @@ export function ReviewPage() {
   )
 }
 
+function summarizeWeek(all: TaskSummary[], events: CalEvent[], monday: Date, now: Date) {
+  const nextMonday = addDays(monday, 7)
+  const finished = all
+    .filter((t) => inRange(t.completed_at, monday, nextMonday))
+    .sort((a, b) => a.completed_at!.localeCompare(b.completed_at!))
+  // A deadline slipped if it fell in this week, has passed, and the task wasn't done in time.
+  const slipped = all
+    .filter(
+      (t) =>
+        inRange(t.due_at, monday, nextMonday) &&
+        toDate(t.due_at!) < now &&
+        (t.status !== 'done' || (t.completed_at !== null && t.completed_at > t.due_at!)),
+    )
+    .sort((a, b) => a.due_at!.localeCompare(b.due_at!))
+  const after = addDays(nextMonday, 7)
+  const coming = [
+    ...all
+      .filter((t) => t.status !== 'done' && inRange(t.due_at, nextMonday, after))
+      .map((t) => ({ kind: 'task' as const, at: t.due_at!, task: t })),
+    ...events
+      .filter((e) => inRange(e.starts_at, nextMonday, after))
+      .map((e) => ({ kind: 'event' as const, at: e.starts_at, event: e })),
+  ].sort((a, b) => a.at.localeCompare(b.at))
+  const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i))
+  const counts = days.map((d) => finished.filter((t) => isSameDay(toDate(t.completed_at!), d)).length)
+  return { finished, slipped, coming, days, counts }
+}
+
 function ReviewPanel({
   title,
   count,
   hint,
+  action,
   children,
   className = '',
 }: {
   title: string
   count: number
   hint?: string
+  action?: ReactNode
   children: ReactNode
   className?: string
 }) {
   return (
     <section className={`panel overflow-hidden ${className}`} aria-label={title}>
-      <div className="border-b border-line px-4 pt-3 pb-2">
-        <h2 className="font-semibold">
-          {title} <span className="font-normal text-ink-3">· {count}</span>
-        </h2>
-        {hint && <p className="text-[13px] text-ink-3">{hint}</p>}
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 border-b border-line px-4 pt-3 pb-2">
+        <div>
+          <h2 className="font-semibold">
+            {title} <span className="font-normal text-ink-3">· {count}</span>
+          </h2>
+          {hint && <p className="text-[13px] text-ink-3">{hint}</p>}
+        </div>
+        {action}
       </div>
       {children}
     </section>

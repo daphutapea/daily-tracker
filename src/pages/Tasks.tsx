@@ -15,12 +15,13 @@ import { MagnifyingGlassIcon, PlusIcon } from '@phosphor-icons/react'
 import { addDays, endOfDay, startOfDay, subDays } from 'date-fns'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { TaskRow } from '@/components/TaskRow'
+import { MoveAllToTomorrow, TaskRow } from '@/components/TaskRow'
 import { Loading, PriorityTag, QueryError, Segmented, StateMessage } from '@/components/ui'
 import { formatWhen, toDate } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
 import { useProjects, useSetTaskStatus, useTasks } from '@/lib/queries'
 import { PRIORITIES, PRIORITY_RANK, STATUSES, type Project, type TaskStatus, type TaskSummary } from '@/lib/types'
+import { useNow } from '@/lib/useNow'
 
 type Show = 'open' | 'today' | 'overdue' | 'done' | 'all'
 const SHOW_OPTIONS: { value: Show; label: string }[] = [
@@ -207,7 +208,7 @@ function TaskList({
   filtersActive: boolean
   clearFilters: () => void
 }) {
-  const now = new Date()
+  const now = useNow(30_000)
   const groups = groupTasks(tasks, show, now)
   const count = groups.reduce((n, g) => n + g.tasks.length, 0)
 
@@ -239,13 +240,12 @@ function TaskList({
     <div className="panel fade-in overflow-hidden">
       {groups.map((g) => (
         <section key={g.label} aria-label={g.label} className="border-line not-first:border-t">
-          <h2
-            className={`border-b border-line bg-surface-2/50 px-4 py-1.5 text-[13px] font-medium ${
-              g.tone === 'danger' ? 'text-danger' : 'text-ink-2'
-            }`}
-          >
-            {g.label} <span className="font-normal text-ink-3">· {g.tasks.length}</span>
-          </h2>
+          <div className="flex items-center justify-between gap-2 border-b border-line bg-surface-2/50 px-4 py-1.5">
+            <h2 className={`text-[13px] font-medium ${g.tone === 'danger' ? 'text-danger' : 'text-ink-2'}`}>
+              {g.label} <span className="font-normal text-ink-3">· {g.tasks.length}</span>
+            </h2>
+            {g.label === 'Overdue' && <MoveAllToTomorrow tasks={g.tasks.filter((t) => t.status !== 'done')} now={now} />}
+          </div>
           <ul className="divide-y divide-line">
             {g.tasks.map((t) => (
               <TaskRow key={t.id} task={t} project={projectById.get(t.project_id ?? '')} onOpen={onOpen} now={now} />
@@ -316,7 +316,8 @@ function Board({
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } }),
   )
-  const doneSince = subDays(new Date(), DONE_WINDOW_DAYS)
+  const now = useNow()
+  const doneSince = subDays(now, DONE_WINDOW_DAYS)
   const [activeId, setActiveId] = useState<string | null>(null)
   // A dropped card's new column, held locally until the save settles. React Query delivers its own
   // update a tick later, and the drop animation measures the card in the same render as the drop,
@@ -326,7 +327,7 @@ function Board({
   const board = tasks.map((t) => {
     const status = moved[t.id]
     if (!status || status === t.status) return t
-    return { ...t, status, completed_at: status === 'done' ? (t.completed_at ?? new Date().toISOString()) : null }
+    return { ...t, status, completed_at: status === 'done' ? (t.completed_at ?? now.toISOString()) : null }
   })
   const active = activeId ? board.find((t) => t.id === activeId) : undefined
 
@@ -372,7 +373,7 @@ function Board({
           return (
             <Column key={s.value} status={s.value} label={s.label} count={items.length}>
               {items.map((t) => (
-                <Card key={t.id} task={t} project={projectById.get(t.project_id ?? '')} onOpen={onOpen} />
+                <Card key={t.id} task={t} project={projectById.get(t.project_id ?? '')} onOpen={onOpen} now={now} />
               ))}
             </Column>
           )
@@ -382,7 +383,7 @@ function Board({
       <DragOverlay dropAnimation={DROP_ANIMATION}>
         {active ? (
           <div className="scale-[1.02] cursor-grabbing rounded-[6px] shadow-float">
-            <CardFace task={active} project={projectById.get(active.project_id ?? '')} />
+            <CardFace task={active} project={projectById.get(active.project_id ?? '')} now={now} />
           </div>
         ) : null}
       </DragOverlay>
@@ -426,7 +427,17 @@ function Column({
   )
 }
 
-function Card({ task, project, onOpen }: { task: TaskSummary; project?: Project; onOpen: (id: string) => void }) {
+function Card({
+  task,
+  project,
+  onOpen,
+  now,
+}: {
+  task: TaskSummary
+  project?: Project
+  onOpen: (id: string) => void
+  now: Date
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
   const { role: _role, tabIndex: _tabIndex, ...dragAttributes } = attributes
   return (
@@ -439,14 +450,13 @@ function Card({ task, project, onOpen }: { task: TaskSummary; project?: Project;
         onClick={() => onOpen(task.id)}
         className="press block w-full rounded-[6px] text-left"
       >
-        <CardFace task={task} project={project} />
+        <CardFace task={task} project={project} now={now} />
       </button>
     </li>
   )
 }
 
-function CardFace({ task, project }: { task: TaskSummary; project?: Project }) {
-  const now = new Date()
+function CardFace({ task, project, now }: { task: TaskSummary; project?: Project; now: Date }) {
   const overdue = task.status !== 'done' && task.due_at && toDate(task.due_at) < now
   return (
     <span className="block rounded-[6px] border border-line bg-surface p-3">

@@ -3,13 +3,13 @@ import type { JSONContent } from '@tiptap/react'
 import { format, isToday } from 'date-fns'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { toast } from 'sonner'
 import { RichEditor } from '@/components/LazyRichEditor'
 import { Loading, QueryError, StateMessage } from '@/components/ui'
 import type { Json } from '@/lib/database.types'
 import { toDate } from '@/lib/dates'
 import { quietly, useCreateNote, useDeleteNote, useNote, useNotes, useProjects, useUpdateNote } from '@/lib/queries'
 import type { Note, NoteSummary } from '@/lib/types'
+import { useOfferUndo } from '@/lib/undo'
 
 export function NotesPage() {
   const { noteId } = useParams()
@@ -146,6 +146,7 @@ function NoteEditor({ note }: { note: Note }) {
   const navigate = useNavigate()
   const update = useUpdateNote()
   const del = useDeleteNote()
+  const offerUndo = useOfferUndo()
   const projects = useProjects()
   const [title, setTitle] = useState(note.title)
   const [pinned, setPinned] = useState(note.pinned)
@@ -193,11 +194,10 @@ function NoteEditor({ note }: { note: Note }) {
   }, [flush])
 
   async function remove() {
-    if (!window.confirm('Delete this note? This can’t be undone.')) return
     pending.current = {}
     window.clearTimeout(timer.current)
     await del.mutateAsync(note.id)
-    toast.success('Note deleted')
+    offerUndo(`Deleted “${note.title || 'Untitled note'}”`, 'notes', note)
     navigate('/notes')
   }
 
@@ -260,7 +260,7 @@ function NoteEditor({ note }: { note: Note }) {
             <PushPinIcon size={16} weight={pinned ? 'fill' : 'bold'} />
             {pinned ? 'Pinned' : 'Pin'}
           </button>
-          <button type="button" className="btn btn-danger" onClick={quietly(remove)} disabled={del.isPending}>
+          <button type="button" className="btn btn-danger" onClick={() => quietly(remove)()} disabled={del.isPending}>
             <TrashIcon size={16} weight="bold" />
             <span className="max-sm:sr-only">Delete</span>
           </button>

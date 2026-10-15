@@ -1,1 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#0E1E33"/><path d="M7 21h18M7 21v-3M11.5 21v-2M16 21v-3M20.5 21v-2M25 21v-3" stroke="#5A6878" stroke-width="1.6" stroke-linecap="round"/><path d="M18 9v15" stroke="#2DD4BF" stroke-width="2.4" stroke-linecap="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Daily Tracker">
+<g transform="translate(0 0) scale(1)">
+  <rect width="64" height="64" rx="14" fill="#0E1E33"/>
+  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="13.25" fill="none" stroke="#FFFFFF" stroke-opacity="0.09" stroke-width="1.5"/>
+  <path d="M12 40H52M12 40V31M22 40V35M32 40V31M42 40V35M52 40V31" fill="none" stroke="#8796AA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M37 15V48" stroke="#2DD4BF" stroke-width="5" stroke-linecap="round"/>
+</g>
+</svg>

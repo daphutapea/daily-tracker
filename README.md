@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/lockup-dark.svg">
+  <img src="docs/brand/lockup-light.svg" alt="Daily Tracker" height="48">
+</picture>
+
 # Daily Tracker
 
 A personal board for one person. It keeps your tasks and their deadlines, your notes, your events, a
@@ -5,16 +10,37 @@ month calendar and the sites you open every day in one place, and it sends remin
 summary to Telegram.
 
 Setting it up for the first time? Follow [docs/SETUP.md](docs/SETUP.md) to create your account, link
-Telegram and put the app online.
+Telegram and put the app online. What changed in each version is in [CHANGELOG.md](CHANGELOG.md); the
+version you are running is shown at the bottom of Settings.
 
 ## Opening it
 
 On your Mac, press Cmd+Space, type Daily Tracker and press Return. It opens in its own window with its
 own Dock icon, and you stay signed in between launches. The app lives in your Applications folder
 (`~/Applications`); `npm run app` builds and installs it, and running it again after a code change
-replaces the installed copy.
+replaces the installed copy, reopening it if it was open.
 
 Links you click inside the app, such as your quick links, open in your normal browser.
+
+Closing the window doesn’t quit the app. It stays in the menu bar (the checklist icon at the top of the
+screen), so reminders keep arriving and stay up to date. That menu lists what’s left today and how
+many tasks are overdue; click any line to open it. It also opens the app or Quick add, shows your next
+reminder, and turns on Open at Login. To quit for real, press Cmd+Q; reminders already handed to macOS
+still arrive after that.
+
+| Shortcut | What it does |
+|---|---|
+| ⌥⌘T, in any app | Brings Daily Tracker forward with Quick add open |
+| ⌘K, inside the app | Opens Quick add |
+| ⌘, | Opens Settings |
+| ⌘Enter | Saves the task or event you’re editing, or reads a Quick add note |
+
+⌥⌘T only works while Daily Tracker is running, because the app is what listens for it. If you quit
+with Cmd+Q, open the app again before using it. Tick Open at Login in the menu bar menu and it’s always
+there from the moment you sign in to your Mac.
+
+The Dock icon shows how many tasks are past their deadline, so you can see it without opening the
+app. Turn it off in Settings → Mac app.
 
 ## Home
 
@@ -48,15 +74,23 @@ For example: “Sync with Dennis Tuesday 10 to 11am, remind me 15 min before. Fi
 by Friday, high priority.” English, Bahasa Indonesia or a mix all work, and one note can hold several
 things.
 
-Press Read it (or Cmd+Enter). Each item comes back as a card you can change before anything is saved:
+Press Read it (or Cmd+Enter). While it reads, a thin line moves along the bottom of your note; it
+usually takes a second or two. Each item comes back as a card you can change before anything is saved:
 switch it between task and event, fix the title, day, time, reminder, priority or project, or remove
 it. A task with a day but no time is due at 17:00. An event that overlaps one already in your calendar
-gets a warning. Press Add to save them all, or Edit note to go back and rewrite.
+gets a warning. Press Add to save them all, or Edit note to go back and rewrite. The whole flow works
+from the keyboard: after reading, Tab moves through the cards, and removing one moves you to the next.
 
 The AI only drafts. It can’t save, change or delete anything; you do that with the Add button. It runs
-on Google’s Gemini free tier, so there is a daily limit; if you reach it, the app says so and you can
-add items by hand until the next day. Quick add needs a one-time setup, described in
+on Google’s Gemini free tier. The best model allows 20 notes a day; after that Quick add switches by
+itself to lighter models with larger allowances, and the footer of each answer says which model read
+it. Only when all of them are used up does the app say so, and then you add items by hand until the
+next day. Quick add needs a one-time setup, described in
 [docs/SETUP.md](docs/SETUP.md).
+
+How often the AI reads notes correctly is measured with a set of 24 test notes. How to run it, and
+what it does and doesn't prove, is in
+[supabase/functions/quick-add/eval/README.md](supabase/functions/quick-add/eval/README.md).
 
 ## Tasks
 
@@ -75,13 +109,20 @@ add items by hand until the next day. Quick add needs a one-time setup, describe
 | Notes | Bold, italic, headings, bulleted and numbered lists, checklists, tables and text alignment. Click inside a table to get controls for adding and removing rows and columns. |
 
 Press Cmd+Enter (Ctrl+Enter on Windows) to save. Escape or the close button shuts the dialog; if you
-changed anything, the app asks before throwing it away. Delete asks for confirmation first, and a
-deleted task can’t be brought back.
+changed anything, the app asks before throwing it away. Delete removes the task at once and shows Undo
+for 8 seconds, which brings it back exactly as it was. Events and notes work the same way.
 
 ### Finishing a task
 
 Tick its box wherever it appears: on Home, in the list or on the calendar. The app records when you
 finished it, which feeds the chart on Home. Unticking a task moves it back to To do.
+
+### Moving overdue tasks
+
+An overdue task has a Tomorrow button on its row. It moves the deadline to the same time tomorrow, and
+a reminder moves with it, keeping the same distance from the deadline. When two or more tasks are
+overdue, Move all to tomorrow on the Overdue heading moves them together, on Home and on the Tasks page.
+Either way, Undo appears for 8 seconds and puts everything back exactly as it was.
 
 ### List view
 
@@ -133,8 +174,14 @@ Once Telegram is linked, every reminder time you set sends a message from your o
 don’t send one. A reminder more than 30 minutes late, for example because you picked a time that had
 already passed, is skipped instead of arriving late.
 
-While the app is open, a reminder also appears in the corner of the screen with an Open button. Until
-you link Telegram, that pop-up is the only reminder you get.
+On your Mac, the app hands every reminder in the next two weeks to macOS, so it arrives as a normal
+Mac notification even when the window is closed or the app has quit. A task’s notification has Mark
+done and Snooze 10 minutes; an event’s has Snooze 10 minutes; clicking either opens it. The first time
+a reminder is coming up, macOS asks whether Daily Tracker may show notifications. Settings → Mac
+notifications can turn them off or send a test.
+
+While you’re looking at the app, a reminder appears in the corner of the window instead, with an Open
+button. In a browser, that pop-up is the only reminder you get until Telegram is linked.
 
 The morning summary is optional. It lists overdue tasks, today’s deadlines and today’s events, and it
 arrives once a day within two hours after the time you choose. The weekly review message is optional
@@ -155,15 +202,20 @@ Sunday, and the arrows step back and forward through earlier weeks.
 | Slipped | Deadlines that fell in that week and passed before the task was done, whether it’s still open or was finished late. |
 | The week after | Deadlines and events planned for the following week. |
 
+When deadlines slipped and the tasks are still open, the Slipped panel offers to move them all to next
+Monday, keeping each one’s time. Undo works here too.
+
 ## Settings
 
 | Section | What you can do there |
 |---|---|
 | You | Set the name used in the greeting, and see the time zone reminders use. |
+| Mac app | In the Mac app only: turn reminder notifications on or off, let macOS show them, send a test, and choose whether the Dock icon shows how many tasks are overdue. |
 | Telegram reminders | Connect your bot, link your chat, send a test message, and turn on the morning summary and the weekly review message. |
 | Projects | Add, rename, archive or delete projects. Deleting a project keeps its tasks and notes; they just lose the label. |
 | Appearance | Match your system, or always use Light or Dark. Each mode has two colour sets: Sage or White for light, Navy or Charcoal for dark. Each card shows a small preview. These choices are saved on each device separately. |
-| Account | See which account is signed in, and sign out. |
+| Your data | Download a copy of everything you’ve added as one JSON file. Keep one somewhere safe now and then. |
+| Account | See which account is signed in, sign out, and see which version of the tracker is running. |
 
 ## Small things worth knowing
 
@@ -171,4 +223,7 @@ Sunday, and the arrows step back and forward through earlier weeks.
 - Tasks and events refresh every minute, and everything refreshes when you switch back to the tab, so
   something you add on your phone shows up on your laptop without reloading.
 - Your phone and laptop share the same data, because it lives in Supabase rather than in the browser.
-- Design decisions and colors are written down in [DESIGN.md](DESIGN.md).
+- Design decisions, colors and the logo’s rules are written down in [DESIGN.md](DESIGN.md).
+- If ⌥⌘T doesn’t respond, look at `~/Library/Logs/DailyTracker.log` (Console.app lists it under Log
+  Reports). It records when the shortcut was set up, each press, and when the app quit, so you can
+  tell whether the app was running and whether the press arrived.

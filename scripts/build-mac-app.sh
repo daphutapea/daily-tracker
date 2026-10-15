@@ -23,7 +23,7 @@ cp -R dist "$APP/Contents/Resources/web"
 
 xcrun swiftc -O -swift-version 6 -target "$(uname -m)-apple-macos14.0" \
   macos/main.swift -o "$APP/Contents/MacOS/DailyTracker" \
-  -framework AppKit -framework WebKit
+  -framework AppKit -framework WebKit -framework Carbon
 
 xcrun swift macos/make-icon.swift "$BUILD_DIR/AppIcon.iconset"
 iconutil -c icns "$BUILD_DIR/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"
@@ -58,7 +58,9 @@ echo "Checking the app loads"
 "$APP/Contents/MacOS/DailyTracker" --smoke-test
 
 echo "Installing to $DEST"
+WAS_RUNNING=false
 if pgrep -xq DailyTracker; then
+  WAS_RUNNING=true
   osascript -e "tell application \"$APP_NAME\" to quit" >/dev/null 2>&1 || true
   sleep 1
 fi
@@ -72,5 +74,11 @@ LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchSe
 "$LSREGISTER" -u "$APP" >/dev/null 2>&1 || true
 "$LSREGISTER" -f "$DEST/$APP_NAME.app"
 mdimport "$DEST/$APP_NAME.app" 2>/dev/null || true
+
+# Reminders, the menu bar and ⌥⌘T only work while the app runs, so put back one that was running.
+if $WAS_RUNNING; then
+  open "$DEST/$APP_NAME.app"
+  echo "Reopened the updated app."
+fi
 
 echo "Done. Open it from Spotlight: Cmd+Space, then type Daily Tracker."

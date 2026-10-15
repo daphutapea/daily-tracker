@@ -116,6 +116,60 @@ export function useSetTaskStatus() {
   })
 }
 
+export interface TaskTiming {
+  id: string
+  due_at: string | null
+  remind_at: string | null
+}
+
+/**
+ * Moves several deadlines, and their reminders, in one go. Lists update at once and roll back if a
+ * save fails. Changing remind_at makes the server send that reminder again.
+ */
+export function useRescheduleTasks() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (changes: TaskTiming[]) => {
+      await Promise.all(
+        changes.map(async ({ id, due_at, remind_at }) =>
+          must(await supabase.from('tasks').update({ due_at, remind_at }).eq('id', id).select('id').single()),
+        ),
+      )
+    },
+    onMutate: async (changes) => {
+      await qc.cancelQueries({ queryKey: keys.tasks })
+      const previous = qc.getQueryData<TaskSummary[]>(keys.tasks)
+      const byId = new Map(changes.map((c) => [c.id, c]))
+      qc.setQueryData<TaskSummary[]>(keys.tasks, (old) =>
+        old?.map((t) => {
+          const c = byId.get(t.id)
+          return c ? { ...t, due_at: c.due_at, remind_at: c.remind_at } : t
+        }),
+      )
+      return { previous }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(keys.tasks, ctx.previous)
+    },
+    onSettled: (_data, _err, changes) => {
+      qc.invalidateQueries({ queryKey: keys.tasks })
+      changes.forEach((c) => qc.invalidateQueries({ queryKey: keys.task(c.id) }))
+    },
+  })
+}
+
+/** Puts a deleted task, event or note back exactly as it was, with the same id and dates, for Undo. */
+export function useRestoreRow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ table, row }: { table: 'tasks' | 'events' | 'notes'; row: object }) => {
+      must(await supabase.from(table).insert(row as never).select('id').single())
+    },
+    // The list caches are keyed by table name: keys.tasks, keys.events, keys.notes.
+    onSuccess: (_data, { table }) => qc.invalidateQueries({ queryKey: [table] }),
+  })
+}
+
 export function useDeleteTask() {
   const qc = useQueryClient()
   return useMutation({
@@ -328,11 +382,16 @@ export function useUpdateProfile() {
   })
 }
 
+/** Telegram has answered a token check: no token, a bot name, or an error. */
+export const telegramSettled = (s: TelegramStatus | undefined) =>
+  !!s && (!s.bot_configured || !!s.bot_username || !!s.bot_error)
+
+/** With `poll`, checks every 1.5 seconds until Telegram has answered the token check, then stops. */
 export function useTelegramStatus(poll = false) {
   return useQuery({
     queryKey: keys.telegram,
     queryFn: async () => must(await supabase.rpc('telegram_status')) as unknown as TelegramStatus,
-    refetchInterval: poll ? 1500 : false,
+    refetchInterval: (query) => (poll && !telegramSettled(query.state.data) ? 1500 : false),
   })
 }
 
