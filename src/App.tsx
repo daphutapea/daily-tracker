@@ -4,6 +4,8 @@ import { Toaster } from 'sonner'
 import { SignIn } from './auth/SignIn'
 import { useSession } from './auth/sessionContext'
 import { AppShell } from './components/AppShell'
+import { Intro } from './components/Intro'
+import { useIntroPlaying } from './lib/intro'
 import { useTheme } from './lib/theme'
 import { HomePage } from './pages/Home'
 
@@ -34,8 +36,10 @@ const router = createBrowserRouter([
 export function App() {
   const session = useSession()
   const theme = useTheme()
+  const intro = useIntroPlaying()
   return (
     <>
+      {intro && <Intro />}
       {session.status === 'loading' ? (
         <div className="grid min-h-dvh place-items-center text-ink-3" role="status">
           Loading your tracker…

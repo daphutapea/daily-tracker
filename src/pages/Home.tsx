@@ -1,6 +1,6 @@
 import { CalendarBlankIcon, ChatTextIcon, NotePencilIcon, PlusIcon } from '@phosphor-icons/react'
 import { addDays, format, isSameDay, startOfDay } from 'date-fns'
-import { useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, type CSSProperties, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Breakdown, FinishedPerDay, Meter } from '@/components/Charts'
 import { DayRuler } from '@/components/DayRuler'
@@ -10,6 +10,8 @@ import { MoveAllToTomorrow, TaskRow } from '@/components/TaskRow'
 import { Loading, QueryError, SiteIcon, StateMessage } from '@/components/ui'
 import { formatDay, greeting, lastNDays, sameDay, toDate, weekRange } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
+import { rememberName } from '@/lib/intro'
+import { rowIn } from '@/lib/motion'
 import { shortcutLabel } from '@/lib/platform'
 import { quietly, useCreateNote, useEvents, useProfile, useProjects, useQuickLinks, useTasks } from '@/lib/queries'
 import { PRIORITIES, PRIORITY_RANK, STATUSES, type CalEvent, type TaskSummary } from '@/lib/types'
@@ -31,6 +33,10 @@ export function HomePage() {
   const name = profile.data?.display_name?.trim()
   const todayKey = format(now, 'yyyy-MM-dd')
 
+  useEffect(() => {
+    if (profile.isSuccess) rememberName(name)
+  }, [profile.isSuccess, name])
+
   async function newNote() {
     const id = await createNote.mutateAsync({})
     navigate(`/notes/${id}`)
@@ -47,7 +53,7 @@ export function HomePage() {
 
   return (
     <div className="space-y-6">
-      <header className="panel px-5 pt-5 pb-4 md:px-6">
+      <header className="arrive panel px-5 pt-5 pb-4 md:px-6">
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
           <div>
             <h1 className="text-xl font-semibold">
@@ -109,7 +115,7 @@ export function HomePage() {
 
       {dataState ?? (
         <div className="fade-in space-y-6">
-          <div className="grid gap-6 lg:grid-cols-12">
+          <div className="arrive grid gap-6 lg:grid-cols-12" style={{ '--i': 1 } as CSSProperties}>
             <Panel
               className="lg:col-span-7"
               title="Today"
@@ -193,7 +199,7 @@ export function HomePage() {
             </Panel>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-12">
+          <div className="arrive grid gap-6 lg:grid-cols-12" style={{ '--i': 2 } as CSSProperties}>
             <Panel
               className="lg:col-span-7"
               title="In progress and waiting"
@@ -219,7 +225,7 @@ export function HomePage() {
             </Panel>
           </div>
 
-          <section aria-labelledby="numbers-heading" className="space-y-4">
+          <section aria-labelledby="numbers-heading" className="arrive space-y-4" style={{ '--i': 3 } as CSSProperties}>
             <div className="flex items-baseline justify-between gap-3">
               <h2 id="numbers-heading" className="text-base font-semibold">
                 Numbers
@@ -329,7 +335,7 @@ function EventRow({ event, onOpen }: { event: CalEvent; onOpen: (id: string) => 
   const start = toDate(event.starts_at)
   const end = event.ends_at ? toDate(event.ends_at) : null
   return (
-    <li>
+    <li className={rowIn(event.id)}>
       <button type="button" onClick={() => onOpen(event.id)} className="row-hover flex w-full items-start gap-3 px-4 py-2.5 text-left">
         <span aria-hidden className="flex w-5 shrink-0 justify-center pt-1">
           <span className="block h-4 w-1 rounded-full bg-ink-2" />

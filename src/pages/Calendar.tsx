@@ -7,6 +7,7 @@ import { TaskRow } from '@/components/TaskRow'
 import { Loading, QueryError, StateMessage } from '@/components/ui'
 import { sameDay, toDate } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
+import { rowIn } from '@/lib/motion'
 import { useEvents, useProjects, useTasks } from '@/lib/queries'
 import { useNow } from '@/lib/useNow'
 import type { CalEvent, Project, TaskSummary } from '@/lib/types'
@@ -17,6 +18,11 @@ export function CalendarPage() {
   const parsed = params.get('date') ? parseISO(params.get('date')!) : null
   const selected = parsed && isValid(parsed) ? parsed : today
   const [month, setMonth] = useState(() => startOfMonth(selected))
+  const [dir, setDir] = useState<'next' | 'prev'>()
+  const goToMonth = (next: Date) => {
+    setDir(next > month ? 'next' : next < month ? 'prev' : dir)
+    setMonth(next)
+  }
   const tasks = useTasks()
   const events = useEvents()
   const projects = useProjects()
@@ -37,7 +43,7 @@ export function CalendarPage() {
 
   const select = (day: Date) => {
     setParams({ date: format(day, 'yyyy-MM-dd') }, { replace: true })
-    if (!isSameMonth(day, month)) setMonth(startOfMonth(day))
+    if (!isSameMonth(day, month)) goToMonth(startOfMonth(day))
   }
 
   const sel = itemsOn(selected)
@@ -77,13 +83,13 @@ export function CalendarPage() {
                 {format(month, 'MMMM yyyy')}
               </h2>
               <div className="flex items-center gap-1">
-                <button type="button" className="btn btn-ghost btn-icon" aria-label="Previous month" onClick={() => setMonth((m) => addMonths(m, -1))}>
+                <button type="button" className="btn btn-ghost btn-icon" aria-label="Previous month" onClick={() => goToMonth(addMonths(month, -1))}>
                   <CaretLeftIcon size={16} weight="bold" />
                 </button>
                 <button type="button" className="btn btn-quiet" onClick={() => select(new Date())}>
                   Today
                 </button>
-                <button type="button" className="btn btn-ghost btn-icon" aria-label="Next month" onClick={() => setMonth((m) => addMonths(m, 1))}>
+                <button type="button" className="btn btn-ghost btn-icon" aria-label="Next month" onClick={() => goToMonth(addMonths(month, 1))}>
                   <CaretRightIcon size={16} weight="bold" />
                 </button>
               </div>
@@ -96,7 +102,7 @@ export function CalendarPage() {
                 </span>
               ))}
             </div>
-            <div className="grid grid-cols-7">
+            <div key={format(month, 'yyyy-MM')} data-dir={dir} className="slide-in grid grid-cols-7">
               {days.map((d, i) => {
                 const { evs, ts } = itemsOn(d)
                 const isSel = isSameDay(d, selected)
@@ -189,7 +195,7 @@ function DayEvents({ events, onOpen }: { events: CalEvent[]; onOpen: (id: string
       <h3 className="bg-surface-2/50 px-4 py-1.5 text-[13px] font-medium text-ink-2">Events</h3>
       <ul className="divide-y divide-line">
         {events.map((e) => (
-          <li key={e.id}>
+          <li key={e.id} className={rowIn(e.id)}>
             <button type="button" onClick={() => onOpen(e.id)} className="row-hover block w-full px-4 py-2.5 text-left">
               <span className="block break-words">{e.title}</span>
               <span className="text-[13px] text-ink-2 tnum">

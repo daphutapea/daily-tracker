@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Reac
 import { toast } from 'sonner'
 import type { ProposedItem, QuickAddResult } from '../../supabase/functions/quick-add/logic.ts'
 import { deviceTimeZone, toDate } from '@/lib/dates'
+import { markNew } from '@/lib/motion'
 import { keys, useEvents, useProjects } from '@/lib/queries'
 import { must, supabase } from '@/lib/supabase'
 import { PRIORITIES, type CalEvent } from '@/lib/types'
@@ -127,8 +128,11 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
       const projectId = (name: string | null) => activeProjects.find((p) => p.name === name)?.id ?? null
       const tasks = drafts.filter((d) => d.kind === 'task').map((d) => toTaskRow(d, projectId(d.project)))
       const evs = drafts.filter((d) => d.kind === 'event').map(toEventRow)
-      if (tasks.length) must(await supabase.from('tasks').insert(tasks))
-      if (evs.length) must(await supabase.from('events').insert(evs))
+      const added = [
+        ...(tasks.length ? must(await supabase.from('tasks').insert(tasks).select('id')) : []),
+        ...(evs.length ? must(await supabase.from('events').insert(evs).select('id')) : []),
+      ]
+      markNew(added.map((row) => row.id))
       qc.invalidateQueries({ queryKey: keys.tasks })
       qc.invalidateQueries({ queryKey: keys.events })
       toast.success(drafts.length === 1 ? `Added “${drafts[0].title}”` : `Added ${drafts.length} items`)

@@ -20,6 +20,11 @@ own Dock icon, and you stay signed in between launches. The app lives in your Ap
 (`~/Applications`); `npm run app` builds and installs it, and running it again after a code change
 replaces the installed copy, reopening it if it was open.
 
+When Daily Tracker opens, a short intro plays while it loads: the day ruler draws itself, a teal line
+runs to the current time, and you're greeted by name. It takes about a second and a half; click or
+press any key to skip it. It plays once each time the app starts (once per tab in a browser), and you
+can turn it off in Settings → Appearance.
+
 Links you click inside the app, such as your quick links, open in your normal browser.
 
 Closing the window doesn’t quit the app. It stays in the menu bar (the checklist icon at the top of the

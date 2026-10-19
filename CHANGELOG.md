@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.7 (2026-10-19)
+
+### Added
+- An intro when Daily Tracker opens: the day ruler draws itself, the teal line runs to the current time, and you’re greeted by name. About a second and a half, while the app loads. A click or any key skips it. It plays once each time the app starts, or once per tab in a browser. Turn it off, or play it again, in Settings → Appearance.
+- After the intro, Home’s sections rise in one after another.
+- Pages fade in when you switch between them. Moving to the next or previous month or week slides the new one in from that side.
+- A task, event or note you add, bring back with Undo, or move to another day rises into its list, so you can see where it went.
+
+### Changed
+- Anything you do from the keyboard stays instant: pages and months change without a fade or slide after a key press, as Tracky already did with Cmd+K.
+- With Reduce motion turned on in your system settings, the intro and the new transitions only fade.
+
 ## v1.6 (2026-10-19)
 
 ### Added

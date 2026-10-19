@@ -13,6 +13,11 @@ export function MiniMonth({
   onPick: (day: Date) => void
 }) {
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
+  const [dir, setDir] = useState<'next' | 'prev'>()
+  const goToMonth = (next: Date) => {
+    setDir(next > month ? 'next' : next < month ? 'prev' : dir)
+    setMonth(next)
+  }
   const days = useMemo(() => monthGrid(month), [month])
   const today = useNow()
 
@@ -23,13 +28,13 @@ export function MiniMonth({
           {format(month, 'MMMM yyyy')}
         </h3>
         <div className="flex items-center gap-1">
-          <button type="button" className="btn btn-ghost btn-icon" aria-label="Previous month" onClick={() => setMonth((m) => addMonths(m, -1))}>
+          <button type="button" className="btn btn-ghost btn-icon" aria-label="Previous month" onClick={() => goToMonth(addMonths(month, -1))}>
             <CaretLeftIcon size={16} weight="bold" />
           </button>
-          <button type="button" className="btn btn-ghost px-2 text-[13px]" onClick={() => setMonth(startOfMonth(new Date()))}>
+          <button type="button" className="btn btn-ghost px-2 text-[13px]" onClick={() => goToMonth(startOfMonth(new Date()))}>
             Today
           </button>
-          <button type="button" className="btn btn-ghost btn-icon" aria-label="Next month" onClick={() => setMonth((m) => addMonths(m, 1))}>
+          <button type="button" className="btn btn-ghost btn-icon" aria-label="Next month" onClick={() => goToMonth(addMonths(month, 1))}>
             <CaretRightIcon size={16} weight="bold" />
           </button>
         </div>
@@ -41,7 +46,7 @@ export function MiniMonth({
           </span>
         ))}
       </div>
-      <div className="grid grid-cols-7">
+      <div key={format(month, 'yyyy-MM')} data-dir={dir} className="slide-in grid grid-cols-7">
         {days.map((d) => {
           const b = busy(d)
           const isToday = isSameDay(d, today)

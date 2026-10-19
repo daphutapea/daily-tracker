@@ -19,6 +19,7 @@ import { MoveAllToTomorrow, TaskRow } from '@/components/TaskRow'
 import { Loading, PriorityTag, QueryError, Segmented, StateMessage } from '@/components/ui'
 import { formatWhen, toDate } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
+import { rowIn } from '@/lib/motion'
 import { useProjects, useSetTaskStatus, useTasks } from '@/lib/queries'
 import { PRIORITIES, PRIORITY_RANK, STATUSES, type Project, type TaskStatus, type TaskSummary } from '@/lib/types'
 import { useNow } from '@/lib/useNow'
@@ -178,7 +179,10 @@ export function TasksPage() {
           />
         </div>
       ) : view === 'board' ? (
-        <Board tasks={filtered} projectById={projectById} onOpen={openTask} />
+        // The list fades in on its own (.fade-in); the board gets the same when you switch to it.
+        <div className="route-in space-y-5">
+          <Board tasks={filtered} projectById={projectById} onOpen={openTask} />
+        </div>
       ) : (
         <TaskList
           tasks={filtered}
@@ -442,7 +446,7 @@ function Card({
   const { role: _role, tabIndex: _tabIndex, ...dragAttributes } = attributes
   return (
     // While its copy is lifted, the card stays put and dims, so you can see where it came from.
-    <li ref={setNodeRef} className={`touch-manipulation transition-opacity duration-150 ${isDragging ? 'opacity-40' : ''}`}>
+    <li ref={setNodeRef} className={`touch-manipulation transition-opacity duration-150 ${isDragging ? 'opacity-40' : ''} ${rowIn(task.id)}`}>
       <button
         type="button"
         {...dragAttributes}

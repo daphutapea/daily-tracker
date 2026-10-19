@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TablesInsert, TablesUpdate } from './database.types'
+import { markNew } from './motion'
 import { must, supabase } from './supabase'
 import type {
   CalEvent,
@@ -78,7 +79,8 @@ export function useSaveTask() {
       }
       return must(await supabase.from('tasks').insert(input).select('id').single()).id
     },
-    onSuccess: (id) => {
+    onSuccess: (id, input) => {
+      if (!input.id) markNew([id])
       qc.invalidateQueries({ queryKey: keys.tasks })
       qc.invalidateQueries({ queryKey: keys.task(id) })
     },
@@ -135,6 +137,8 @@ export function useRescheduleTasks() {
       )
     },
     onMutate: async (changes) => {
+      // Moved tasks usually land in another list or day; they rise into their new place.
+      markNew(changes.map((c) => c.id))
       await qc.cancelQueries({ queryKey: keys.tasks })
       const previous = qc.getQueryData<TaskSummary[]>(keys.tasks)
       const byId = new Map(changes.map((c) => [c.id, c]))
@@ -161,10 +165,13 @@ export function useRestoreRow() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ table, row }: { table: 'tasks' | 'events' | 'notes'; row: object }) => {
-      must(await supabase.from(table).insert(row as never).select('id').single())
+      return must(await supabase.from(table).insert(row as never).select('id').single()).id as string
     },
     // The list caches are keyed by table name: keys.tasks, keys.events, keys.notes.
-    onSuccess: (_data, { table }) => qc.invalidateQueries({ queryKey: [table] }),
+    onSuccess: (id, { table }) => {
+      markNew([id])
+      qc.invalidateQueries({ queryKey: [table] })
+    },
   })
 }
 
@@ -198,7 +205,10 @@ export function useSaveEvent() {
       if (id) return must(await supabase.from('events').update(input).eq('id', id).select('id').single()).id
       return must(await supabase.from('events').insert(input).select('id').single()).id
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.events }),
+    onSuccess: (id, input) => {
+      if (!input.id) markNew([id])
+      qc.invalidateQueries({ queryKey: keys.events })
+    },
   })
 }
 
@@ -241,7 +251,10 @@ export function useCreateNote() {
   return useMutation({
     mutationFn: async (input: Omit<TablesInsert<'notes'>, 'user_id'> = {}) =>
       must(await supabase.from('notes').insert(input).select('id').single()).id,
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.notes }),
+    onSuccess: (id) => {
+      markNew([id])
+      qc.invalidateQueries({ queryKey: keys.notes })
+    },
   })
 }
 

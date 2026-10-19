@@ -1,6 +1,6 @@
 import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react'
 import { addDays, format, isSameDay, isSameMonth, isValid, parseISO, startOfWeek } from 'date-fns'
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router'
 import { FinishedPerDay } from '@/components/Charts'
 import { TaskRow } from '@/components/TaskRow'
@@ -42,8 +42,11 @@ export function ReviewPage() {
   const isCurrent = isSameDay(monday, thisMonday)
   const notStarted = monday > now
 
-  const goTo = (d: Date) =>
+  const [dir, setDir] = useState<'next' | 'prev'>()
+  const goTo = (d: Date) => {
+    setDir(d > monday ? 'next' : d < monday ? 'prev' : dir)
     setParams(isSameDay(d, thisMonday) ? {} : { week: format(d, 'yyyy-MM-dd') }, { replace: true })
+  }
 
   const projectById = useMemo(() => new Map(projects.data?.map((p) => [p.id, p])), [projects.data])
   // A few filters over your tasks; cheap enough to run on every render.
@@ -95,7 +98,7 @@ export function ReviewPage() {
           }}
         />
       ) : (
-        <div className="fade-in space-y-6">
+        <div key={format(monday, 'yyyy-MM-dd')} data-dir={dir} className="slide-in space-y-6">
           <p className="text-base">{summary}</p>
 
           <div className="grid gap-6 lg:grid-cols-12">

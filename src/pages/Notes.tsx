@@ -9,6 +9,7 @@ import type { Json } from '@/lib/database.types'
 import { toDate } from '@/lib/dates'
 import { quietly, useCreateNote, useDeleteNote, useNote, useNotes, useProjects, useUpdateNote } from '@/lib/queries'
 import type { Note, NoteSummary } from '@/lib/types'
+import { rowIn } from '@/lib/motion'
 import { useOfferUndo } from '@/lib/undo'
 
 export function NotesPage() {
@@ -109,7 +110,7 @@ function NoteListItem({ note, active }: { note: NoteSummary; active: boolean }) 
   const updated = toDate(note.updated_at)
   const snippet = note.content_text.split('\n').find((l) => l.trim()) ?? ''
   return (
-    <li>
+    <li className={rowIn(note.id)}>
       <Link
         to={`/notes/${note.id}`}
         aria-current={active ? 'page' : undefined}
@@ -235,7 +236,7 @@ function NoteEditor({ note }: { note: Note }) {
           : `Saved ${isToday(savedAt) ? format(savedAt, 'HH:mm') : format(savedAt, 'd MMM, HH:mm')}`
 
   return (
-    <article className="panel overflow-hidden">
+    <article className="panel fade-in overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
         <Link to="/notes" className="btn btn-ghost btn-icon md:hidden" aria-label="Back to all notes">
           <ArrowLeftIcon size={18} weight="bold" />

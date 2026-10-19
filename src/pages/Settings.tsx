@@ -24,6 +24,7 @@ import {
   useMacPermission,
   useMacRemindersEnabled,
 } from '@/lib/native'
+import { playIntro, setIntroEnabled, useIntroEnabled } from '@/lib/intro'
 import { quietly, useDeleteProject, useProfile, useProjects, useSaveProject, useUpdateProfile } from '@/lib/queries'
 import { must, supabase } from '@/lib/supabase'
 import { updateTheme, useTheme, type DarkPalette, type LightPalette, type Palette, type ThemeMode } from '@/lib/theme'
@@ -317,6 +318,7 @@ const DARK_PALETTES: { value: DarkPalette; label: string; note: string }[] = [
 
 function AppearanceSection() {
   const theme = useTheme()
+  const intro = useIntroEnabled()
   return (
     <Section title="Appearance" intro="Saved on this device only.">
       <div className="space-y-5">
@@ -344,6 +346,23 @@ function AppearanceSection() {
           value={theme.dark}
           onChange={(dark) => updateTheme({ dark })}
         />
+        <div className="space-y-1">
+          <label className="flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 font-medium">
+            <input
+              type="checkbox"
+              className="size-4 accent-[var(--ink)]"
+              checked={intro}
+              onChange={(e) => setIntroEnabled(e.target.checked)}
+            />
+            Play the intro when Daily Tracker opens
+          </label>
+          <p className="pl-6 text-[13px] text-ink-2">
+            About a second and a half: the day ruler draws itself, then your greeting. A click or any key skips it.{' '}
+            <button type="button" className="hit font-medium text-ink underline underline-offset-2" onClick={playIntro}>
+              Play it now
+            </button>
+          </p>
+        </div>
       </div>
     </Section>
   )

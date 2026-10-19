@@ -9,6 +9,7 @@
 :root {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --toast-bottom: 24px;
 }
 /* Toasts sit above the phone tab bar (56px plus the home-indicator inset) instead of covering it. */
@@ -353,6 +354,45 @@
     }
   }
 
+  /* A new page fades in over 150ms so switching pages isn't a hard cut. Opacity only: it happens often. */
+  .route-in {
+    transition: opacity 150ms var(--ease-out);
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  /* The next or previous month or week slides 8px in from the side you moved towards. */
+  .slide-in {
+    transition:
+      opacity 180ms var(--ease-out),
+      translate 180ms var(--ease-out);
+    @starting-style {
+      opacity: 0;
+      translate: var(--slide-from, 0) 0;
+    }
+  }
+  .slide-in[data-dir="next"] {
+    --slide-from: 8px;
+  }
+  .slide-in[data-dir="prev"] {
+    --slide-from: -8px;
+  }
+
+  /* Keyboard actions stay instant (see lib/motion.ts). */
+  :root[data-input="key"] :is(.route-in, .slide-in) {
+    transition: none;
+  }
+
+  /*
+   * A row that was just added, restored or moved rises into place once, so you can see where it
+   * landed. A keyframe rather than a transition: rows carry Tailwind transition classes that would
+   * replace a transition list set here.
+   */
+  .row-in {
+    animation: rise-in 200ms var(--ease-out) both;
+  }
+
   /* A small list that opens from a trigger grows out of the corner nearest to it. */
   .pop-in {
     transition:
@@ -403,6 +443,67 @@
     background: var(--ink-2);
     /* -100% to 333% of its own width carries it from just off the left edge to just off the right. */
     animation: working-sweep 1.2s linear infinite;
+  }
+}
+
+/*
+ * The intro (components/Intro.tsx). Keyframes, because the motion is fixed and has to stay smooth
+ * while the app loads underneath; CSS animations run off the main thread. Timeline: the mark at 0,
+ * the ruler draws from 150ms, the now line travels from 350ms to 950ms, the greeting at 500ms, and
+ * the whole layer fades out from 1300ms.
+ */
+.intro {
+  transition: opacity 250ms var(--ease-out);
+}
+.intro.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+.intro-rise {
+  animation: rise-in 300ms var(--ease-out) var(--d, 0ms) both;
+}
+.intro-draw {
+  animation: draw-in 500ms var(--ease-in-out) 150ms both;
+}
+.intro-now {
+  animation: travel-to-now 600ms var(--ease-in-out) 350ms both;
+}
+
+/* As the intro fades, Home's sections rise in after it, 50ms apart (lib/intro.ts sets the attribute). */
+:root[data-arrive] .arrive {
+  animation: rise-in 350ms var(--ease-out) calc(var(--i, 0) * 50ms) both;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes draw-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+@keyframes travel-to-now {
+  from {
+    opacity: 0;
+    translate: 0 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    translate: var(--now) 0;
   }
 }
 
@@ -562,6 +663,22 @@ dialog.sheet.sheet-instant::backdrop {
     @starting-style {
       scale: none;
     }
+  }
+  /* Fades stay; movement goes. The intro shows everything in place and fades it in. */
+  .slide-in {
+    @starting-style {
+      translate: none;
+    }
+  }
+  .row-in,
+  .intro-rise,
+  .intro-draw,
+  :root[data-arrive] .arrive {
+    animation: fade-in 200ms ease both;
+  }
+  .intro-now {
+    animation: fade-in 200ms ease both;
+    translate: var(--now) 0;
   }
 }
 

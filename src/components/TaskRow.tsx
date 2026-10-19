@@ -2,6 +2,7 @@ import { BellIcon } from '@phosphor-icons/react'
 import { addDays, startOfDay } from 'date-fns'
 import { formatWhen, toDate } from '@/lib/dates'
 import { useSetTaskStatus } from '@/lib/queries'
+import { rowIn } from '@/lib/motion'
 import { useMoveTasks } from '@/lib/reschedule'
 import { useNow } from '@/lib/useNow'
 import { statusLabel, type Project, type TaskSummary } from '@/lib/types'
@@ -35,7 +36,7 @@ export function TaskRow({
     : null
 
   return (
-    <li className="row-hover group flex items-start gap-3 px-4 py-2.5 transition-colors duration-150">
+    <li className={`row-hover group flex items-start gap-3 px-4 py-2.5 transition-colors duration-150 ${rowIn(task.id)}`}>
       <div className="pt-px">
         <TaskCheck
           checked={done}

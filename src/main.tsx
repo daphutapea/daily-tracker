@@ -5,6 +5,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { toast } from 'sonner'
 import { App } from './App'
+import './lib/motion'
 import { SessionProvider } from './auth/session'
 
 const queryClient = new QueryClient({

@@ -11,7 +11,7 @@ import {
   type Icon,
 } from '@phosphor-icons/react'
 import { useEffect, useEffectEvent } from 'react'
-import { NavLink, Outlet } from 'react-router'
+import { NavLink, Outlet, useLocation } from 'react-router'
 import { toast } from 'sonner'
 import { useUserEmail } from '@/auth/sessionContext'
 import { toDate } from '@/lib/dates'
@@ -41,6 +41,8 @@ const NAV: { to: string; label: string; icon: Icon; mobile: boolean }[] = [
 
 export function AppShell() {
   useInAppReminders()
+  // Keyed by the first part of the path, so moving between notes or task filters doesn't count as a page change.
+  const section = useLocation().pathname.split('/')[1]
 
   return (
     <QuickAddProvider>
@@ -54,7 +56,9 @@ export function AppShell() {
         <Sidebar />
         <main id="main" tabIndex={-1} className="pb-24 outline-none md:pb-10 md:pl-60">
           <div className="mx-auto w-full max-w-[1200px] px-4 pt-5 md:px-8 md:pt-7">
-            <Outlet />
+            <div key={section} className="route-in">
+              <Outlet />
+            </div>
           </div>
         </main>
         <TabBar />

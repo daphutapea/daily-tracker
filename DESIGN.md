@@ -126,6 +126,14 @@ the teal spread thin and the "now" line stop standing out.
 
 ## Motion (dial 2)
 
+- The intro, when the app opens (once per browser session, every launch of the Mac app): the mark
+  and name rise in (300ms), the day ruler draws left to right (`clip-path`, 500ms from 150ms,
+  `cubic-bezier(0.77, 0, 0.175, 1)`), the teal "now" line travels from 00:00 to the current time
+  (600ms from 350ms, same curve), and the greeting rises in at 500ms. At 1.3s the layer fades out
+  (250ms) and Home's four sections rise in after it, 50ms apart (350ms each). It is the one place
+  with motion for delight, because it is seen a few times a day at most and covers the app while it
+  loads. A click fades it out early; a key press removes it at once. It can be turned off in
+  Settings → Appearance. CSS keyframes, so it stays smooth while the app loads underneath.
 - Dialogs: 200ms scale from 0.97 plus fade, ease-out `cubic-bezier(0.23, 1, 0.32, 1)`; exit 150ms.
 - Phone dialogs slide up as a sheet: 260ms, `cubic-bezier(0.32, 0.72, 0, 1)`.
 - Buttons: `scale(0.97)` on press, 120ms. Everything else you tap gets the same press (chips, view
@@ -134,6 +142,15 @@ the teal spread thin and the "now" line stop standing out.
 - Ticking a task done: the check fills, the row fades to its done state over 150ms.
 - Content that replaces a loading message fades in once (opacity only, 200ms) so the swap isn't a
   hard cut. Refetches don't repeat it.
+- Changing page fades the new page in: 150ms, opacity only, because it happens many times a day.
+  Moving between notes or task filters isn't a page change. Switching the Tasks list and board
+  fades the same way.
+- The next or previous month (Calendar, Home's month) or week (Review) slides 8px in from the side
+  you moved towards, with a fade: 180ms ease-out. It shows which way you went.
+- A task, event or note you just added, restored with Undo, or moved to another day rises into its
+  list once: 6px and opacity, 200ms ease-out. It shows where it landed. Rows leaving a list don't
+  animate.
+- Nothing animates for data you are reading: chart bars, counts and meters appear as they are.
 - The day ruler's list of shared marks grows out of the corner nearest its mark: 150ms, opacity and
   scale from 0.97, ease-out.
 - Board drag: the card lifts into a floating copy (shadow, scale 1.02) while the original dims in
@@ -151,9 +168,12 @@ the teal spread thin and the "now" line stop standing out.
   resize handle while it runs. Removing a draft is instant: a fade would still leave the
   cards below jumping up.
 - Keyboard shortcuts open things instantly with no animation: Tracky opened with Cmd+K skips the
-  dialog's scale and fade, while the same dialog opened by a click still animates.
+  dialog's scale and fade, while the same dialog opened by a click still animates. The same goes
+  for pages and months: after a key press (Tab and Enter on a link, Cmd+,) they change without the
+  fade or slide. `lib/motion.ts` notes whether the last input was a key or a pointer.
 - `prefers-reduced-motion`: keep fades, drop movement. The drafts only fade, and the busy line is
-  hidden; the button still says Reading….
+  hidden; the button still says Reading…. The intro shows the ruler, the line and the greeting in
+  place and fades them in, then leaves after 0.9s. Months, weeks and new rows only fade.
 
 ## Copy
 
