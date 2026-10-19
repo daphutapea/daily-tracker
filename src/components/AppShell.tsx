@@ -176,7 +176,7 @@ function Sidebar({
                 title={collapsed ? n.label : undefined}
                 className={({ isActive }) =>
                   `flex min-h-9 items-center gap-2.5 rounded-[6px] font-medium transition-colors duration-150 ${row} ${
-                    isActive ? 'bg-surface-2 text-ink' : 'row-hover text-ink-2'
+                    isActive ? 'bg-accent-soft text-ink' : 'row-hover text-ink-2'
                   }`
                 }
               >
@@ -385,7 +385,10 @@ function TabBar() {
             >
               {({ isActive }) => (
                 <>
-                  <n.icon size={22} weight={isActive ? 'fill' : 'bold'} className={isActive ? 'text-accent' : ''} />
+                  {/* The active tab's icon sits on a teal pill, as the sidebar's active row does. */}
+                  <span className={`grid h-7 w-14 place-items-center rounded-[6px] ${isActive ? 'bg-accent-soft' : ''}`}>
+                    <n.icon size={22} weight={isActive ? 'fill' : 'bold'} className={isActive ? 'text-accent' : ''} />
+                  </span>
                   {n.label}
                 </>
               )}

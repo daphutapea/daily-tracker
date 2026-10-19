@@ -1,6 +1,7 @@
 import { CheckIcon, WarningIcon } from '@phosphor-icons/react'
 import { useState, type ReactNode } from 'react'
-import type { TaskPriority } from '@/lib/types'
+import { STATUS_COLOR } from '@/lib/hues'
+import type { TaskPriority, TaskStatus } from '@/lib/types'
 
 export function TaskCheck({
   checked,
@@ -42,14 +43,24 @@ export function TaskCheck({
 export function PriorityTag({ priority, quiet = false }: { priority: TaskPriority; quiet?: boolean }) {
   if (priority === 'urgent')
     return (
-      <span className="inline-flex items-center gap-1 text-[13px] font-medium text-danger">
-        <WarningIcon size={13} weight="bold" aria-hidden />
+      <span className="tag" data-hue="danger">
+        <WarningIcon size={12} weight="bold" aria-hidden />
         Urgent
       </span>
     )
-  if (priority === 'high') return <span className="text-[13px] font-medium text-warn">High</span>
+  if (priority === 'high')
+    return (
+      <span className="tag" data-hue="warn">
+        High
+      </span>
+    )
   if (quiet) return null
   return <span className="text-[13px] text-ink-3">{priority === 'medium' ? 'Medium' : 'Low'}</span>
+}
+
+/** A status as a small lamp, like an indicator on a panel. Always beside the status's name. */
+export function StatusLamp({ status }: { status: TaskStatus }) {
+  return <span aria-hidden className={`inline-block size-1.5 shrink-0 rounded-full ${STATUS_COLOR[status]}`} />
 }
 
 export function StateMessage({

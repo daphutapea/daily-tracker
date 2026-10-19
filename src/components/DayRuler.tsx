@@ -81,11 +81,11 @@ export function DayRuler({
           <span
             key={h}
             aria-hidden
-            className={`absolute bottom-0 w-px -translate-x-1/2 bg-line ${h % 6 === 0 ? 'h-3' : 'h-1.5'}`}
+            className={`absolute bottom-0 w-px -translate-x-1/2 ${h % 6 === 0 ? 'h-3 bg-ruler' : 'h-1.5 bg-line'}`}
             style={{ left: `${(h / 24) * 100}%` }}
           />
         ))}
-        <span aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-line" />
+        <span aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-ruler" />
 
         {groups.map((g) => {
           const key = `${g[0].kind}-${g[0].id}`
@@ -140,7 +140,7 @@ export function DayRuler({
           <span aria-hidden className="block size-2 rotate-45 border-[1.5px] border-ink bg-surface" /> Deadline
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="block h-3 w-1 rounded-full bg-ink-2" /> Event
+          <span aria-hidden className="block h-3 w-1 rounded-full bg-event" /> Event
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden className="block h-3 w-0.5 rounded-full bg-accent" /> Now
@@ -153,7 +153,7 @@ export function DayRuler({
 /** A deadline is a diamond, an event a bar. A shared mark takes a deadline's shape if it holds one. */
 function MarkGlyph({ marks }: { marks: Mark[] }) {
   const tasks = marks.filter((m) => m.kind === 'task')
-  if (tasks.length === 0) return <span className="block h-4 w-1 rounded-full bg-ink-2" />
+  if (tasks.length === 0) return <span className="block h-4 w-1 rounded-full bg-event" />
   const tone = tasks.some((m) => m.late)
     ? 'border-danger bg-danger'
     : tasks.every((m) => m.done)

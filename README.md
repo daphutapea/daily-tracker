@@ -55,27 +55,38 @@ the width, whatever you set.
 
 ## Home
 
-Home is built to answer one question: what is left today?
+Home is built to answer one question: what is left today? On a computer it fits on one screen, so
+nothing you need is below the fold.
 
-The header shows the date, the time and three buttons. Add task opens a new task due today at 17:00.
-Add event opens a new event today, starting at the next full hour. New note opens an empty note. The
+The header is the navy band at the top. It shows the time, the date and three buttons: Task opens a
+new task due today at 17:00, Event opens a new event today starting at the next full hour, and Note
+opens an empty note. Beside them is the field where you ask Tracky (see [Tracky](#tracky)). The
 greeting uses the name you set in Settings.
 
-Below the buttons is the field where you ask Tracky (see [Tracky](#tracky)). Under it is a ruler for
-today, from midnight to midnight. Diamonds are deadlines, short bars
-are events, and the teal line is the current time. A filled red diamond is a deadline you have already
+Under them is a ruler for today, from midnight to midnight. Diamonds are deadlines, indigo bars are
+events, and the teal line is the current time. A filled red diamond is a deadline you have already
 missed. Click any mark to open it. When several fall at almost the same time, such as three tasks due
 at 17:00, they share one mark with a number above it; click it to list them and open the one you want.
 
+Right under the header are five counts: open tasks (with a strip showing how many are to do, in
+progress and waiting), due today, overdue, done in the last 7 days, and events today. Click one to
+open the matching list.
+
 | Panel | What it shows |
 |---|---|
-| Today | Overdue tasks first, then today’s events and deadlines in time order. The number beside the title is how much is left. |
-| Next 7 days | Deadlines and events for the coming week, grouped by day. |
+| Today | Overdue tasks first, then today’s events and deadlines in time order, with a teal Now line between what has passed and what is next. The number beside the title is how much is left. |
 | In progress and waiting | Open tasks with the status In progress or Waiting. They stay here until you finish them. |
-| Month | A small calendar. A diamond under a day means a deadline, a bar means an event. Click a day to open it in Calendar. |
-| Numbers | Counts that open the matching list when clicked, tasks finished per day over the last week, how many of today’s and this week’s deadlines you met, and your open tasks by status and priority. Show table swaps the chart for the numbers behind it. |
+| Next 7 days | Deadlines and events for the coming week, grouped by day. The number beside the title is how many. |
+| Month | A small calendar, with today in teal. A diamond under a day means a deadline, an indigo bar an event. Click a day to open it in Calendar. |
+| Numbers | One chart at a time: tasks finished per day over the last week, how many of today’s and this week’s deadlines you met, or your open tasks by status and priority. Pick one with Finished, Deadlines or Open; Show table swaps the chart for the numbers behind it. |
 
-On a phone, your quick links sit at the bottom of Home.
+On a computer, a panel with more than fits scrolls inside itself, so the page stays still. In a
+smaller window or on a phone the panels sit one under another and long lists show their first few
+rows, with Show more for the rest. On a phone, your quick links sit at the bottom of Home.
+
+Colors mean the same thing everywhere: red is overdue or urgent, amber is High priority, green is
+done, a sky dot is In progress, a plum dot is Waiting, indigo is an event, and teal is now and
+today.
 
 ## Tracky
 

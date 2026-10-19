@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.10 (2026-10-19)
+
+### Added
+- More color, in all four palettes. Home's header is a band of brand navy holding the day ruler, and each color means one thing everywhere: red overdue or urgent, amber High priority, green done, sky In progress, plum Waiting, indigo events, teal now and today. Urgent and High are tinted tags, statuses are small colored dots beside their names, the counts have tinted icons, and the charts use the same colors. The intro and the palette previews in Settings use the new band.
+- A teal Now line in Today, between what has passed and what is next.
+- In the Mac app, ⌘T opens Tracky (⌘K still works). A browser keeps ⌘T for a new tab, so there it stays ⌘K.
+
+### Changed
+- Home fits on one screen on a computer. The counts sit right under the header; below them Today with In progress and waiting, then Next 7 days, then the month with Numbers, which shows one chart at a time (Finished, Deadlines, Open). A panel with more than fits scrolls inside itself, so no panel is stretched and the page doesn't scroll. In a medium window the panels sit in two columns, and on a phone they stack, with long lists cut short behind Show more.
+- Waiting is plum instead of amber, so amber means High priority only.
+
 ## v1.9 (2026-10-19)
 
 ### Added

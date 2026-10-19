@@ -133,7 +133,7 @@ export function CalendarPage() {
                   >
                     <span
                       className={`grid size-7 place-items-center self-center rounded-full text-[13px] tnum sm:self-start ${
-                        isToday ? 'bg-ink font-semibold text-surface' : inMonth ? 'text-ink' : 'text-ink-3'
+                        isToday ? 'bg-accent font-semibold text-on-accent' : inMonth ? 'text-ink' : 'text-ink-3'
                       } ${isSel && !isToday ? 'ring-1 ring-ink' : ''}`}
                     >
                       {format(d, 'd')}
@@ -141,17 +141,21 @@ export function CalendarPage() {
                     {/* Phones: marks only. Wider screens: the first three items. */}
                     <span className="flex justify-center gap-0.5 sm:hidden" aria-hidden>
                       {ts.length > 0 && <span className="block size-1.5 rotate-45 bg-ink-2" />}
-                      {evs.length > 0 && <span className="block h-1.5 w-[3px] rounded-full bg-ink-2" />}
+                      {evs.length > 0 && <span className="block h-1.5 w-[3px] rounded-full bg-event" />}
                     </span>
                     <span className="hidden min-w-0 flex-col gap-0.5 sm:flex" aria-hidden>
                       {all.slice(0, 3).map((it) => (
                         <span
                           key={it.key}
                           className={`flex min-w-0 items-center gap-1 rounded-[4px] px-1 text-[12px] leading-5 ${
-                            it.kind === 'event' ? 'bg-surface-2 text-ink' : 'text-ink-2'
+                            it.kind === 'event' ? 'bg-event-soft text-ink' : 'text-ink-2'
                           } ${it.done ? 'line-through opacity-70' : ''}`}
                         >
-                          {it.kind === 'task' && <span className="block size-1.5 shrink-0 rotate-45 border border-current" />}
+                          {it.kind === 'task' ? (
+                            <span className="block size-1.5 shrink-0 rotate-45 border border-current" />
+                          ) : (
+                            <span className="block h-2.5 w-[3px] shrink-0 rounded-full bg-event" />
+                          )}
                           <span className="truncate">{it.text}</span>
                         </span>
                       ))}
@@ -196,13 +200,19 @@ function DayEvents({ events, onOpen }: { events: CalEvent[]; onOpen: (id: string
       <ul className="divide-y divide-line">
         {events.map((e) => (
           <li key={e.id} className={rowIn(e.id)}>
-            <button type="button" onClick={() => onOpen(e.id)} className="row-hover block w-full px-4 py-2.5 text-left">
-              <span className="block break-words">{e.title}</span>
-              <span className="text-[13px] text-ink-2 tnum">
-                {e.all_day
-                  ? 'All day'
-                  : `${format(toDate(e.starts_at), 'HH:mm')}${e.ends_at ? `–${format(toDate(e.ends_at), 'HH:mm')}` : ''}`}
-                {e.location && <span className="text-ink-3"> · {e.location}</span>}
+            <button type="button" onClick={() => onOpen(e.id)} className="row-hover flex w-full items-start gap-3 px-4 py-2.5 text-left">
+              {/* The event bar, as on the day ruler and Home. */}
+              <span aria-hidden className="flex w-5 shrink-0 justify-center pt-1">
+                <span className="block h-4 w-1 rounded-full bg-event" />
+              </span>
+              <span className="min-w-0">
+                <span className="block break-words">{e.title}</span>
+                <span className="text-[13px] text-ink-2 tnum">
+                  {e.all_day
+                    ? 'All day'
+                    : `${format(toDate(e.starts_at), 'HH:mm')}${e.ends_at ? `–${format(toDate(e.ends_at), 'HH:mm')}` : ''}`}
+                  {e.location && <span className="text-ink-3"> · {e.location}</span>}
+                </span>
               </span>
             </button>
           </li>

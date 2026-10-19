@@ -39,7 +39,8 @@ export function Intro() {
     <div
       aria-hidden
       onPointerDown={() => setLeaving(true)}
-      className={`intro fixed inset-0 z-[60] grid place-items-center bg-bg px-6 ${leaving ? 'is-leaving' : ''}`}
+      // In the header band's navy, so the ruler drawn here reads as the one in Home's header.
+      className={`intro hero fixed inset-0 z-[60] grid place-items-center rounded-none border-0 px-6 ${leaving ? 'is-leaving' : ''}`}
       style={{ '--now': `${nowPct}%` } as CSSProperties}
     >
       <div className="w-full max-w-md">
@@ -53,11 +54,11 @@ export function Intro() {
             {Array.from({ length: 25 }, (_, h) => (
               <span
                 key={h}
-                className={`absolute bottom-0 w-px -translate-x-1/2 bg-line-strong ${h % 6 === 0 ? 'h-3' : 'h-1.5'}`}
+                className={`absolute bottom-0 w-px -translate-x-1/2 ${h % 6 === 0 ? 'h-3 bg-ruler' : 'h-1.5 bg-line'}`}
                 style={{ left: `${(h / 24) * 100}%` }}
               />
             ))}
-            <span className="absolute inset-x-0 bottom-0 h-px bg-line-strong" />
+            <span className="absolute inset-x-0 bottom-0 h-px bg-ruler" />
           </div>
           {/* A full-width track, so translating it by --now carries the line to the current time. */}
           <div className="intro-now absolute inset-0">

@@ -74,7 +74,7 @@ export function FinishedPerDay({
                       className="flex h-full w-full items-end justify-center rounded-[4px] focus-visible:outline-offset-0"
                     >
                       <span
-                        className="block w-full max-w-6 rounded-t-[4px] bg-ink-2"
+                        className="block w-full max-w-6 rounded-t-[4px] bg-ok"
                         style={{ height: n === 0 ? 0 : Math.max(h, 3) }}
                       />
                     </div>
@@ -105,18 +105,32 @@ export function FinishedPerDay({
   )
 }
 
-/** Horizontal bars with the count at the tip; labels in text tokens, the bar in one neutral hue. */
-export function Breakdown({ title, rows, total }: { title: string; rows: { label: string; value: number }[]; total: number }) {
+/**
+ * Horizontal bars with the count at the tip. Each row's lamp and bar take the color its status or
+ * priority has everywhere else, so the chart doubles as their legend.
+ */
+export function Breakdown({
+  title,
+  rows,
+  total,
+}: {
+  title: string
+  rows: { label: string; value: number; color: string }[]
+  total: number
+}) {
   return (
     <div>
       <h4 className="section-label">{title}</h4>
       <dl className="mt-2 space-y-2">
         {rows.map((r) => (
-          <div key={r.label} className="grid grid-cols-[88px_1fr_28px] items-center gap-3">
-            <dt className="text-[13px] text-ink-2">{r.label}</dt>
+          <div key={r.label} className="grid grid-cols-[96px_1fr_28px] items-center gap-3">
+            <dt className="flex items-center gap-1.5 text-[13px] text-ink-2">
+              <span aria-hidden className={`size-1.5 shrink-0 rounded-full ${r.color}`} />
+              {r.label}
+            </dt>
             <dd className="h-2 overflow-hidden rounded-full bg-surface-2" aria-hidden>
               <span
-                className="block h-full rounded-full bg-ink-2"
+                className={`block h-full rounded-full ${r.color}`}
                 style={{ width: total ? `${(r.value / total) * 100}%` : 0 }}
               />
             </dd>
@@ -144,7 +158,7 @@ export function Meter({ label, done, total }: { label: string; done: number; tot
         aria-valuenow={done}
         className="mt-1.5 h-2 overflow-hidden rounded-full bg-surface-2"
       >
-        <span className="block h-full rounded-full bg-ink-2" style={{ width: `${pct}%` }} />
+        <span className="block h-full rounded-full bg-ok" style={{ width: `${pct}%` }} />
       </div>
       <p className="mt-1 text-[13px] text-ink-3">
         {total ? `${done} of ${total} done` : 'No deadlines in this window'}

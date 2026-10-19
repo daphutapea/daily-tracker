@@ -6,7 +6,7 @@ import { rowIn } from '@/lib/motion'
 import { useMoveTasks } from '@/lib/reschedule'
 import { useNow } from '@/lib/useNow'
 import { statusLabel, type Project, type TaskSummary } from '@/lib/types'
-import { PriorityTag, TaskCheck } from './ui'
+import { PriorityTag, StatusLamp, TaskCheck } from './ui'
 
 export function TaskRow({
   task,
@@ -76,7 +76,12 @@ export function TaskRow({
             </span>
           )}
           {project && <span className="text-ink-3">{project.name}</span>}
-          {showStatus && !done && task.status !== 'todo' && <span className="text-ink-2">{statusLabel(task.status)}</span>}
+          {showStatus && !done && task.status !== 'todo' && (
+            <span className="inline-flex items-center gap-1.5 text-ink-2">
+              <StatusLamp status={task.status} />
+              {statusLabel(task.status)}
+            </span>
+          )}
           {!done && <PriorityTag priority={task.priority} quiet />}
         </span>
       </button>

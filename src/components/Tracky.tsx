@@ -903,7 +903,7 @@ function DraftCard({
           {d.kind === 'task' ? (
             <span className="block size-2.5 rotate-45 border-[1.5px] border-ink" />
           ) : (
-            <span className="block h-4 w-1 rounded-full bg-ink-2" />
+            <span className="block h-4 w-1 rounded-full bg-event" />
           )}
         </span>
         <div className="min-w-0 flex-1">

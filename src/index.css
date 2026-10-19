@@ -34,6 +34,16 @@
   --danger: #b42318;
   --warn: #b54708;
   --ok: #067647;
+  --danger-soft: #fce9e7;
+  --warn-soft: #fcefe1;
+  --ok-soft: #e2f3e9;
+  --progress: #0369a1;
+  --waiting: #9d23a8;
+  --event: #4338ca;
+  --event-soft: #e9e8fc;
+  --accent-soft: #dcf5f0;
+  --ruler: var(--line);
+  --hero-bg: #133a68;
   --shadow-float: 0 12px 32px rgb(14 30 51 / 0.14), 0 2px 6px rgb(14 30 51 / 0.08);
   --scrim: rgb(14 30 51 / 0.36);
   color-scheme: light;
@@ -53,6 +63,16 @@
   --danger: #b42318;
   --warn: #b54708;
   --ok: #067647;
+  --danger-soft: #fce9e7;
+  --warn-soft: #fcefe1;
+  --ok-soft: #e2f3e9;
+  --progress: #0369a1;
+  --waiting: #9d23a8;
+  --event: #4338ca;
+  --event-soft: #e9e8fc;
+  --accent-soft: #dcf5f0;
+  --ruler: var(--line);
+  --hero-bg: #133a68;
   --shadow-float: 0 12px 32px rgb(24 24 27 / 0.12), 0 2px 6px rgb(24 24 27 / 0.06);
   --scrim: rgb(24 24 27 / 0.32);
   color-scheme: light;
@@ -75,6 +95,16 @@
     --danger: #f97066;
     --warn: #fdb022;
     --ok: #47cd89;
+    --danger-soft: #3a2a36;
+    --warn-soft: #3a3226;
+    --ok-soft: #1b3e41;
+    --progress: #7cc8f8;
+    --waiting: #e9a8f5;
+    --event: #a5b4fc;
+    --event-soft: #283a63;
+    --accent-soft: #0e3a44;
+    --ruler: var(--line);
+    --hero-bg: #133a68;
     --shadow-float: 0 16px 40px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3);
     --scrim: rgb(2 6 14 / 0.6);
     color-scheme: dark;
@@ -97,6 +127,16 @@
   --danger: #f97066;
   --warn: #fdb022;
   --ok: #47cd89;
+  --danger-soft: #3a2a36;
+  --warn-soft: #3a3226;
+  --ok-soft: #1b3e41;
+  --progress: #7cc8f8;
+  --waiting: #e9a8f5;
+  --event: #a5b4fc;
+  --event-soft: #283a63;
+  --accent-soft: #0e3a44;
+  --ruler: var(--line);
+  --hero-bg: #133a68;
   --shadow-float: 0 16px 40px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3);
   --scrim: rgb(2 6 14 / 0.6);
   color-scheme: dark;
@@ -118,6 +158,16 @@
   --danger: #f97066;
   --warn: #fdb022;
   --ok: #47cd89;
+  --danger-soft: #3e2827;
+  --warn-soft: #43351b;
+  --ok-soft: #223a2e;
+  --progress: #7cc8f8;
+  --waiting: #e9a8f5;
+  --event: #a5b4fc;
+  --event-soft: #2e3348;
+  --accent-soft: #10332f;
+  --ruler: var(--line);
+  --hero-bg: #133a68;
   --shadow-float: 0 16px 40px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.4);
   --scrim: rgb(0 0 0 / 0.6);
   color-scheme: dark;
@@ -150,6 +200,15 @@
   --color-danger: var(--danger);
   --color-warn: var(--warn);
   --color-ok: var(--ok);
+  --color-danger-soft: var(--danger-soft);
+  --color-warn-soft: var(--warn-soft);
+  --color-ok-soft: var(--ok-soft);
+  --color-progress: var(--progress);
+  --color-waiting: var(--waiting);
+  --color-event: var(--event);
+  --color-event-soft: var(--event-soft);
+  --color-accent-soft: var(--accent-soft);
+  --color-ruler: var(--ruler);
   --font-sans: "IBM Plex Sans Variable", "IBM Plex Sans", system-ui, sans-serif;
   --radius-control: 6px;
   --radius-panel: 10px;
@@ -196,6 +255,82 @@
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius-panel);
+  }
+
+  /*
+   * Home's header: one flat band of brand navy (the logo's ink, lifted so it reads as navy), the same
+   * in every palette. It re-declares the palette inside itself, so the buttons, the Ask Tracky field
+   * and the day ruler and its popover take dark colors with no changes of their own.
+   */
+  .hero {
+    --surface: #0c2a4f;
+    --surface-2: #1b477a;
+    --line: #557baa;
+    --line-strong: #8aa6cc;
+    --ruler: #8796aa;
+    --ink: #f2f6fa;
+    --ink-2: #c8d6ea;
+    --ink-3: #a3b8d6;
+    --accent: #2dd4bf;
+    --on-accent: #0b1524;
+    --danger: #f97066;
+    --warn: #fdb022;
+    --ok: #47cd89;
+    --progress: #7cc8f8;
+    --waiting: #e9a8f5;
+    --event: #a5b4fc;
+    background: var(--hero-bg);
+    color: var(--ink);
+    border: 1px solid var(--logo-edge, transparent);
+    border-radius: var(--radius-panel);
+    color-scheme: dark;
+  }
+
+  /* A count tile's icon square, tinted by what it counts. */
+  .stat-icon {
+    background: var(--surface-2);
+    color: var(--ink-2);
+  }
+  .stat-icon[data-tone="quiet"] {
+    color: var(--ink-3);
+  }
+  .stat-icon[data-tone="today"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .stat-icon[data-tone="danger"] {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+  .stat-icon[data-tone="ok"] {
+    background: var(--ok-soft);
+    color: var(--ok);
+  }
+  .stat-icon[data-tone="event"] {
+    background: var(--event-soft);
+    color: var(--event);
+  }
+
+  /* Urgent and High: priority is the loud signal, so it is the only pill in a row. */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .tag[data-hue="danger"] {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+  .tag[data-hue="warn"] {
+    background: var(--warn-soft);
+    color: var(--warn);
   }
 
   .field {
@@ -588,6 +723,32 @@
   @media (height >= 42rem) {
     .capped .show-more {
       display: none;
+    }
+  }
+}
+
+/*
+ * Between a phone and the board (a medium window, or a wide one too short for the board), Home's
+ * panels sit in two columns that each keep their own height: Today and In progress on the left,
+ * Next 7 days and then the month and Numbers on the right.
+ */
+@container (48rem <= width < 56rem) {
+  .home-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .home-split > :first-child {
+    grid-row: span 2;
+  }
+}
+@container (width >= 56rem) {
+  @media (height < 42rem) {
+    .home-split {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: start;
+    }
+    .home-split > :first-child {
+      grid-row: span 2;
     }
   }
 }

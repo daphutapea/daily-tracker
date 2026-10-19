@@ -456,18 +456,26 @@ function PaletteGroup<T extends Palette>({
   )
 }
 
-/** A miniature of the Home header in the palette's own colors: panel, text lines and the day ruler. */
+/**
+ * A miniature of Home in the palette's own colors: the navy header band with the day ruler, then a
+ * panel with a task line, its status lamp and a High tag.
+ */
 function PalettePreview({ palette }: { palette: Palette }) {
   return (
     <span data-palette={palette} aria-hidden className="block overflow-hidden rounded-[6px] border border-line bg-bg p-2">
-      <span className="block rounded-[4px] border border-line bg-surface p-2">
-        <span className="block h-2 w-16 rounded-full bg-ink" />
-        <span className="mt-1.5 block h-1.5 w-24 rounded-full bg-ink-3" />
-        <span className="relative mt-3 block h-3">
-          <span className="absolute inset-x-0 bottom-0 h-px bg-line-strong" />
+      <span className="hero block rounded-[4px] p-2">
+        <span className="block h-2 w-14 rounded-full bg-ink" />
+        <span className="relative mt-2.5 block h-3">
+          <span className="absolute inset-x-0 bottom-0 h-px bg-ruler" />
           <span className="absolute bottom-0 left-[62%] h-3 w-0.5 rounded-full bg-accent" />
           <span className="absolute bottom-1 left-[38%] size-1.5 rotate-45 border border-ink" />
+          <span className="absolute bottom-0.5 left-[48%] h-2 w-[3px] rounded-full bg-event" />
         </span>
+      </span>
+      <span className="mt-1.5 flex items-center gap-1.5 rounded-[4px] border border-line bg-surface p-2">
+        <span className="block h-1.5 w-16 rounded-full bg-ink-3" />
+        <span className="block size-1.5 rounded-full bg-progress" />
+        <span className="ml-auto block h-2.5 w-6 rounded-[3px] bg-warn-soft" />
       </span>
     </span>
   )

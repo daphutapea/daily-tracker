@@ -52,7 +52,12 @@ Rules:
 
 ## Color
 
-Two neutrals plus one accent. Status colors are signals, used only where something needs attention.
+Two neutrals, one brand band, one accent that means now, and six signal hues that each mean one
+thing. Surfaces stay calm; the color goes on the data. On 19 Oct 2026 you said the board looked
+bland, so the meaning the data already had (status, priority, deadline or event, late, done) now
+shows in color instead of grey ink. Each hue means the same thing on Home, Tasks, Calendar, the
+charts and in Tracky, and every one keeps a word or a shape beside it, so color is never the only
+way to tell.
 
 There are four palettes, two for each mode, picked in Settings → Appearance and saved per device.
 Sage and Navy are the originals, derived from your projects. White and Charcoal were added on
@@ -70,16 +75,45 @@ in all four palettes.
 | `--ink` | `#0E1E33` | `#18181B` | `#E4EBF3` | `#EDEDED` | Text |
 | `--ink-2` | `#3F4D5F` | `#3F3F46` | `#A9B6C6` | `#B5B5B5` | Secondary text |
 | `--ink-3` | `#5A6878` | `#5E5E68` | `#8796AA` | `#8F8F8F` | Labels, hints (4.5:1 on every surface) |
-| `--accent` | `#0F766E` | `#0F766E` | `#2DD4BF` | `#2DD4BF` | Primary action, "now" line, active nav, focus ring |
+| `--accent` | `#0F766E` | `#0F766E` | `#2DD4BF` | `#2DD4BF` | Now and today: primary action, "now" line, today's date, active nav, focus ring |
+| `--accent-soft` | `#DCF5F0` | `#DCF5F0` | `#0E3A44` | `#10332F` | Active nav item, Due today tile square (only ink text or teal icons on it) |
 | `--danger` | `#B42318` | `#B42318` | `#F97066` | `#F97066` | Overdue, urgent |
-| `--warn` | `#B54708` | `#B54708` | `#FDB022` | `#FDB022` | High priority, waiting |
-| `--ok` | `#067647` | `#067647` | `#47CD89` | `#47CD89` | Done |
+| `--danger-soft` | `#FCE9E7` | `#FCE9E7` | `#3A2A36` | `#3E2827` | Urgent tag, Overdue headings, Overdue tile square |
+| `--warn` | `#B54708` | `#B54708` | `#FDB022` | `#FDB022` | High priority (only) |
+| `--warn-soft` | `#FCEFE1` | `#FCEFE1` | `#3A3226` | `#43351B` | High tag |
+| `--ok` | `#067647` | `#067647` | `#47CD89` | `#47CD89` | Done: finished-per-day bars, deadlines met, Done lamp |
+| `--ok-soft` | `#E2F3E9` | `#E2F3E9` | `#1B3E41` | `#223A2E` | Done tile square |
+| `--progress` | `#0369A1` | `#0369A1` | `#7CC8F8` | `#7CC8F8` | In progress (sky): lamps and bars, never text |
+| `--waiting` | `#9D23A8` | `#9D23A8` | `#E9A8F5` | `#E9A8F5` | Waiting (plum): lamps and bars, never text |
+| `--event` | `#4338CA` | `#4338CA` | `#A5B4FC` | `#A5B4FC` | Events (indigo): the event bar on the ruler, rows, month and calendar |
+| `--event-soft` | `#E9E8FC` | `#E9E8FC` | `#283A63` | `#2E3348` | Calendar event chips, Events tile square |
+| `--hero-bg` | `#133A68` | `#133A68` | `#133A68` | `#133A68` | Home's header band, the same in every palette |
 
-The accent shows up in four places only: the primary button, the "now" line, the active nav item,
-and the focus ring (plus a faint tint of it behind selected text). Everything else that marks a state
-uses ink: ticked task boxes fill with ink, native checkboxes and the checklist boxes in notes are
-ink, and links inside notes are ink with an underline. Before 15 Oct 2026 those were teal, which made
-the teal spread thin and the "now" line stop standing out.
+**The header band.** Home's header is one flat band of brand navy, `#133A68`: the logo's ink lifted
+so it reads as navy rather than black, and so it still stands apart from the Navy page. It holds the
+day ruler, so the teal now line, the indigo event bars and the red late marks read like an
+instrument display. `.hero` re-declares the palette inside itself (wells `#0C2A4F`, hover `#1B477A`,
+text `#F2F6FA` / `#C8D6EA` / `#A3B8D6`, ruler grey `#8796AA`, and the dark-palette signal colors),
+so the buttons, the Ask Tracky field, the ruler and its popover need no colors of their own. The
+intro uses the same band, so it hands over to the header without a change of color.
+
+**One hue, one meaning.**
+- Teal: now and today, and where you are. The primary button, the now line and the Now rule in
+  Today, today's date in the month and calendar, the Due today tile, the active nav item, the focus
+  ring.
+- Red: overdue or urgent. Amber: High priority only (Waiting moved off amber, so a waiting, high
+  task no longer shows two ambers). Green: done.
+- Sky: in progress. Plum: waiting. They appear as a small lamp before the status's name, like an
+  indicator on a panel, so a row carries at most one pill (the priority tag).
+- Indigo: an event, as opposed to a deadline. Indigo rather than sky, so event bars stay clearly
+  apart from the near-cyan now line in the band.
+
+Ticked task boxes stay ink: green sits too close to teal and would blur done with now. Medium and
+Low priority, To do, project names, times and every title stay neutral. No per-project colors.
+
+Every pair was computed with the WCAG formula in all four palettes and inside the band: text at least
+4.5:1, marks at least 3:1. Two rules keep it that way: grey `--ink-3` text never sits on a soft
+tint (it fails in the dark palettes), and on `--accent-soft` only ink text or teal icons go.
 
 ## Type
 
@@ -95,8 +129,9 @@ the teal spread thin and the "now" line stop standing out.
 - Radius: 6px for controls, 10px for panels, round only for avatar initials and Tracky's send button.
   One exception: Tracky's message bubbles and message box use 16px, because the chat layout borrows
   its shape from the chat apps people know, and at 6px the box reads as a form field.
-- Panels are flat with a 1px `--line` border. Shadow is reserved for things that float above the page:
-  dialogs, popovers, toasts.
+- Panels are flat with a 1px `--line` border; the header band is the one borderless block of color.
+  Shadow is reserved for things that float above the page: dialogs, popovers, toasts.
+- Priority tags use a 4px radius, like the other small inner shapes.
 - No gradients, glass, glow, grids or decorative rings.
 
 ## Layout

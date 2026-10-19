@@ -16,7 +16,7 @@ import { addDays, endOfDay, startOfDay, subDays } from 'date-fns'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { MoveAllToTomorrow, TaskRow } from '@/components/TaskRow'
-import { Loading, PriorityTag, QueryError, Segmented, StateMessage } from '@/components/ui'
+import { Loading, PriorityTag, QueryError, Segmented, StateMessage, StatusLamp } from '@/components/ui'
 import { formatWhen, toDate } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
 import { rowIn } from '@/lib/motion'
@@ -244,9 +244,14 @@ function TaskList({
     <div className="panel fade-in overflow-hidden">
       {groups.map((g) => (
         <section key={g.label} aria-label={g.label} className="border-line not-first:border-t">
-          <div className="flex items-center justify-between gap-2 border-b border-line bg-surface-2/50 px-4 py-1.5">
+          <div
+            className={`flex items-center justify-between gap-2 border-b border-line px-4 py-1.5 ${
+              g.tone === 'danger' ? 'bg-danger-soft' : 'bg-surface-2/50'
+            }`}
+          >
+            {/* On the red tint the count stays red too: grey text fails contrast on it in the dark palettes. */}
             <h2 className={`text-[13px] font-medium ${g.tone === 'danger' ? 'text-danger' : 'text-ink-2'}`}>
-              {g.label} <span className="font-normal text-ink-3">· {g.tasks.length}</span>
+              {g.label} <span className={`font-normal ${g.tone === 'danger' ? '' : 'text-ink-3'}`}>· {g.tasks.length}</span>
             </h2>
             {g.label === 'Overdue' && <MoveAllToTomorrow tasks={g.tasks.filter((t) => t.status !== 'done')} now={now} />}
           </div>
@@ -421,8 +426,11 @@ function Column({
         isOver ? 'border-ink-2' : 'border-line'
       }`}
     >
-      <h2 className="px-3 pt-2.5 pb-2 text-[13px] font-medium text-ink-2">
-        {label} <span className="font-normal text-ink-3">· {count}</span>
+      <h2 className="flex items-center gap-1.5 px-3 pt-2.5 pb-2 text-[13px] font-medium text-ink-2">
+        <StatusLamp status={status} />
+        <span>
+          {label} <span className="font-normal text-ink-3">· {count}</span>
+        </span>
       </h2>
       <ul className="flex min-h-24 flex-1 flex-col gap-2 px-2 pb-2">
         {count === 0 ? <li className="px-1 py-3 text-[13px] text-ink-3">Nothing here.</li> : children}

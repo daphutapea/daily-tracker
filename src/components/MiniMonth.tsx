@@ -68,13 +68,13 @@ export function MiniMonth({
               }`}
             >
               <span
-                className={`grid size-7 place-items-center rounded-full ${isToday ? 'bg-ink font-semibold text-surface' : ''}`}
+                className={`grid size-7 place-items-center rounded-full ${isToday ? 'bg-accent font-semibold text-on-accent' : ''}`}
               >
                 {format(d, 'd')}
               </span>
               <span className="flex h-1.5 items-center gap-0.5" aria-hidden>
                 {b.deadlines > 0 && <span className="block size-1.5 rotate-45 bg-ink-2" />}
-                {b.events > 0 && <span className="block h-1.5 w-[3px] rounded-full bg-ink-2" />}
+                {b.events > 0 && <span className="block h-1.5 w-[3px] rounded-full bg-event" />}
               </span>
             </button>
           )

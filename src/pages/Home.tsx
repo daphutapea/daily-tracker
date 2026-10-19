@@ -11,7 +11,7 @@ import {
   type Icon,
 } from '@phosphor-icons/react'
 import { addDays, format, isSameDay, startOfDay } from 'date-fns'
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { Fragment, useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Breakdown, FinishedPerDay, Meter } from '@/components/Charts'
 import { DayRuler } from '@/components/DayRuler'
@@ -21,11 +21,20 @@ import { MoveAllToTomorrow, TaskRow } from '@/components/TaskRow'
 import { Loading, QueryError, Segmented, SiteIcon, StateMessage } from '@/components/ui'
 import { formatDay, greeting, lastNDays, sameDay, toDate, weekRange } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
+import { PRIORITY_COLOR, STATUS_COLOR } from '@/lib/hues'
 import { rememberName } from '@/lib/intro'
 import { rowIn } from '@/lib/motion'
 import { shortcutKeys, shortcutLabel } from '@/lib/platform'
 import { quietly, useCreateNote, useEvents, useProfile, useProjects, useQuickLinks, useTasks } from '@/lib/queries'
-import { PRIORITIES, PRIORITY_RANK, STATUSES, type CalEvent, type Project, type TaskSummary } from '@/lib/types'
+import {
+  PRIORITIES,
+  PRIORITY_RANK,
+  STATUSES,
+  type CalEvent,
+  type Project,
+  type TaskStatus,
+  type TaskSummary,
+} from '@/lib/types'
 import { useNow } from '@/lib/useNow'
 
 export function HomePage() {
@@ -68,7 +77,7 @@ export function HomePage() {
     // phones, get the same panels one under another, with long lists cut short behind "Show more".
     <div className="@container">
       <div className="flex flex-col gap-4 board:h-[calc(100dvh-4.25rem)] board:min-h-0">
-        <header className="arrive hero panel shrink-0 px-4 pt-4 pb-3 md:px-5">
+        <header className="arrive hero shrink-0 px-4 pt-4 pb-3 md:px-5">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
             {/* The clock comes first on screen; the greeting stays first for screen readers. */}
             <div className="mr-auto flex flex-row-reverse items-center gap-4">
@@ -133,16 +142,17 @@ export function HomePage() {
 
         {dataState ?? (
           <>
-            <ul aria-label="Numbers at a glance" className="arrive grid shrink-0 grid-cols-3 gap-2 @3xl:grid-cols-5 @3xl:gap-3" style={{ '--i': 1 } as CSSProperties}>
-              <Stat to="/tasks" icon={ListChecksIcon} tone="blue" label="Open tasks" value={d.open.length} />
-              <Stat to="/tasks?show=today" icon={TimerIcon} tone="teal" label="Due today" value={d.dueToday.filter((t) => t.status !== 'done').length} />
-              <Stat to="/tasks?show=overdue" icon={WarningIcon} tone="red" label="Overdue" value={d.overdue.length} />
-              <Stat to="/tasks?show=done" icon={CheckCircleIcon} tone="green" label="Done, 7 days" value={d.finishedCounts.reduce((a, b) => a + b, 0)} />
-              <Stat to={`/calendar?date=${todayKey}`} icon={CalendarDotsIcon} tone="violet" label="Events today" value={d.eventsToday.length} />
+            {/* Phones: three tiles over two, both rows full. Wider: one row of five. */}
+            <ul aria-label="Numbers at a glance" className="arrive grid shrink-0 grid-cols-6 gap-2 @3xl:grid-cols-5 @3xl:gap-3" style={{ '--i': 1 } as CSSProperties}>
+              <Stat to="/tasks" icon={ListChecksIcon} tone="neutral" label="Open tasks" value={d.open.length} strip={d.openByStatus} />
+              <Stat to="/tasks?show=today" icon={TimerIcon} tone="today" label="Due today" value={d.dueToday.filter((t) => t.status !== 'done').length} />
+              <Stat to="/tasks?show=overdue" icon={WarningIcon} tone={d.overdue.length > 0 ? 'danger' : 'quiet'} label="Overdue" value={d.overdue.length} />
+              <Stat to="/tasks?show=done" icon={CheckCircleIcon} tone="ok" label="Done, 7 days" value={d.finishedCounts.reduce((a, b) => a + b, 0)} wide />
+              <Stat to={`/calendar?date=${todayKey}`} icon={CalendarDotsIcon} tone="event" label="Events today" value={d.eventsToday.length} wide />
             </ul>
 
             <div
-              className="arrive fade-in grid gap-4 board:min-h-0 board:flex-1 board:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_minmax(16rem,3fr)] board:grid-rows-[minmax(0,1fr)]"
+              className="home-split arrive fade-in grid gap-4 board:min-h-0 board:flex-1 board:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_minmax(16rem,3fr)] board:grid-rows-[minmax(0,1fr)]"
               style={{ '--i': 2 } as CSSProperties}
             >
               <div className="flex min-h-0 flex-col gap-4">
@@ -174,12 +184,13 @@ export function HomePage() {
               <div className="flex min-h-0 flex-col gap-4">
                 <Panel
                   title="Next 7 days"
+                  aside={d.upcomingCount > 0 ? String(d.upcomingCount) : undefined}
                   action={<Link to="/calendar" className="hit text-[13px] text-ink-2 hover:text-ink">Calendar</Link>}
                 >
                   {d.upcoming.length === 0 ? (
                     <StateMessage title="A clear week ahead." body="Nothing is due and no events are planned for the next 7 days." />
                   ) : (
-                    <Capped limit={6} total={d.upcoming.reduce((n, g) => n + g.items.length, 0)}>
+                    <Capped limit={6} total={d.upcomingCount}>
                       {(extra) =>
                         d.upcoming.map((g) => (
                           <div key={g.day.toISOString()} data-extra={extra(g.first) || undefined}>
@@ -246,6 +257,10 @@ function TodayPanel({
 }) {
   const { openTask } = useDialogs()
   const empty = d.overdue.length === 0 && d.dueToday.length === 0 && d.eventsToday.length === 0
+  // The day ruler's now line, carried into the list: between what is past and what is next. Only
+  // when there is something on both sides. All-day events count as past (their time is -1).
+  const firstAhead = d.todayItems.findIndex((item) => item.at > now.getTime())
+  const nowAt = firstAhead > 0 ? firstAhead : -1
   return (
     <Panel title="Today" aside={d.leftToday > 0 ? `${d.leftToday} left` : undefined}>
       {empty ? (
@@ -280,7 +295,10 @@ function TodayPanel({
               ) : (
                 <ul className="divide-y divide-line">
                   {d.todayItems.map((item, i) => (
-                    <AgendaRow key={itemKey(item)} item={item} projectById={projectById} now={now} extra={extra(d.overdue.length + i)} />
+                    <Fragment key={itemKey(item)}>
+                      {i === nowAt && <NowRule now={now} extra={extra(d.overdue.length + i)} />}
+                      <AgendaRow item={item} projectById={projectById} now={now} extra={extra(d.overdue.length + i)} />
+                    </Fragment>
                   ))}
                 </ul>
               )}
@@ -289,6 +307,22 @@ function TodayPanel({
         </Capped>
       )}
     </Panel>
+  )
+}
+
+function NowRule({ now, extra }: { now: Date; extra: boolean }) {
+  return (
+    <li
+      role="separator"
+      aria-label={`Now, ${format(now, 'HH:mm')}`}
+      data-extra={extra || undefined}
+      className="flex items-center gap-2 px-4 py-1"
+    >
+      <span aria-hidden className="text-[12px] font-medium text-accent tnum">
+        Now {format(now, 'HH:mm')}
+      </span>
+      <span aria-hidden className="h-0.5 flex-1 rounded-full bg-accent" />
+    </li>
   )
 }
 
@@ -335,14 +369,18 @@ function Capped({
   children: (extra: (index: number) => boolean) => ReactNode
 }) {
   const [open, setOpen] = useState(false)
-  const hidden = total - limit
+  const id = useId()
+  // Hiding a single row saves nothing over the button that would replace it, so it shows.
+  const cut = total - limit > 1 ? limit : total
+  const hidden = total - cut
   return (
-    <div className={`capped ${open ? 'expanded' : ''}`}>
-      {children((i) => i >= limit)}
+    <div id={id} className={`capped ${open ? 'expanded' : ''}`}>
+      {children((i) => i >= cut)}
       {hidden > 0 && (
         <button
           type="button"
           aria-expanded={open}
+          aria-controls={id}
           className="show-more row-hover w-full border-t border-line px-4 py-2 text-left text-[13px] font-medium text-ink-2 pointer-coarse:min-h-11"
           onClick={() => setOpen((v) => !v)}
         >
@@ -406,12 +444,17 @@ function NumbersPanel({ d }: { d: Derived }) {
               rows={STATUSES.filter((s) => s.value !== 'done').map((s) => ({
                 label: s.label,
                 value: d.open.filter((t) => t.status === s.value).length,
+                color: STATUS_COLOR[s.value],
               }))}
             />
             <Breakdown
               title="By priority"
               total={d.open.length}
-              rows={PRIORITIES.map((p) => ({ label: p.label, value: d.open.filter((t) => t.priority === p.value).length }))}
+              rows={PRIORITIES.map((p) => ({
+                label: p.label,
+                value: d.open.filter((t) => t.priority === p.value).length,
+                color: PRIORITY_COLOR[p.value],
+              }))}
             />
           </div>
         )}
@@ -485,7 +528,7 @@ function EventRow({ event, onOpen, extra = false }: { event: CalEvent; onOpen: (
     <li className={rowIn(event.id)} data-extra={extra || undefined}>
       <button type="button" onClick={() => onOpen(event.id)} className="row-hover flex w-full items-start gap-3 px-4 py-2.5 text-left">
         <span aria-hidden className="flex w-5 shrink-0 justify-center pt-1">
-          <span className="event-mark block h-4 w-1 rounded-full" />
+          <span className="block h-4 w-1 rounded-full bg-event" />
         </span>
         <span className="min-w-0">
           <span className="block break-words">{event.title}</span>
@@ -499,35 +542,51 @@ function EventRow({ event, onOpen, extra = false }: { event: CalEvent; onOpen: (
   )
 }
 
-type Tone = 'blue' | 'teal' | 'red' | 'green' | 'violet'
+/** What a count's icon square says: today is teal, done green, events indigo, overdue red while above 0. */
+type Tone = 'neutral' | 'quiet' | 'today' | 'danger' | 'ok' | 'event'
 
-/** A count that opens its list. The tinted icon names the kind of count at a glance. */
+/** A count that opens its list. `strip` splits it by status under the label (open tasks). */
 function Stat({
   to,
   icon: Glyph,
   tone,
   label,
   value,
+  strip,
+  wide = false,
 }: {
   to: string
   icon: Icon
   tone: Tone
   label: string
   value: number
+  strip?: { status: TaskStatus; label: string; value: number }[]
+  /** On a phone, the two tiles of the second row are wider. */
+  wide?: boolean
 }) {
-  const alarm = tone === 'red' && value > 0
+  const parts = strip?.filter((p) => p.value > 0) ?? []
   return (
-    <li>
+    <li className={`${wide ? 'col-span-3' : 'col-span-2'} @3xl:col-span-1`}>
       {/* Wide: the icon beside the number and label. Narrow: icon and number on one line, the label under them. */}
       <Link
         to={to}
         className="panel row-hover press grid h-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2.5 gap-y-0.5 px-3 py-2 @3xl:gap-x-3 @3xl:py-2.5"
       >
-        <span aria-hidden data-tone={tone} className="stat-icon grid size-7 place-items-center rounded-[8px] @3xl:row-span-2 @3xl:size-8">
+        <span aria-hidden data-tone={tone} className="stat-icon grid size-7 place-items-center rounded-[6px] @3xl:row-span-2 @3xl:size-8">
           <Glyph size={16} weight="bold" />
         </span>
-        <span className={`text-xl leading-tight font-semibold tnum ${alarm ? 'text-danger' : ''}`}>{value}</span>
-        <span className="col-span-2 text-[13px] leading-snug text-ink-2 @3xl:col-span-1 @3xl:col-start-2">{label}</span>
+        <span className={`text-xl leading-tight font-semibold tnum ${tone === 'danger' ? 'text-danger' : ''}`}>{value}</span>
+        <span className="col-span-2 text-[13px] leading-snug text-ink-2 @3xl:col-span-1 @3xl:col-start-2">
+          {label}
+          {parts.length > 0 && <span className="sr-only">: {parts.map((p) => `${p.value} ${p.label.toLowerCase()}`).join(', ')}</span>}
+        </span>
+        {parts.length > 0 && (
+          <span aria-hidden className="col-span-2 mt-1 flex h-1 gap-0.5 @3xl:col-span-1 @3xl:col-start-2">
+            {parts.map((p) => (
+              <span key={p.status} className={`rounded-full ${STATUS_COLOR[p.status]}`} style={{ flexGrow: p.value }} />
+            ))}
+          </span>
+        )}
       </Link>
     </li>
   )
@@ -618,6 +677,12 @@ function derive(tasks: TaskSummary[], events: CalEvent[], now: Date) {
     weekTotal: dueThisWeek.length,
     weekDone: dueThisWeek.filter((t) => t.status === 'done').length,
     upcoming: upcomingGroups,
+    upcomingCount: seen,
+    openByStatus: STATUSES.filter((st) => st.value !== 'done').map((st) => ({
+      status: st.value,
+      label: st.label,
+      value: open.filter((t) => t.status === st.value).length,
+    })),
     active,
     last7,
     finishedCounts,
