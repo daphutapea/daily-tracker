@@ -11,6 +11,7 @@ export function Dialog({
   title,
   children,
   footer,
+  actions,
   size = 'md',
   instant = false,
   placement = 'center',
@@ -20,7 +21,10 @@ export function Dialog({
   title: string
   children: ReactNode
   footer?: ReactNode
-  size?: 'sm' | 'md'
+  /** Extra buttons in the header, before Close. */
+  actions?: ReactNode
+  /** 'chat' is a tall fixed height, so a conversation scrolls between the header and the footer. */
+  size?: 'sm' | 'md' | 'chat'
   /** Skip the open/close animation, for dialogs opened by a keyboard shortcut. */
   instant?: boolean
   /**
@@ -61,20 +65,23 @@ export function Dialog({
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      className={`sheet ${size === 'sm' ? 'sheet-sm' : ''} ${instant ? 'sheet-instant' : ''} ${placement === 'top' ? 'sheet-top' : ''}`}
+      className={`sheet ${size === 'sm' ? 'sheet-sm' : size === 'chat' ? 'sheet-chat' : ''} ${instant ? 'sheet-instant' : ''} ${placement === 'top' ? 'sheet-top' : ''}`}
       onClick={(e) => {
         // A click whose target is the <dialog> itself landed on the backdrop.
         if (e.target === e.currentTarget) onRequestClose()
       }}
     >
-      <div className="flex max-h-[inherit] flex-col">
+      <div className="flex h-full max-h-[inherit] flex-col">
         <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
           <h2 id={titleId} className="text-base font-semibold">
             {title}
           </h2>
-          <button type="button" className="btn btn-ghost btn-icon -mr-2" onClick={onRequestClose} aria-label="Close">
-            <XIcon size={18} weight="bold" />
-          </button>
+          <div className="-mr-2 flex items-center gap-1">
+            {actions}
+            <button type="button" className="btn btn-ghost btn-icon" onClick={onRequestClose} aria-label="Close">
+              <XIcon size={18} weight="bold" />
+            </button>
+          </div>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
         {footer && (

@@ -569,6 +569,10 @@ dialog.sheet {
 dialog.sheet.sheet-sm {
   width: min(520px, calc(100vw - 32px));
 }
+/* Tracky's chat: a fixed height, so the thread scrolls and the message box stays at the bottom. */
+dialog.sheet.sheet-chat {
+  height: min(760px, calc(100dvh - 48px));
+}
 /* Pinned near the top so a dialog whose content grows (Quick add's drafts) extends downward. Phones
    keep the bottom sheet. */
 @media (min-width: 640px) {
@@ -619,6 +623,9 @@ dialog.sheet:not([open])::backdrop {
       transform 260ms var(--ease-drawer),
       overlay 260ms allow-discrete,
       display 260ms allow-discrete;
+  }
+  dialog.sheet.sheet-chat {
+    height: 94dvh;
   }
   dialog.sheet:not([open]) {
     opacity: 1;

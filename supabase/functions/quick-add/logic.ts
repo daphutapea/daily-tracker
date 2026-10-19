@@ -2,12 +2,22 @@
 // the drafts for confirmation and saves them itself, so nothing reaches the database unreviewed.
 // No Deno or Node APIs here, so the same file runs in the Edge Function and in `node --test`.
 
+/** One message earlier in the chat with Tracky. */
+export interface ChatTurn {
+  role: 'you' | 'tracky'
+  text: string
+}
+
 export interface QuickAddRequest {
   text: string
   /** The device's local date and time, "YYYY-MM-DDTHH:mm". */
   now: string
   timezone: string
   projects: string[]
+  /** The chat so far, oldest first, without the new note. */
+  history?: ChatTurn[]
+  /** Drafts on screen that haven't been added yet, as the person last left them. */
+  drafts?: ProposedItem[]
 }
 
 export interface ProposedItem {
@@ -43,6 +53,7 @@ export class QuickAddError extends Error {
 export const DEFAULT_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']
 
 const MAX_ITEMS = 10
+const MAX_TURNS = 12
 const PRIORITIES = ['urgent', 'high', 'medium', 'low'] as const
 
 export const SYSTEM_PROMPT = `You are Tracky, the assistant built into Daily Tracker, a personal board for one person's tasks,
@@ -75,10 +86,20 @@ Rules:
 - If the note contains nothing to add, return no items and use reply to say why in one sentence.
   Also use reply, briefly, when you had to guess something important.
 - reply is in the note's language, in the first person, plain and short. No greetings or emoji.
-- If the note asks who or what you are, return no items and answer in reply: you are Tracky, Daily
-  Tracker's assistant, running on Gemini from Google, and you turn notes into tasks and events.
-  Never say you are Claude, ChatGPT, a person, or any other assistant, and never make up who built
-  you beyond that.`
+- If the note asks who or what you are, answer in reply: you are Tracky, Daily Tracker's assistant,
+  running on Gemini from Google, and you turn notes into tasks and events. Never say you are
+  Claude, ChatGPT, a person, or any other assistant, and never make up who built you beyond that.
+
+This is a chat. EARLIER IN THIS CHAT and CURRENT DRAFTS, when given, are what was said so far and
+the drafts on screen that are not saved yet.
+- items is always the complete list of drafts as it should be after the note. Copy every current
+  draft the note doesn't change exactly as it is, in the same order, and put new items after them.
+- When the note changes drafts ("make it 4pm", "the second one is urgent", "drop the call"), change
+  only what it asks for. When it adds something new, keep the current drafts and add the new item.
+- When the note only asks a question or says thanks, return the current drafts unchanged and answer
+  in reply.
+- Items already added are saved and are not in CURRENT DRAFTS. If the note asks to change one, keep
+  the drafts unchanged and say in reply that it is saved, so they can open it from the app to edit.`
 
 /**
  * The order Gemini writes an item's fields in. Without it, Gemini writes them alphabetically, so it
@@ -124,10 +145,16 @@ const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 
 export function buildUserMessage(req: QuickAddRequest): string {
   const weekday = WEEKDAYS[new Date(`${req.now.slice(0, 10)}T12:00:00Z`).getUTCDay()]
+  const history = req.history ?? []
+  const drafts = req.drafts ?? []
   return [
     `NOW: ${req.now.replace('T', ' ')} (${weekday})`,
     `TIMEZONE: ${req.timezone}`,
     `PROJECTS: ${req.projects.length ? req.projects.join(', ') : '(none)'}`,
+    ...(history.length
+      ? ['', 'EARLIER IN THIS CHAT:', ...history.map((t) => `${t.role === 'you' ? 'You' : 'Tracky'}: ${t.text}`)]
+      : []),
+    ...(drafts.length ? ['', 'CURRENT DRAFTS (not saved yet):', JSON.stringify(drafts)] : []),
     '',
     'NOTE:',
     req.text,
@@ -146,7 +173,18 @@ export function parseRequest(body: unknown): QuickAddRequest {
   const projects = Array.isArray(b.projects)
     ? b.projects.filter((p): p is string => typeof p === 'string' && p.length <= 60).slice(0, 50)
     : []
-  return { text, now, timezone, projects }
+  const history = Array.isArray(b.history)
+    ? b.history
+        .filter((t: unknown): t is ChatTurn => {
+          const turn = t as Partial<ChatTurn> | null
+          return (turn?.role === 'you' || turn?.role === 'tracky') && typeof turn.text === 'string' && turn.text.trim() !== ''
+        })
+        .slice(-MAX_TURNS)
+        .map((t) => ({ role: t.role, text: t.text.trim().slice(0, 2000) }))
+    : []
+  // Drafts come back from the browser, so they go through the same checks as the model's answer.
+  const drafts = validateItems({ items: b.drafts }, projects)
+  return { text, now, timezone, projects, history, drafts }
 }
 
 const isDate = (v: unknown): v is string => {

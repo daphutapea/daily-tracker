@@ -66,7 +66,7 @@ export async function asOwner(page: Page) {
     task: async (id: string) => (await call<TaskRow[]>(`tasks?id=eq.${id}`))[0],
     tasksTitled: (title: string) => call<TaskRow[]>(`tasks?title=eq.${encodeURIComponent(title)}`),
     eventsTitled: (title: string) =>
-      call<{ id: string; title: string; starts_at: string; ends_at: string | null; remind_at: string | null }[]>(
+      call<{ id: string; title: string; starts_at: string; ends_at: string | null; remind_at: string | null; location: string | null }[]>(
         `events?title=eq.${encodeURIComponent(title)}`,
       ),
     /** Removes every task and event a test made. */
