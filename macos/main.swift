@@ -780,6 +780,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     app.addItem(withTitle: "About Daily Tracker", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
     app.addItem(.separator())
     app.addItem(withTitle: "Settings…", action: #selector(openSettings(_:)), keyEquivalent: ",").target = self
+    // ⌘T inside the app; ⌥⌘T (the menu bar menu and TrackyHotKey) reaches it from any app.
+    app.addItem(withTitle: "Ask Tracky…", action: #selector(trackyFromMenu(_:)), keyEquivalent: "t").target = self
     app.addItem(.separator())
     app.addItem(withTitle: "Hide Daily Tracker", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
     let hideOthers = app.addItem(withTitle: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")

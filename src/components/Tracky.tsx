@@ -6,6 +6,7 @@ import { SUMMARY_PREFIX, type ChatTurn, type ProposedItem, type ScheduleEntry, t
 import { deviceTimeZone, toDate } from '@/lib/dates'
 import { markNew } from '@/lib/motion'
 import { keys, useEvents, useProjects, useTasks } from '@/lib/queries'
+import { opensTracky } from '@/lib/platform'
 import { must, supabase } from '@/lib/supabase'
 import { TRACKY_CHAT_KEY } from '@/lib/trackyChat'
 import { scheduleForTracky, useTrackySeesSchedule } from '@/lib/trackySchedule'
@@ -15,7 +16,7 @@ import { LogoMark } from './Logo'
 import { OpenTracky } from './trackyContext'
 import { Segmented } from './ui'
 
-/** Tracky, mounted once in the app shell. Cmd+K (Ctrl+K elsewhere) opens it from any page. */
+/** Tracky, mounted once in the app shell. Cmd+K (Ctrl+K elsewhere), or Cmd+T in the Mac app, opens it from any page. */
 export function TrackyProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState({ open: false, instant: false })
   const open = useCallback(
@@ -25,8 +26,12 @@ export function TrackyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() !== 'k' || !(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
-      if (document.querySelector('dialog[open]')) return
+      if (!opensTracky(e)) return
+      if (document.querySelector('dialog[open]')) {
+        // Kept from the Mac app's menu too, which would otherwise open Tracky over the other dialog.
+        if (e.key.toLowerCase() === 't') e.preventDefault()
+        return
+      }
       e.preventDefault()
       // Opened from the keyboard, it appears at once: a shortcut you use many times a day shouldn't animate.
       open({ instant: true })

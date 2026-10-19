@@ -7,12 +7,17 @@ export function FinishedPerDay({
   days,
   counts,
   caption = 'Last 7 days',
+  compact = false,
 }: {
   days: Date[]
   counts: number[]
   caption?: string
+  /** Shorter bars, for Home's board, where a tab above already names the chart. */
+  compact?: boolean
 }) {
   const [asTable, setAsTable] = useState(false)
+  // The bars stand in a 120px area (88px compact): 7px above the tallest bar for its axis line.
+  const area = compact ? 88 : 120
   const max = Math.max(1, ...counts)
   const total = counts.reduce((a, b) => a + b, 0)
   const today = useNow()
@@ -20,7 +25,7 @@ export function FinishedPerDay({
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="font-medium">Tasks finished per day</h3>
+        <h3 className={compact ? 'text-[13px] font-medium text-ink-2' : 'font-medium'}>Tasks finished per day</h3>
         <button type="button" className="hit text-[13px] text-ink-3 underline-offset-2 hover:underline" onClick={() => setAsTable((v) => !v)}>
           {asTable ? 'Show chart' : 'Show table'}
         </button>
@@ -47,18 +52,18 @@ export function FinishedPerDay({
           </tbody>
         </table>
       ) : (
-        <div className="mt-4 flex gap-2">
-          <div className="flex h-[120px] flex-col justify-between pb-0 text-right text-[12px] text-ink-3 tnum" aria-hidden>
+        <div className={`${compact ? 'mt-3' : 'mt-4'} flex gap-2`}>
+          <div className="flex flex-col justify-between pb-0 text-right text-[12px] text-ink-3 tnum" style={{ height: area }} aria-hidden>
             <span>{max}</span>
             <span>0</span>
           </div>
           <div className="relative flex-1">
             <div aria-hidden className="absolute inset-x-0 top-[7px] h-px bg-line" />
-            <div aria-hidden className="absolute inset-x-0 top-[120px] h-px bg-line-strong/60" />
-            <ul className="relative grid h-[128px] grid-cols-7">
+            <div aria-hidden className="absolute inset-x-0 h-px bg-line-strong/60" style={{ top: area }} />
+            <ul className="relative grid grid-cols-7" style={{ height: area + 8 }}>
               {days.map((d, i) => {
                 const n = counts[i]
-                const h = Math.round((n / max) * 113)
+                const h = Math.round((n / max) * (area - 7))
                 const isToday = isSameDay(d, today)
                 const label = `${isToday ? 'Today' : format(d, 'EEEE d MMM')}: ${n} ${n === 1 ? 'task' : 'tasks'} finished`
                 return (

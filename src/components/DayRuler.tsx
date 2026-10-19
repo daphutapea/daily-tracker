@@ -75,7 +75,7 @@ export function DayRuler({
   const open = (m: Mark) => (m.kind === 'task' ? onOpenTask(m.id) : onOpenEvent(m.id))
 
   return (
-    <div role="group" className="select-none" aria-label="Today, hour by hour">
+    <div role="group" className="relative select-none" aria-label="Today, hour by hour">
       <div ref={rulerRef} className="relative h-10">
         {Array.from({ length: 25 }, (_, h) => (
           <span
@@ -127,14 +127,15 @@ export function DayRuler({
         {[0, 6, 12, 18, 24].map((h) => (
           <span
             key={h}
-            className={`absolute ${h === 0 ? '' : h === 24 ? '-translate-x-full' : '-translate-x-1/2'}`}
+            className={`absolute ${h === 0 ? '' : h === 24 ? '-translate-x-full @4xl:hidden' : '-translate-x-1/2'}`}
             style={{ left: `${(h / 24) * 100}%` }}
           >
             {String(h % 24).padStart(2, '0')}:00
           </span>
         ))}
       </div>
-      <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-3">
+      {/* On a wide Home the key sits at the end of the hour labels, where midnight would be, to save a line. */}
+      <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-3 @4xl:absolute @4xl:right-0 @4xl:bottom-0 @4xl:mt-0 @4xl:leading-4">
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden className="block size-2 rotate-45 border-[1.5px] border-ink bg-surface" /> Deadline
         </span>

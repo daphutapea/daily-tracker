@@ -123,6 +123,19 @@
   color-scheme: dark;
 }
 
+/*
+ * Home is one board that fits the window when its column is at least 56rem wide and the window at
+ * least 42rem tall (Home.tsx wraps itself in a container to measure the column, so the sidebar's
+ * width counts). Below that the panels stack and the page scrolls.
+ */
+@custom-variant board {
+  @container (width >= 56rem) {
+    @media (height >= 42rem) {
+      @slot;
+    }
+  }
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -554,6 +567,28 @@
   }
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/*
+ * Home's lists show their first few rows and "Show n more" where the page scrolls. On the one-screen
+ * board every row shows and the panel scrolls. Unlayered, so it wins over a row's own display class.
+ */
+@container (width < 56rem) {
+  .capped:not(.expanded) [data-extra] {
+    display: none;
+  }
+}
+@media (height < 42rem) {
+  .capped:not(.expanded) [data-extra] {
+    display: none;
+  }
+}
+@container (width >= 56rem) {
+  @media (height >= 42rem) {
+    .capped .show-more {
+      display: none;
+    }
   }
 }
 

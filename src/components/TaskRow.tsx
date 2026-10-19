@@ -15,6 +15,7 @@ export function TaskRow({
   showStatus = true,
   timeOnly = false,
   now: nowProp,
+  extra = false,
 }: {
   task: TaskSummary
   project?: Project
@@ -22,6 +23,8 @@ export function TaskRow({
   showStatus?: boolean
   timeOnly?: boolean
   now?: Date
+  /** Past the first few rows of a list that is cut short (see Capped on Home). */
+  extra?: boolean
 }) {
   const setStatus = useSetTaskStatus()
   const moveTasks = useMoveTasks()
@@ -36,7 +39,10 @@ export function TaskRow({
     : null
 
   return (
-    <li className={`row-hover group flex items-start gap-3 px-4 py-2.5 transition-colors duration-150 ${rowIn(task.id)}`}>
+    <li
+      data-extra={extra || undefined}
+      className={`row-hover group flex items-start gap-3 px-4 py-2.5 transition-colors duration-150 ${rowIn(task.id)}`}
+    >
       <div className="pt-px">
         <TaskCheck
           checked={done}

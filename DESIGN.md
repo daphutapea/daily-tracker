@@ -11,8 +11,10 @@ instrument-panel style, dial ENERGY 1 / RHYTHM 2 / MOTION 2.
 
 ## Identity
 
-- **Job of the home screen:** answer "what do I do next, and what's left today?" in one glance.
-  The agenda for today is the page. Counts and charts are supporting detail below it.
+- **Job of the home screen:** answer "what do I do next, and what's left today?" in one glance,
+  on one screen. Since 19 Oct 2026 Home is a board that fits the window on a computer, because
+  scrolling down to the month, the work in progress and the numbers was a chore. Today stays the
+  first panel; the counts sit right under the header, where they are a glance away.
 - **Identity motif: the day ruler.** A 24-hour strip with hour ticks, a teal "now" line, and marks
   for today's deadlines and events. It sits in the header and is the one thing that makes this board
   read as a time instrument rather than a generic dashboard. The same tick language appears on the
@@ -101,14 +103,22 @@ the teal spread thin and the "now" line stop standing out.
 
 - Desktop: left sidebar (navigation plus quick links), content max 1200px.
 - Phone: a bottom tab bar replaces the sidebar; quick links move into Settings > Links.
-- Home order: header (greeting, clock, quick buttons, the Ask Tracky field, day ruler); then Today (the focal point) beside
-  Next 7 days; then In progress and waiting beside the month; then Numbers (counts, tasks finished per
-  day, deadlines met, open tasks by status and priority). The numbers sit last on purpose: they are
-  the review, the agenda is the work.
+- Home is one board on a computer. The header (clock, greeting, the Task, Event and Note buttons, the
+  Ask Tracky field, then the day ruler) and a row of five count tiles sit at the top. Under them are
+  three columns: Today with In progress and waiting below it; Next 7 days; the month with Numbers
+  below it. Numbers shows one chart at a time (Finished, Deadlines, Open), picked with a segmented
+  control and kept per device, so the board fits.
+- The board fills the window whenever Home's column is at least 56rem wide and the window at least
+  42rem tall (the `board` variant: a container query on Home plus a height query). Each panel is as
+  tall as its content up to the room left in its column, then scrolls inside itself, so nothing is
+  stretched to fill space. In a smaller window or on a phone the panels stack in reading order
+  (Today, In progress and waiting, Next 7 days, Month, Numbers) and the page scrolls; long lists show
+  their first rows (Today 6, In progress 4, Next 7 days 6) with "Show n more".
 - Tracky is the assistant's name, used wherever the feature is named (the dialog title, the sidebar's
   Ask Tracky button, the Mac menu). It answers in the first person and, asked, says it runs on Gemini.
-  Its field looks like a text field on Home, because that is what it asks for: a sentence. Cmd+K
-  (Ctrl+K) opens it from anywhere; the shortcut is shown beside the field and the sidebar button.
+  Its field looks like a text field on Home, because that is what it asks for: a sentence. Cmd+T in
+  the Mac app, Cmd+K in a browser (which keeps Cmd+T for a new tab), or Ctrl+K opens it from
+  anywhere; the shortcut is shown beside the field and the sidebar button.
 - Tracky is a chat, laid out like Claude and ChatGPT because that is the shape people already know
   for talking to an assistant, in this app's own colors and type. Your messages sit on the right in a
   `--surface-2` bubble; Tracky's answers sit on the left under the logo mark and its name, with no
@@ -197,7 +207,7 @@ the teal spread thin and the "now" line stop standing out.
   1)`); the labels fade back in over 150ms. From ⌘\, or with reduced motion, it just changes.
   Dragging the edge follows the pointer with no easing. Removing a draft is instant: a fade would still leave the
   cards below jumping up. Opening a draft's fields is instant too.
-- Keyboard shortcuts open things instantly with no animation: Tracky opened with Cmd+K skips the
+- Keyboard shortcuts open things instantly with no animation: Tracky opened with Cmd+K or Cmd+T skips the
   dialog's scale and fade, while the same dialog opened by a click still animates. The same goes
   for pages and months: after a key press (Tab and Enter on a link, Cmd+,) they change without the
   fade or slide. `lib/motion.ts` notes whether the last input was a key or a pointer.

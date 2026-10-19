@@ -36,7 +36,7 @@ still arrive after that.
 | Shortcut | What it does |
 |---|---|
 | ⌥⌘T, in any app | Brings Daily Tracker forward with Tracky open |
-| ⌘K, inside the app | Opens Tracky |
+| ⌘T in the Mac app, ⌘K in a browser | Opens Tracky (⌘K works in the app too; a browser keeps ⌘T for a new tab) |
 | ⌘, | Opens Settings |
 | ⌘Enter | Saves the task or event you’re editing, or sends your note to Tracky |
 
@@ -81,7 +81,7 @@ On a phone, your quick links sit at the bottom of Home.
 
 Tracky is the assistant built into Daily Tracker. Write what’s coming up the way you’d say it, and
 Tracky drafts the tasks and events for you. Open it from the field on Home, the Ask Tracky button in
-the sidebar, or Cmd+K (Ctrl+K on Windows) from any page. Ask it who it is and it tells you: Tracky,
+the sidebar, ⌘T in the Mac app, or ⌘K in a browser (Ctrl+K on Windows) from any page. Ask it who it is and it tells you: Tracky,
 running on Google’s Gemini.
 
 For example: “Sync with Dennis Tuesday 10 to 11am, remind me 15 min before. Finish the labelling sheet

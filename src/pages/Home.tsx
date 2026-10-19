@@ -1,20 +1,31 @@
-import { CalendarBlankIcon, ChatTextIcon, NotePencilIcon, PlusIcon } from '@phosphor-icons/react'
+import {
+  CalendarBlankIcon,
+  CalendarDotsIcon,
+  ChatTextIcon,
+  CheckCircleIcon,
+  ListChecksIcon,
+  NotePencilIcon,
+  PlusIcon,
+  TimerIcon,
+  WarningIcon,
+  type Icon,
+} from '@phosphor-icons/react'
 import { addDays, format, isSameDay, startOfDay } from 'date-fns'
-import { useEffect, useMemo, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Breakdown, FinishedPerDay, Meter } from '@/components/Charts'
 import { DayRuler } from '@/components/DayRuler'
 import { MiniMonth } from '@/components/MiniMonth'
 import { useOpenTracky } from '@/components/trackyContext'
 import { MoveAllToTomorrow, TaskRow } from '@/components/TaskRow'
-import { Loading, QueryError, SiteIcon, StateMessage } from '@/components/ui'
+import { Loading, QueryError, Segmented, SiteIcon, StateMessage } from '@/components/ui'
 import { formatDay, greeting, lastNDays, sameDay, toDate, weekRange } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
 import { rememberName } from '@/lib/intro'
 import { rowIn } from '@/lib/motion'
-import { shortcutLabel } from '@/lib/platform'
+import { shortcutKeys, shortcutLabel } from '@/lib/platform'
 import { quietly, useCreateNote, useEvents, useProfile, useProjects, useQuickLinks, useTasks } from '@/lib/queries'
-import { PRIORITIES, PRIORITY_RANK, STATUSES, type CalEvent, type TaskSummary } from '@/lib/types'
+import { PRIORITIES, PRIORITY_RANK, STATUSES, type CalEvent, type Project, type TaskSummary } from '@/lib/types'
 import { useNow } from '@/lib/useNow'
 
 export function HomePage() {
@@ -52,228 +63,154 @@ export function HomePage() {
     ) : null
 
   return (
-    <div className="space-y-6">
-      <header className="arrive panel px-5 pt-5 pb-4 md:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-          <div>
-            <h1 className="text-xl font-semibold">
-              {greeting(now)}
-              {name ? `, ${name}` : ''}
-            </h1>
-            <p className="text-ink-2">{format(now, 'EEEE, d MMMM yyyy')}</p>
-          </div>
-          <Clock />
-        </div>
-        <div className="mt-4 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
-          <button
-            type="button"
-            aria-label="Add task"
-            className="btn btn-primary px-2 sm:px-3"
-            onClick={() => openTask('new', { due: todayKey })}
-          >
-            <PlusIcon size={16} weight="bold" />
-            <span className="sm:hidden">Task</span>
-            <span className="max-sm:hidden">Add task</span>
-          </button>
-          <button
-            type="button"
-            aria-label="Add event"
-            className="btn btn-quiet px-2 sm:px-3"
-            onClick={() => openEvent('new', { date: todayKey })}
-          >
-            <CalendarBlankIcon size={16} weight="bold" />
-            <span className="sm:hidden">Event</span>
-            <span className="max-sm:hidden">Add event</span>
-          </button>
-          <button
-            type="button"
-            aria-label="New note"
-            className="btn btn-quiet px-2 sm:px-3"
-            onClick={quietly(newNote)}
-            disabled={createNote.isPending}
-          >
-            <NotePencilIcon size={16} weight="bold" />
-            <span className="sm:hidden">Note</span>
-            <span className="max-sm:hidden">New note</span>
-          </button>
-        </div>
-        {/* Looks like a text field because that's what it opens: write a sentence, get items back. */}
-        <button
-          type="button"
-          onClick={() => openTracky()}
-          aria-label="Ask Tracky: describe tasks or events in a sentence"
-          className="field mt-3 flex items-center gap-2 text-left text-ink-3"
-        >
-          <ChatTextIcon size={16} weight="bold" aria-hidden className="shrink-0" />
-          <span className="truncate">Tell Tracky what’s coming up, like “sync with Dennis Tuesday 10am”</span>
-          <kbd className="ml-auto shrink-0 font-sans text-[12px] max-sm:hidden">{shortcutLabel()}</kbd>
-        </button>
-        <div className="mt-5">
-          <DayRuler now={now} tasks={d.dueToday} events={d.eventsToday} onOpenTask={openTask} onOpenEvent={openEvent} />
-        </div>
-      </header>
-
-      {dataState ?? (
-        <div className="fade-in space-y-6">
-          <div className="arrive grid gap-6 lg:grid-cols-12" style={{ '--i': 1 } as CSSProperties}>
-            <Panel
-              className="lg:col-span-7"
-              title="Today"
-              aside={d.leftToday > 0 ? `${d.leftToday} left` : undefined}
-            >
-              {d.overdue.length === 0 && d.dueToday.length === 0 && d.eventsToday.length === 0 ? (
-                <StateMessage
-                  title="Nothing due today."
-                  body="Tasks with a deadline today and today’s events show up here."
-                  action={
-                    <button type="button" className="btn btn-quiet" onClick={() => openTask('new', { due: todayKey })}>
-                      Add a task for today
-                    </button>
-                  }
-                />
-              ) : (
-                <>
-                  {d.overdue.length > 0 && (
-                    <>
-                      <SubHead tone="danger" action={<MoveAllToTomorrow tasks={d.overdue} now={now} />}>
-                        Overdue · {d.overdue.length}
-                      </SubHead>
-                      <ul className="divide-y divide-line">
-                        {d.overdue.map((t) => (
-                          <TaskRow key={t.id} task={t} project={projectById.get(t.project_id ?? '')} onOpen={openTask} now={now} />
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                  {d.overdue.length > 0 && <SubHead>Today</SubHead>}
-                  {d.todayItems.length === 0 ? (
-                    <p className="px-4 py-3 text-ink-2">Nothing else is scheduled for today.</p>
-                  ) : (
-                    <ul className="divide-y divide-line">
-                      {d.todayItems.map((item) =>
-                        item.kind === 'task' ? (
-                          <TaskRow
-                            key={item.task.id}
-                            task={item.task}
-                            project={projectById.get(item.task.project_id ?? '')}
-                            onOpen={openTask}
-                            timeOnly
-                            now={now}
-                          />
-                        ) : (
-                          <EventRow key={item.event.id} event={item.event} onOpen={openEvent} />
-                        ),
-                      )}
-                    </ul>
-                  )}
-                </>
-              )}
-            </Panel>
-
-            <Panel className="lg:col-span-5" title="Next 7 days" action={<Link to="/calendar" className="hit text-[13px] text-ink-2 hover:text-ink">Calendar</Link>}>
-              {d.upcoming.length === 0 ? (
-                <StateMessage title="A clear week ahead." body="Nothing is due and no events are planned for the next 7 days." />
-              ) : (
-                d.upcoming.map((g) => (
-                  <div key={g.day.toISOString()}>
-                    <SubHead>{formatDay(g.day, now)}</SubHead>
-                    <ul className="divide-y divide-line">
-                      {g.items.map((item) =>
-                        item.kind === 'task' ? (
-                          <TaskRow
-                            key={item.task.id}
-                            task={item.task}
-                            project={projectById.get(item.task.project_id ?? '')}
-                            onOpen={openTask}
-                            timeOnly
-                            now={now}
-                          />
-                        ) : (
-                          <EventRow key={item.event.id} event={item.event} onOpen={openEvent} />
-                        ),
-                      )}
-                    </ul>
-                  </div>
-                ))
-              )}
-            </Panel>
-          </div>
-
-          <div className="arrive grid gap-6 lg:grid-cols-12" style={{ '--i': 2 } as CSSProperties}>
-            <Panel
-              className="lg:col-span-7"
-              title="In progress and waiting"
-              action={<Link to="/tasks?view=board" className="hit text-[13px] text-ink-2 hover:text-ink">Board</Link>}
-            >
-              {d.active.length === 0 ? (
-                <StateMessage
-                  title="Nothing in progress."
-                  body="Set a task’s status to In progress or Waiting and it stays here until it’s done."
-                />
-              ) : (
-                <ul className="divide-y divide-line">
-                  {d.active.map((t) => (
-                    <TaskRow key={t.id} task={t} project={projectById.get(t.project_id ?? '')} onOpen={openTask} now={now} />
-                  ))}
-                </ul>
-              )}
-            </Panel>
-            <Panel className="lg:col-span-5" title="Month" bare>
-              <div className="px-4 pb-4">
-                <MiniMonth busy={d.busy} onPick={(day) => navigate(`/calendar?date=${format(day, 'yyyy-MM-dd')}`)} />
+    // On a computer with room for it, Home is one board that fits the window: each panel is as tall
+    // as what it holds, up to the space left, and scrolls inside. Narrower or shorter windows, and
+    // phones, get the same panels one under another, with long lists cut short behind "Show more".
+    <div className="@container">
+      <div className="flex flex-col gap-4 board:h-[calc(100dvh-4.25rem)] board:min-h-0">
+        <header className="arrive hero panel shrink-0 px-4 pt-4 pb-3 md:px-5">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            {/* The clock comes first on screen; the greeting stays first for screen readers. */}
+            <div className="mr-auto flex flex-row-reverse items-center gap-4">
+              <div className="min-w-0">
+                <h1 className="text-lg leading-tight font-semibold">
+                  {greeting(now)}
+                  {name ? `, ${name}` : ''}
+                </h1>
+                <p className="text-[13px] text-ink-2">{format(now, 'EEEE, d MMMM yyyy')}</p>
               </div>
-            </Panel>
-          </div>
-
-          <section aria-labelledby="numbers-heading" className="arrive space-y-4" style={{ '--i': 3 } as CSSProperties}>
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 id="numbers-heading" className="text-base font-semibold">
-                Numbers
-              </h2>
-              <Link to="/review" className="hit text-[13px] text-ink-2 hover:text-ink">
-                Weekly review
-              </Link>
+              <Clock />
             </div>
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              <Stat to="/tasks" label="Open tasks" value={d.open.length} />
-              <Stat to="/tasks?show=today" label="Due today" value={d.dueToday.filter((t) => t.status !== 'done').length} />
-              <Stat to="/tasks?show=overdue" label="Overdue" value={d.overdue.length} danger={d.overdue.length > 0} />
-              <Stat to="/tasks?show=done" label="Done, last 7 days" value={d.finishedCounts.reduce((a, b) => a + b, 0)} />
-              <Stat to={`/calendar?date=${todayKey}`} label="Events today" value={d.eventsToday.length} />
+            <div className="flex w-full flex-wrap items-center gap-2 @3xl:w-auto">
+              <div className="grid flex-1 grid-cols-3 gap-2 @3xl:flex @3xl:flex-none">
+                <button
+                  type="button"
+                  aria-label="Add task"
+                  className="btn btn-primary px-2 @3xl:px-3"
+                  onClick={() => openTask('new', { due: todayKey })}
+                >
+                  <PlusIcon size={16} weight="bold" />
+                  <span>Task</span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Add event"
+                  className="btn btn-quiet px-2 @3xl:px-3"
+                  onClick={() => openEvent('new', { date: todayKey })}
+                >
+                  <CalendarBlankIcon size={16} weight="bold" />
+                  <span>Event</span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="New note"
+                  className="btn btn-quiet px-2 @3xl:px-3"
+                  onClick={quietly(newNote)}
+                  disabled={createNote.isPending}
+                >
+                  <NotePencilIcon size={16} weight="bold" />
+                  <span>Note</span>
+                </button>
+              </div>
+              {/* Looks like a text field because that's what it opens: write a sentence, get items back. */}
+              <button
+                type="button"
+                onClick={() => openTracky()}
+                aria-label="Ask Tracky: describe tasks or events in a sentence"
+                aria-keyshortcuts={shortcutKeys()}
+                className="field flex min-h-9 w-full items-center gap-2 text-left text-ink-3 @3xl:w-72"
+              >
+                <ChatTextIcon size={16} weight="bold" aria-hidden className="shrink-0" />
+                <span className="truncate">Tell Tracky what’s coming up</span>
+                <kbd className="ml-auto shrink-0 font-sans text-[12px] max-sm:hidden">{shortcutLabel()}</kbd>
+              </button>
+            </div>
+          </div>
+          <div className="mt-3">
+            <DayRuler now={now} tasks={d.dueToday} events={d.eventsToday} onOpenTask={openTask} onOpenEvent={openEvent} />
+          </div>
+        </header>
+
+        {dataState ?? (
+          <>
+            <ul aria-label="Numbers at a glance" className="arrive grid shrink-0 grid-cols-3 gap-2 @3xl:grid-cols-5 @3xl:gap-3" style={{ '--i': 1 } as CSSProperties}>
+              <Stat to="/tasks" icon={ListChecksIcon} tone="blue" label="Open tasks" value={d.open.length} />
+              <Stat to="/tasks?show=today" icon={TimerIcon} tone="teal" label="Due today" value={d.dueToday.filter((t) => t.status !== 'done').length} />
+              <Stat to="/tasks?show=overdue" icon={WarningIcon} tone="red" label="Overdue" value={d.overdue.length} />
+              <Stat to="/tasks?show=done" icon={CheckCircleIcon} tone="green" label="Done, 7 days" value={d.finishedCounts.reduce((a, b) => a + b, 0)} />
+              <Stat to={`/calendar?date=${todayKey}`} icon={CalendarDotsIcon} tone="violet" label="Events today" value={d.eventsToday.length} />
             </ul>
-            <div className="grid gap-6 lg:grid-cols-12">
-              <div className="panel p-4 lg:col-span-5">
-                <FinishedPerDay days={d.last7} counts={d.finishedCounts} />
+
+            <div
+              className="arrive fade-in grid gap-4 board:min-h-0 board:flex-1 board:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_minmax(16rem,3fr)] board:grid-rows-[minmax(0,1fr)]"
+              style={{ '--i': 2 } as CSSProperties}
+            >
+              <div className="flex min-h-0 flex-col gap-4">
+                <TodayPanel d={d} now={now} todayKey={todayKey} projectById={projectById} />
+                <Panel
+                  title="In progress and waiting"
+                  aside={d.active.length > 0 ? String(d.active.length) : undefined}
+                  action={<Link to="/tasks?view=board" className="hit text-[13px] text-ink-2 hover:text-ink">Board</Link>}
+                >
+                  {d.active.length === 0 ? (
+                    <StateMessage
+                      title="Nothing in progress."
+                      body="Set a task’s status to In progress or Waiting and it stays here until it’s done."
+                    />
+                  ) : (
+                    <Capped limit={4} total={d.active.length}>
+                      {(extra) => (
+                        <ul className="divide-y divide-line">
+                          {d.active.map((t, i) => (
+                            <TaskRow key={t.id} task={t} project={projectById.get(t.project_id ?? '')} onOpen={openTask} now={now} extra={extra(i)} />
+                          ))}
+                        </ul>
+                      )}
+                    </Capped>
+                  )}
+                </Panel>
               </div>
-              <div className="panel space-y-5 p-4 lg:col-span-3">
-                <h3 className="font-medium">Deadlines met</h3>
-                <Meter label="Due today" done={d.todayDone} total={d.dueToday.length} />
-                <Meter label="Due this week" done={d.weekDone} total={d.weekTotal} />
+
+              <div className="flex min-h-0 flex-col gap-4">
+                <Panel
+                  title="Next 7 days"
+                  action={<Link to="/calendar" className="hit text-[13px] text-ink-2 hover:text-ink">Calendar</Link>}
+                >
+                  {d.upcoming.length === 0 ? (
+                    <StateMessage title="A clear week ahead." body="Nothing is due and no events are planned for the next 7 days." />
+                  ) : (
+                    <Capped limit={6} total={d.upcoming.reduce((n, g) => n + g.items.length, 0)}>
+                      {(extra) =>
+                        d.upcoming.map((g) => (
+                          <div key={g.day.toISOString()} data-extra={extra(g.first) || undefined}>
+                            <SubHead>{formatDay(g.day, now)}</SubHead>
+                            <ul className="divide-y divide-line">
+                              {g.items.map((item, i) => (
+                                <AgendaRow key={itemKey(item)} item={item} projectById={projectById} now={now} extra={extra(g.first + i)} />
+                              ))}
+                            </ul>
+                          </div>
+                        ))
+                      }
+                    </Capped>
+                  )}
+                </Panel>
               </div>
-              <div className="panel space-y-5 p-4 lg:col-span-4">
-                <h3 className="font-medium">
-                  Open tasks <span className="font-normal text-ink-3">· {d.open.length}</span>
-                </h3>
-                <Breakdown
-                  title="By status"
-                  total={d.open.length}
-                  rows={STATUSES.filter((s) => s.value !== 'done').map((s) => ({
-                    label: s.label,
-                    value: d.open.filter((t) => t.status === s.value).length,
-                  }))}
-                />
-                <Breakdown
-                  title="By priority"
-                  total={d.open.length}
-                  rows={PRIORITIES.map((p) => ({ label: p.label, value: d.open.filter((t) => t.priority === p.value).length }))}
-                />
+
+              <div className="flex min-h-0 flex-col gap-4">
+                <Panel title="Month" bare fixed>
+                  <div className="px-3 pb-2">
+                    <MiniMonth busy={d.busy} onPick={(day) => navigate(`/calendar?date=${format(day, 'yyyy-MM-dd')}`)} />
+                  </div>
+                </Panel>
+                <NumbersPanel d={d} />
               </div>
             </div>
-          </section>
 
-          <MobileQuickLinks />
-        </div>
-      )}
+            <MobileQuickLinks />
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -293,52 +230,262 @@ function Clock() {
   )
 }
 
+type Derived = ReturnType<typeof derive>
+
+/** Overdue tasks, then today's deadlines and events in time order. */
+function TodayPanel({
+  d,
+  now,
+  todayKey,
+  projectById,
+}: {
+  d: Derived
+  now: Date
+  todayKey: string
+  projectById: Map<string, Project>
+}) {
+  const { openTask } = useDialogs()
+  const empty = d.overdue.length === 0 && d.dueToday.length === 0 && d.eventsToday.length === 0
+  return (
+    <Panel title="Today" aside={d.leftToday > 0 ? `${d.leftToday} left` : undefined}>
+      {empty ? (
+        <StateMessage
+          title="Nothing due today."
+          body="Tasks with a deadline today and today’s events show up here."
+          action={
+            <button type="button" className="btn btn-quiet" onClick={() => openTask('new', { due: todayKey })}>
+              Add a task for today
+            </button>
+          }
+        />
+      ) : (
+        <Capped limit={6} total={d.overdue.length + d.todayItems.length}>
+          {(extra) => (
+            <>
+              {d.overdue.length > 0 && (
+                <>
+                  <SubHead tone="danger" action={<MoveAllToTomorrow tasks={d.overdue} now={now} />}>
+                    Overdue · {d.overdue.length}
+                  </SubHead>
+                  <ul className="divide-y divide-line">
+                    {d.overdue.map((t, i) => (
+                      <TaskRow key={t.id} task={t} project={projectById.get(t.project_id ?? '')} onOpen={openTask} now={now} extra={extra(i)} />
+                    ))}
+                  </ul>
+                </>
+              )}
+              {d.overdue.length > 0 && <SubHead extra={extra(d.overdue.length)}>Today</SubHead>}
+              {d.todayItems.length === 0 ? (
+                <p className="px-4 py-3 text-ink-2">Nothing else is scheduled for today.</p>
+              ) : (
+                <ul className="divide-y divide-line">
+                  {d.todayItems.map((item, i) => (
+                    <AgendaRow key={itemKey(item)} item={item} projectById={projectById} now={now} extra={extra(d.overdue.length + i)} />
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </Capped>
+      )}
+    </Panel>
+  )
+}
+
+const itemKey = (item: AgendaItem) => (item.kind === 'task' ? `t-${item.task.id}` : `e-${item.event.id}`)
+
+function AgendaRow({
+  item,
+  projectById,
+  now,
+  extra,
+}: {
+  item: AgendaItem
+  projectById: Map<string, Project>
+  now: Date
+  extra: boolean
+}) {
+  const { openTask, openEvent } = useDialogs()
+  return item.kind === 'task' ? (
+    <TaskRow
+      task={item.task}
+      project={projectById.get(item.task.project_id ?? '')}
+      onOpen={openTask}
+      timeOnly
+      now={now}
+      extra={extra}
+    />
+  ) : (
+    <EventRow event={item.event} onOpen={openEvent} extra={extra} />
+  )
+}
+
+/**
+ * A list that shows its first `limit` rows and a "Show n more" button where the page scrolls. On
+ * the one-screen board every row shows and the panel scrolls instead (the CSS for .capped in
+ * index.css). Rows past the limit are marked with data-extra.
+ */
+function Capped({
+  limit,
+  total,
+  children,
+}: {
+  limit: number
+  total: number
+  children: (extra: (index: number) => boolean) => ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  const hidden = total - limit
+  return (
+    <div className={`capped ${open ? 'expanded' : ''}`}>
+      {children((i) => i >= limit)}
+      {hidden > 0 && (
+        <button
+          type="button"
+          aria-expanded={open}
+          className="show-more row-hover w-full border-t border-line px-4 py-2 text-left text-[13px] font-medium text-ink-2 pointer-coarse:min-h-11"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? 'Show fewer' : `Show ${hidden} more`}
+        </button>
+      )}
+    </div>
+  )
+}
+
+type NumbersView = 'done' | 'deadlines' | 'open'
+const NUMBERS_KEY = 'dt-home-numbers'
+
+/** The charts, one at a time, so the board fits the window. The choice is kept on this device. */
+function NumbersPanel({ d }: { d: Derived }) {
+  const [view, setView] = useState<NumbersView>(() => {
+    try {
+      const saved = localStorage.getItem(NUMBERS_KEY)
+      return saved === 'deadlines' || saved === 'open' ? saved : 'done'
+    } catch {
+      return 'done'
+    }
+  })
+  const choose = (next: NumbersView) => {
+    setView(next)
+    try {
+      localStorage.setItem(NUMBERS_KEY, next)
+    } catch {
+      // Blocked storage: the choice holds for this visit.
+    }
+  }
+  return (
+    <Panel title="Numbers" action={<Link to="/review" className="hit text-[13px] text-ink-2 hover:text-ink">Weekly review</Link>}>
+      <div className="space-y-3 px-4 pt-1 pb-4">
+        <Segmented
+          label="Numbers to show"
+          value={view}
+          onChange={choose}
+          options={[
+            { value: 'done', label: 'Finished' },
+            { value: 'deadlines', label: 'Deadlines' },
+            { value: 'open', label: 'Open' },
+          ]}
+        />
+        {view === 'done' ? (
+          <FinishedPerDay days={d.last7} counts={d.finishedCounts} compact />
+        ) : view === 'deadlines' ? (
+          <div className="space-y-4">
+            <h3 className="font-medium">Deadlines met</h3>
+            <Meter label="Due today" done={d.todayDone} total={d.dueToday.length} />
+            <Meter label="Due this week" done={d.weekDone} total={d.weekTotal} />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <h3 className="font-medium">
+              Open tasks <span className="font-normal text-ink-3">· {d.open.length}</span>
+            </h3>
+            <Breakdown
+              title="By status"
+              total={d.open.length}
+              rows={STATUSES.filter((s) => s.value !== 'done').map((s) => ({
+                label: s.label,
+                value: d.open.filter((t) => t.status === s.value).length,
+              }))}
+            />
+            <Breakdown
+              title="By priority"
+              total={d.open.length}
+              rows={PRIORITIES.map((p) => ({ label: p.label, value: d.open.filter((t) => t.priority === p.value).length }))}
+            />
+          </div>
+        )}
+      </div>
+    </Panel>
+  )
+}
+
+/**
+ * A panel on the board. It is as tall as what it holds; on the one-screen board it gives way when
+ * the column runs out of room and its body scrolls. `fixed` keeps its full height (the month).
+ */
 function Panel({
   title,
   aside,
   action,
   children,
-  className = '',
   bare = false,
+  fixed = false,
 }: {
   title: string
   aside?: string
   action?: ReactNode
   children: ReactNode
-  className?: string
   bare?: boolean
+  fixed?: boolean
 }) {
   return (
-    <section className={`panel flex flex-col overflow-hidden ${className}`} aria-label={title}>
-      <div className={`flex items-baseline justify-between gap-3 px-4 pt-3 ${bare ? 'pb-1' : 'pb-2'}`}>
+    <section
+      className={`panel flex flex-col overflow-hidden ${fixed ? 'shrink-0' : 'min-h-0 board:min-h-36'}`}
+      aria-label={title}
+    >
+      <div className={`flex shrink-0 items-baseline justify-between gap-3 px-4 pt-3 ${bare ? 'pb-1' : 'pb-2'}`}>
         <h2 className="font-semibold">
           {title}
           {aside && <span className="ml-2 font-normal text-ink-3">{aside}</span>}
         </h2>
         {action}
       </div>
-      <div className="flex-1">{children}</div>
+      <div className={fixed ? '' : 'min-h-0 flex-1 board:overflow-y-auto board:overscroll-contain'}>{children}</div>
     </section>
   )
 }
 
-function SubHead({ children, tone, action }: { children: ReactNode; tone?: 'danger'; action?: ReactNode }) {
+function SubHead({
+  children,
+  tone,
+  action,
+  extra = false,
+}: {
+  children: ReactNode
+  tone?: 'danger'
+  action?: ReactNode
+  extra?: boolean
+}) {
   return (
-    <div className="flex items-center justify-between gap-2 border-t border-line bg-surface-2/50 px-4 py-1.5">
+    <div
+      data-extra={extra || undefined}
+      className="flex items-center justify-between gap-2 border-t border-line bg-surface-2/50 px-4 py-1.5"
+    >
       <h3 className={`text-[13px] font-medium ${tone === 'danger' ? 'text-danger' : 'text-ink-2'}`}>{children}</h3>
       {action}
     </div>
   )
 }
 
-function EventRow({ event, onOpen }: { event: CalEvent; onOpen: (id: string) => void }) {
+function EventRow({ event, onOpen, extra = false }: { event: CalEvent; onOpen: (id: string) => void; extra?: boolean }) {
   const start = toDate(event.starts_at)
   const end = event.ends_at ? toDate(event.ends_at) : null
   return (
-    <li className={rowIn(event.id)}>
+    <li className={rowIn(event.id)} data-extra={extra || undefined}>
       <button type="button" onClick={() => onOpen(event.id)} className="row-hover flex w-full items-start gap-3 px-4 py-2.5 text-left">
         <span aria-hidden className="flex w-5 shrink-0 justify-center pt-1">
-          <span className="block h-4 w-1 rounded-full bg-ink-2" />
+          <span className="event-mark block h-4 w-1 rounded-full" />
         </span>
         <span className="min-w-0">
           <span className="block break-words">{event.title}</span>
@@ -352,12 +499,35 @@ function EventRow({ event, onOpen }: { event: CalEvent; onOpen: (id: string) => 
   )
 }
 
-function Stat({ to, label, value, danger }: { to: string; label: string; value: number; danger?: boolean }) {
+type Tone = 'blue' | 'teal' | 'red' | 'green' | 'violet'
+
+/** A count that opens its list. The tinted icon names the kind of count at a glance. */
+function Stat({
+  to,
+  icon: Glyph,
+  tone,
+  label,
+  value,
+}: {
+  to: string
+  icon: Icon
+  tone: Tone
+  label: string
+  value: number
+}) {
+  const alarm = tone === 'red' && value > 0
   return (
     <li>
-      <Link to={to} className="panel row-hover press block px-4 py-3">
-        <span className={`block text-2xl font-semibold ${danger ? 'text-danger' : ''}`}>{value}</span>
-        <span className="text-[13px] text-ink-2">{label}</span>
+      {/* Wide: the icon beside the number and label. Narrow: icon and number on one line, the label under them. */}
+      <Link
+        to={to}
+        className="panel row-hover press grid h-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2.5 gap-y-0.5 px-3 py-2 @3xl:gap-x-3 @3xl:py-2.5"
+      >
+        <span aria-hidden data-tone={tone} className="stat-icon grid size-7 place-items-center rounded-[8px] @3xl:row-span-2 @3xl:size-8">
+          <Glyph size={16} weight="bold" />
+        </span>
+        <span className={`text-xl leading-tight font-semibold tnum ${alarm ? 'text-danger' : ''}`}>{value}</span>
+        <span className="col-span-2 text-[13px] leading-snug text-ink-2 @3xl:col-span-1 @3xl:col-start-2">{label}</span>
       </Link>
     </li>
   )
@@ -416,6 +586,13 @@ function derive(tasks: TaskSummary[], events: CalEvent[], now: Date) {
       ),
     }))
     .filter((g) => g.items.length > 0)
+  // Where each day starts in the list as a whole, so a cut-short list can hide what comes after.
+  let seen = 0
+  const upcomingGroups = upcoming.map((g) => {
+    const first = seen
+    seen += g.items.length
+    return { ...g, first }
+  })
 
   const active = open
     .filter((t) => t.status === 'in_progress' || t.status === 'waiting')
@@ -440,7 +617,7 @@ function derive(tasks: TaskSummary[], events: CalEvent[], now: Date) {
     todayDone: dueToday.filter((t) => t.status === 'done').length,
     weekTotal: dueThisWeek.length,
     weekDone: dueThisWeek.filter((t) => t.status === 'done').length,
-    upcoming,
+    upcoming: upcomingGroups,
     active,
     last7,
     finishedCounts,
