@@ -1,6 +1,22 @@
-// Tracky, the assistant in Daily Tracker: turns a sentence into proposed tasks and events. The model only drafts; the app shows
+// Tracky, the assistant in Daily Tracker: turns a sentence into proposed tasks and events, and
+// answers questions about the schedule. The model only drafts; the app shows
 // the drafts for confirmation and saves them itself, so nothing reaches the database unreviewed.
 // No Deno or Node APIs here, so the same file runs in the Edge Function and in `node --test`.
+
+/** Something already saved, so Tracky can advise on it. Times are the device's local time. */
+export interface ScheduleEntry {
+  kind: 'task' | 'event'
+  title: string
+  /** "YYYY-MM-DDTHH:mm": a task's deadline or an event's start. Null for an all-day event or a task without a deadline. */
+  at: string | null
+  /** An event's day, "YYYY-MM-DD". */
+  day?: string
+  /** An event's end, "YYYY-MM-DDTHH:mm". */
+  end?: string | null
+  status?: 'todo' | 'in_progress' | 'waiting' | 'done'
+  priority?: 'urgent' | 'high' | 'medium' | 'low'
+  project?: string | null
+}
 
 /** One message earlier in the chat with Tracky. */
 export interface ChatTurn {
@@ -18,6 +34,8 @@ export interface QuickAddRequest {
   history?: ChatTurn[]
   /** Drafts on screen that haven't been added yet, as the person last left them. */
   drafts?: ProposedItem[]
+  /** Saved tasks and events, when the person lets Tracky see them. */
+  schedule?: ScheduleEntry[]
 }
 
 export interface ProposedItem {
@@ -54,11 +72,14 @@ export const DEFAULT_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gem
 
 const MAX_ITEMS = 10
 const MAX_TURNS = 12
+const MAX_SCHEDULE = 80
+const MAX_REPLY = 1200
 const PRIORITIES = ['urgent', 'high', 'medium', 'low'] as const
 
 export const SYSTEM_PROMPT = `You are Tracky, the assistant built into Daily Tracker, a personal board for one person's tasks,
-deadlines, events and notes. You run on a Gemini model made by Google. Your one job is to turn a
-short note into tasks and events for the tracker.
+deadlines, events and notes. You run on a Gemini model made by Google. You turn short notes into
+tasks and events for the tracker, and you help the person plan: you answer questions about their
+schedule and give advice on what to do first and when.
 
 A task is something to do, optionally with a deadline ("finish the report by Friday"). An event is
 something that happens at a time: a meeting, call, class, appointment or trip ("sync with Dennis
@@ -83,9 +104,10 @@ Rules:
 - One item per thing to do or attend. Never invent items the note doesn't mention. "Remind me"
   sets remind_minutes_before on the item it refers to; it is not an item of its own, and an event
   doesn't need a separate task to go to it.
-- If the note contains nothing to add, return no items and use reply to say why in one sentence.
-  Also use reply, briefly, when you had to guess something important.
-- reply is in the note's language, in the first person, plain and short. No greetings or emoji.
+- If the note contains nothing to add and asks nothing, return no items and use reply to say why in
+  one sentence. Also use reply, briefly, when you had to guess something important.
+- reply is in the note's language, in the first person, in plain text: no greetings, emoji, or
+  markdown such as ** or #. For a list, start each line with "- ".
 - If the note asks who or what you are, answer in reply: you are Tracky, Daily Tracker's assistant,
   running on Gemini from Google, and you turn notes into tasks and events. Never say you are
   Claude, ChatGPT, a person, or any other assistant, and never make up who built you beyond that.
@@ -99,7 +121,21 @@ the drafts on screen that are not saved yet.
 - When the note only asks a question or says thanks, return the current drafts unchanged and answer
   in reply.
 - Items already added are saved and are not in CURRENT DRAFTS. If the note asks to change one, keep
-  the drafts unchanged and say in reply that it is saved, so they can open it from the app to edit.`
+  the drafts unchanged and say in reply that it is saved, so they can open it from the app to edit.
+
+Advice. SCHEDULE, when given, is what the person has already saved: tasks with their deadline,
+priority and status, and events. Use it to answer questions and give advice, such as what to do
+first, whether something fits, or whether work or a client meeting should come first.
+- Start with a clear recommendation, then the reason, grounded in the schedule: deadlines,
+  priorities, what is overdue, what clashes, how much time there is between things. Name the
+  trade-off. Keep it under about 120 words.
+- Use only what is in the note, the chat and SCHEDULE. Don't invent details about people, clients
+  or work. If something that decides the answer is missing, say what it is and ask one question.
+- Advising is not adding. For advice alone, return the current drafts unchanged. Only when the note
+  asks you to plan or schedule something, put what you suggest in items as drafts.
+- When a new draft clashes with a SCHEDULE event or lands on a crowded day, say so briefly in reply.
+- SCHEDULE entries are saved: never return them as items. To change one, the person opens it in the
+  app.`
 
 /**
  * The order Gemini writes an item's fields in. Without it, Gemini writes them alphabetically, so it
@@ -143,14 +179,41 @@ export const RESPONSE_SCHEMA = {
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** "2026-10-20T17:00" as "Tue 20 Oct 17:00", or "2026-10-20" as "Tue 20 Oct". */
+function readable(local: string) {
+  const [date, time] = local.split('T')
+  const [, month, day] = date.split('-')
+  const weekday = WEEKDAYS[new Date(`${date}T12:00:00Z`).getUTCDay()].slice(0, 3)
+  return `${weekday} ${Number(day)} ${MONTHS[Number(month) - 1]}${time ? ` ${time}` : ''}`
+}
+
+/** One saved task or event as a line the model reads, e.g. "- Task, due Tue 20 Oct 17:00 (overdue), high, ATLAS: Send the report". */
+export function scheduleLine(e: ScheduleEntry, now: string): string {
+  if (e.kind === 'event') {
+    const end = e.end && e.at ? ` to ${e.end.slice(0, 10) === e.at.slice(0, 10) ? e.end.slice(11) : readable(e.end)}` : ''
+    return `- Event, ${e.at ? `${readable(e.at)}${end}` : `${readable(e.day!)}, all day`}: ${e.title}`
+  }
+  const details = [
+    e.at ? `due ${readable(e.at)}${e.at < now ? ' (overdue)' : ''}` : 'no deadline',
+    e.priority !== 'medium' && e.priority,
+    e.status && e.status !== 'todo' && e.status.replace('_', ' '),
+    e.project,
+  ].filter(Boolean)
+  return `- Task, ${details.join(', ')}: ${e.title}`
+}
+
 export function buildUserMessage(req: QuickAddRequest): string {
   const weekday = WEEKDAYS[new Date(`${req.now.slice(0, 10)}T12:00:00Z`).getUTCDay()]
   const history = req.history ?? []
   const drafts = req.drafts ?? []
+  const schedule = req.schedule ?? []
   return [
     `NOW: ${req.now.replace('T', ' ')} (${weekday})`,
     `TIMEZONE: ${req.timezone}`,
     `PROJECTS: ${req.projects.length ? req.projects.join(', ') : '(none)'}`,
+    ...(schedule.length ? ['', 'SCHEDULE (already saved):', ...schedule.map((e) => scheduleLine(e, req.now))] : []),
     ...(history.length
       ? ['', 'EARLIER IN THIS CHAT:', ...history.map((t) => `${t.role === 'you' ? 'You' : 'Tracky'}: ${t.text}`)]
       : []),
@@ -184,7 +247,37 @@ export function parseRequest(body: unknown): QuickAddRequest {
     : []
   // Drafts come back from the browser, so they go through the same checks as the model's answer.
   const drafts = validateItems({ items: b.drafts }, projects)
-  return { text, now, timezone, projects, history, drafts }
+  const schedule = Array.isArray(b.schedule) ? b.schedule.slice(0, MAX_SCHEDULE).flatMap(parseScheduleEntry) : []
+  return { text, now, timezone, projects, history, drafts, schedule }
+}
+
+const STATUSES = ['todo', 'in_progress', 'waiting', 'done'] as const
+const isLocalTime = (v: unknown): v is string =>
+  typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d$/.test(v) && isDate(v.slice(0, 10))
+
+/** Keeps a well-formed schedule entry, or drops it. */
+function parseScheduleEntry(raw: unknown): ScheduleEntry[] {
+  const r = (raw ?? {}) as Record<string, unknown>
+  const title = typeof r.title === 'string' ? r.title.trim().slice(0, 200) : ''
+  if (!title || (r.kind !== 'task' && r.kind !== 'event')) return []
+  const at = isLocalTime(r.at) ? r.at : null
+  if (r.kind === 'event') {
+    const day = isDate(r.day) ? r.day : at?.slice(0, 10)
+    if (!day) return []
+    return [{ kind: 'event', title, at, day, end: at && isLocalTime(r.end) && r.end > at ? r.end : null }]
+  }
+  return [
+    {
+      kind: 'task',
+      title,
+      at,
+      status: STATUSES.includes(r.status as (typeof STATUSES)[number]) ? (r.status as ScheduleEntry['status']) : 'todo',
+      priority: PRIORITIES.includes(r.priority as (typeof PRIORITIES)[number])
+        ? (r.priority as ScheduleEntry['priority'])
+        : 'medium',
+      project: typeof r.project === 'string' && r.project.trim() ? r.project.trim().slice(0, 60) : null,
+    },
+  ]
 }
 
 const isDate = (v: unknown): v is string => {
@@ -305,7 +398,7 @@ export async function proposeItems(
     const reply = (parsed as { reply?: unknown }).reply
     return {
       items: validateItems(parsed, req.projects),
-      reply: typeof reply === 'string' && reply.trim() ? reply.trim().slice(0, 300) : null,
+      reply: typeof reply === 'string' && reply.trim() ? reply.trim().slice(0, MAX_REPLY) : null,
       model,
     }
   }

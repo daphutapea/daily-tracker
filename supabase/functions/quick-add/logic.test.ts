@@ -7,6 +7,7 @@ import {
   proposeItems,
   QuickAddError,
   RESPONSE_SCHEMA,
+  scheduleLine,
   SYSTEM_PROMPT,
   validateItems,
   type QuickAddRequest,
@@ -83,6 +84,56 @@ test('parseRequest keeps the last twelve messages and checks drafts like the mod
     parsed.drafts!.map((d) => [d.title, d.date, d.priority]),
     [['Finish labelling', null, 'medium']],
   )
+})
+
+test('the saved schedule reaches the prompt as one readable line per entry', () => {
+  const msg = buildUserMessage({
+    ...req,
+    text: 'client meeting or the ATLAS report first?',
+    schedule: [
+      { kind: 'task', title: 'Send the ATLAS report', at: '2026-10-15T17:00', status: 'in_progress', priority: 'high', project: 'ATLAS' },
+      { kind: 'task', title: 'Renew the VM', at: '2026-10-14T10:00', status: 'todo', priority: 'urgent', project: null },
+      { kind: 'event', title: 'Client meeting', at: '2026-10-15T15:00', day: '2026-10-15', end: '2026-10-15T16:00' },
+      { kind: 'event', title: 'Offsite', at: null, day: '2026-10-17' },
+      { kind: 'task', title: 'Plan Q4', at: null, status: 'waiting', priority: 'medium', project: null },
+    ],
+  })
+  assert.match(msg, /SCHEDULE \(already saved\):/)
+  assert.match(msg, /- Task, due Thu 15 Oct 17:00, high, in progress, ATLAS: Send the ATLAS report/)
+  assert.match(msg, /- Task, due Wed 14 Oct 10:00 \(overdue\), urgent: Renew the VM/)
+  assert.match(msg, /- Event, Thu 15 Oct 15:00 to 16:00: Client meeting/)
+  assert.match(msg, /- Event, Sat 17 Oct, all day: Offsite/)
+  assert.match(msg, /- Task, no deadline, waiting: Plan Q4/)
+  assert.ok(msg.indexOf('SCHEDULE') < msg.indexOf('NOTE:'))
+})
+
+test('parseRequest keeps well-formed schedule entries and drops or repairs the rest', () => {
+  const parsed = parseRequest({
+    text: 'what first?',
+    now: '2026-10-15T09:30',
+    schedule: [
+      { kind: 'task', title: '  Report ', at: '2026-10-15T17:00', status: 'sideways', priority: 'HIGH', project: 'ATLAS' },
+      { kind: 'event', title: 'Meeting', at: '2026-10-15T15:00', end: '2026-10-15T14:00' },
+      { kind: 'event', title: 'No day at all', at: 'soon' },
+      { kind: 'note', title: 'Not a kind' },
+      { kind: 'task', title: '' },
+    ],
+  })
+  assert.deepEqual(parsed.schedule, [
+    { kind: 'task', title: 'Report', at: '2026-10-15T17:00', status: 'todo', priority: 'medium', project: 'ATLAS' },
+    { kind: 'event', title: 'Meeting', at: '2026-10-15T15:00', day: '2026-10-15', end: null },
+  ])
+  assert.equal(parseRequest({ text: 'x', now: '2026-10-15T09:30', schedule: Array(200).fill({ kind: 'task', title: 'a', at: null }) }).schedule!.length, 80)
+})
+
+test('a deadline later the same day is not overdue', () => {
+  assert.doesNotMatch(scheduleLine({ kind: 'task', title: 'x', at: '2026-10-15T17:00', status: 'todo', priority: 'medium', project: null }, '2026-10-15T09:30'), /overdue/)
+})
+
+test('the prompt lets Tracky advise from the schedule without adding items for advice alone', () => {
+  assert.match(SYSTEM_PROMPT, /Start with a clear recommendation/)
+  assert.match(SYSTEM_PROMPT, /Advising is not adding/)
+  assert.match(SYSTEM_PROMPT, /SCHEDULE entries are saved: never return them as items/)
 })
 
 test('the prompt explains how follow-ups change the drafts', () => {

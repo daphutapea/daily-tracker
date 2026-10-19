@@ -90,7 +90,9 @@ the teal spread thin and the "now" line stop standing out.
 
 ## Shape and depth
 
-- Radius: 6px for controls, 10px for panels, round only for avatar initials.
+- Radius: 6px for controls, 10px for panels, round only for avatar initials and Tracky's send button.
+  One exception: Tracky's message bubbles and message box use 16px, because the chat layout borrows
+  its shape from the chat apps people know, and at 6px the box reads as a form field.
 - Panels are flat with a 1px `--line` border. Shadow is reserved for things that float above the page:
   dialogs, popovers, toasts.
 - No gradients, glass, glow, grids or decorative rings.
@@ -105,10 +107,22 @@ the teal spread thin and the "now" line stop standing out.
   the review, the agenda is the work.
 - Tracky is the assistant's name, used wherever the feature is named (the dialog title, the sidebar's
   Ask Tracky button, the Mac menu). It answers in the first person and, asked, says it runs on Gemini.
-  Its field looks like a text field on Home, because that is what it asks for: a sentence. It opens
-  a dialog where the AI's drafts come back as editable cards, one per item, and nothing is saved until
-  you press Add. Cmd+K (Ctrl+K) opens it from anywhere; the shortcut is shown beside the field and the
-  sidebar button.
+  Its field looks like a text field on Home, because that is what it asks for: a sentence. Cmd+K
+  (Ctrl+K) opens it from anywhere; the shortcut is shown beside the field and the sidebar button.
+- Tracky is a chat, laid out like Claude and ChatGPT because that is the shape people already know
+  for talking to an assistant, in this app's own colors and type. Your messages sit on the right in a
+  `--surface-2` bubble; Tracky's answers sit on the left under the logo mark and its name, with no
+  bubble, so the drafts inside them read as content rather than chat chrome. The message box is
+  pinned to the bottom and grows to about eight lines. The dialog has a fixed height (760px on a
+  computer, 94% of the screen on a phone), so the thread scrolls and the box never moves. After you
+  send, your message moves to the top of the view with the answer under it.
+- Drafts are one line each, with the day ruler's mark (diamond for a deadline, bar for an event):
+  title, then kind, time, place, reminder, priority and project. The pencil opens every field; a draft
+  that can't be added as it is opens by itself. Older answers in the thread shrink to a plain list.
+- Tracky advises as well as drafts. Its answers keep their line breaks; lists are lines starting
+  with "- ". Each answer ends with a quiet line naming the model that wrote it.
+- Enter sends, Shift+Enter starts a new line, and text being composed with an input method is left
+  alone. On a phone Return starts a new line and the send button sends.
 - Overdue rows carry a quiet text button, Tomorrow, at the right. Overdue is the one state where the
   next action is nearly always the same, so it gets a shortcut; other rows stay clean. Every move
   offers Undo in its toast rather than asking first: moving is easy to reverse, so a question would
@@ -156,23 +170,21 @@ the teal spread thin and the "now" line stop standing out.
 - Board drag: the card lifts into a floating copy (shadow, scale 1.02) while the original dims in
   place; on drop the copy settles into its new column in 200ms with ease-out.
 - Switching palettes never animates; colors change in one frame.
-- Nothing loops, with one exception: while Tracky reads a note, a short `--ink-2` line
-  sweeps along the bottom of the note (1.2s, linear). A wait of one to several seconds with nothing
+- Nothing loops, with one exception: while Tracky reads, a short `--ink-2` line
+  sweeps under its name (1.2s, linear). A wait of one to several seconds with nothing
   moving looks frozen; a database load of a tenth of a second doesn't, which is why other loading
   states stay as text. The line appears only after 300ms, so a quick answer never flashes it, and it
   disappears the moment the answer arrives.
-- The AI's answer rises into place (4px and opacity, 200ms ease-out): its one-line reply first, then
-  each draft 40ms apart, capped at 160ms, so they read as separate things to check. On a computer the
-  Tracky dialog sits near the top of the window rather than in the middle, so when the drafts make
-  it taller it grows downward instead of jumping up to re-center. The busy line hides the note's
-  resize handle while it runs. Removing a draft is instant: a fade would still leave the
-  cards below jumping up.
+- Tracky's answer rises into place (4px and opacity, 200ms ease-out): its reply first, then each draft
+  40ms apart, capped at 160ms, so they read as separate things to check. Your own message appears at
+  once, because you sent it with a key. Removing a draft is instant: a fade would still leave the
+  cards below jumping up. Opening a draft's fields is instant too.
 - Keyboard shortcuts open things instantly with no animation: Tracky opened with Cmd+K skips the
   dialog's scale and fade, while the same dialog opened by a click still animates. The same goes
   for pages and months: after a key press (Tab and Enter on a link, Cmd+,) they change without the
   fade or slide. `lib/motion.ts` notes whether the last input was a key or a pointer.
 - `prefers-reduced-motion`: keep fades, drop movement. The drafts only fade, and the busy line is
-  hidden; the button still says Reading…. The intro shows the ruler, the line and the greeting in
+  hidden; Tracky's answer area still says Reading…. The intro shows the ruler, the line and the greeting in
   place and fades them in, then leaves after 0.9s. Months, weeks and new rows only fade.
 
 ## Copy

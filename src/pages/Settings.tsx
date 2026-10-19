@@ -25,6 +25,7 @@ import {
   useMacRemindersEnabled,
 } from '@/lib/native'
 import { playIntro, setIntroEnabled, useIntroEnabled } from '@/lib/intro'
+import { setTrackySeesSchedule, useTrackySeesSchedule } from '@/lib/trackySchedule'
 import { quietly, useDeleteProject, useProfile, useProjects, useSaveProject, useUpdateProfile } from '@/lib/queries'
 import { must, supabase } from '@/lib/supabase'
 import { updateTheme, useTheme, type DarkPalette, type LightPalette, type Palette, type ThemeMode } from '@/lib/theme'
@@ -50,6 +51,7 @@ export function SettingsPage() {
           <ProfileSection profile={profile.data} />
           {inMacApp && <MacAppSection />}
           <SummariesSection profile={profile.data} />
+          <TrackySection />
           <ProjectsSection />
           <AppearanceSection />
           <Link to="/links" className="panel row-hover flex min-h-12 items-center justify-between px-4 md:hidden">
@@ -204,6 +206,36 @@ function SummariesSection({ profile }: { profile: Profile }) {
       </div>
       <p className="text-[13px] text-ink-3">The same review is always on the Review page.</p>
     </div>
+    </Section>
+  )
+}
+
+/** What Tracky may see. Per device, like the appearance settings. */
+function TrackySection() {
+  const sees = useTrackySeesSchedule()
+  return (
+    <Section
+      id="tracky"
+      title="Tracky"
+      intro="Tracky drafts tasks and events from what you write, and helps you plan: what to do first, whether something fits, what clashes."
+    >
+      <div className="space-y-1">
+        <label className="flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 font-medium">
+          <input
+            type="checkbox"
+            className="size-4 accent-[var(--ink)]"
+            checked={sees}
+            onChange={(e) => setTrackySeesSchedule(e.target.checked)}
+          />
+          Let Tracky see your schedule
+        </label>
+        <p className="pl-6 text-[13px] text-ink-2">
+          With each message, Tracky gets the titles, times, priority, status and project of your open tasks from the last
+          30 days to two weeks ahead, and your events for the next two weeks. Never notes or links. They go to Google’s
+          Gemini, which on the free tier may use them to improve its products. Turned off, Tracky still drafts, but can’t
+          advise on your plans.
+        </p>
+      </div>
     </Section>
   )
 }

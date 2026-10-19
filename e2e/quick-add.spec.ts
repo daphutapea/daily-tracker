@@ -115,3 +115,46 @@ test('a follow-up sends the chat so far and the drafts as you left them, and Tra
   expect(Date.parse(saved.starts_at)).toBe(Date.parse(jakarta(day, '16:00')))
   expect(saved.location).toBe('Room 4')
 })
+
+test('Tracky answers a planning question from your schedule, and the schedule stays home when turned off', async ({ page }) => {
+  await page.goto('/')
+  const db = await asOwner(page)
+  const today = jakartaDay(0)
+  await db.addTask({ title: `${PREFIX}send the report`, due_at: jakarta(today, '23:00'), priority: 'high' })
+
+  const bodies: { schedule: { title: string; priority?: string }[] }[] = []
+  await page.route('**/functions/v1/quick-add', async (route) => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS })
+    bodies.push(route.request().postDataJSON())
+    await route.fulfill({
+      headers: CORS,
+      json: { model: 'fake-model', items: [], reply: 'Do the report first.\n- It is due tonight and marked high.' },
+    })
+  })
+
+  await page.reload()
+  await expect(page.getByText(`${PREFIX}send the report`).first()).toBeVisible()
+  await page.keyboard.press('ControlOrMeta+k')
+  const dialog = page.getByRole('dialog', { name: 'Tracky' })
+  const box = dialog.getByLabel('Message Tracky')
+  await box.fill('Client meeting or the report first?')
+  await box.press('Enter')
+
+  const answer = dialog.locator('p.whitespace-pre-wrap', { hasText: 'Do the report first.' })
+  await expect(answer).toBeVisible()
+  // Line breaks in an answer are kept.
+  expect(await answer.evaluate((el) => (el as HTMLElement).innerText)).toBe('Do the report first.\n- It is due tonight and marked high.')
+  await expect(dialog.getByRole('button', { name: /^Add / })).toHaveCount(0)
+  expect(bodies[0].schedule).toContainEqual(expect.objectContaining({ title: `${PREFIX}send the report`, priority: 'high' }))
+
+  await page.keyboard.press('Escape')
+  await page.goto('/settings')
+  await page.getByLabel('Let Tracky see your schedule').uncheck()
+  await page.getByRole('link', { name: 'Home' }).first().click()
+  await page.keyboard.press('ControlOrMeta+k')
+  await box.fill('And tomorrow?')
+  await box.press('Enter')
+  await expect.poll(() => bodies.length).toBe(2)
+  expect(bodies[1].schedule).toEqual([])
+  await page.evaluate(() => localStorage.removeItem('dt-tracky-schedule'))
+})

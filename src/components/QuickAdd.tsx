@@ -2,11 +2,12 @@ import { ArrowUpIcon, CaretUpIcon, NotePencilIcon, PencilSimpleIcon, StopIcon, W
 import { useQueryClient } from '@tanstack/react-query'
 import { addHours, format, subMinutes } from 'date-fns'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import type { ChatTurn, ProposedItem, QuickAddResult } from '../../supabase/functions/quick-add/logic.ts'
+import type { ChatTurn, ProposedItem, QuickAddResult, ScheduleEntry } from '../../supabase/functions/quick-add/logic.ts'
 import { deviceTimeZone, toDate } from '@/lib/dates'
 import { markNew } from '@/lib/motion'
-import { keys, useEvents, useProjects } from '@/lib/queries'
+import { keys, useEvents, useProjects, useTasks } from '@/lib/queries'
 import { must, supabase } from '@/lib/supabase'
+import { scheduleForTracky, useTrackySeesSchedule } from '@/lib/trackySchedule'
 import { PRIORITIES, type CalEvent } from '@/lib/types'
 import { Dialog } from './Dialog'
 import { LogoMark } from './Logo'
@@ -67,12 +68,12 @@ const REMINDER_OPTIONS = [
 
 const EXAMPLES = [
   'Sync with Dennis Tuesday 10 to 11am, remind me 15 min before',
-  'Finish the labelling sheet by Friday, high priority',
   'Besok jam 9 standup, ingatkan 10 menit sebelumnya',
+  'I have a client meeting at 3 and a report due at 5. What should I do first?',
 ]
 
 async function readNote(
-  body: { text: string; projects: string[]; history: ChatTurn[]; drafts: ProposedItem[] },
+  body: { text: string; projects: string[]; history: ChatTurn[]; drafts: ProposedItem[]; schedule: ScheduleEntry[] },
   signal: AbortSignal,
 ): Promise<QuickAddResult> {
   const { data, error } = await supabase.functions.invoke<QuickAddResult>('quick-add', {
@@ -105,7 +106,9 @@ function addedText(titles: string[]) {
 function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: boolean; onClose: () => void }) {
   const qc = useQueryClient()
   const projects = useProjects()
+  const tasks = useTasks()
   const events = useEvents()
+  const seesSchedule = useTrackySeesSchedule()
   const [messages, setMessages] = useState<Message[]>([])
   const [drafts, setDrafts] = useState<Draft[]>([])
   // The proposal whose drafts are still on screen to edit; older proposals show a summary.
@@ -141,8 +144,11 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
     const controller = new AbortController()
     abort.current = controller
     try {
+      const schedule = seesSchedule
+        ? scheduleForTracky(tasks.data ?? [], events.data ?? [], projects.data ?? [], new Date())
+        : []
       const result = await readNote(
-        { text, projects: activeProjects.map((p) => p.name), history, drafts: drafts.map(strip) },
+        { text, projects: activeProjects.map((p) => p.name), history, drafts: drafts.map(strip), schedule },
         controller.signal,
       )
       if (controller.signal.aborted) return
@@ -327,7 +333,7 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
                     </div>
                   ) : m.kind === 'proposal' ? (
                     <>
-                      <p className="draft-in">{m.text}</p>
+                      <p className="draft-in break-words whitespace-pre-wrap">{m.text}</p>
                       {m.id === liveId && drafts.length > 0 ? (
                         <div className="space-y-3">
                           {drafts.map((d, i) => (
@@ -353,11 +359,14 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
                             <button type="button" className="btn btn-quiet" disabled={saving} onClick={discard}>
                               Discard
                             </button>
-                            <span className="text-[12px] text-ink-3">Read by Tracky, running on {m.model}</span>
+                            <span className="text-[12px] text-ink-3">Tracky, running on {m.model}</span>
                           </div>
                         </div>
                       ) : (
-                        m.items.length > 0 && <DraftSummary items={m.items} />
+                        <>
+                          {m.items.length > 0 && <DraftSummary items={m.items} />}
+                          <p className="text-[12px] text-ink-3">Tracky, running on {m.model}</p>
+                        </>
                       )}
                     </>
                   ) : (
@@ -401,8 +410,8 @@ function EmptyChat({ onPick }: { onPick: (example: string) => void }) {
       <LogoMark size={36} />
       <h3 className="mt-4 text-xl font-semibold">What’s coming up?</h3>
       <p className="mt-1 max-w-md text-ink-2">
-        Tell Tracky the way you’d say it, in English or Bahasa Indonesia. It drafts the tasks and events, and nothing is
-        saved until you add them.
+        Tell Tracky what’s coming up, or ask it to help you plan your day, in English or Bahasa Indonesia. It drafts
+        tasks and events, and nothing is saved until you add them.
       </p>
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         {EXAMPLES.map((example) => (
@@ -509,7 +518,7 @@ function Composer({
       </div>
       <p className="mt-1.5 text-center text-[12px] text-ink-3">
         <span className="pointer-coarse:hidden">Enter sends, Shift+Enter starts a new line. </span>
-        Tracky only drafts; nothing is saved until you add it.
+        Nothing is saved until you add it.
       </p>
     </form>
   )

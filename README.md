@@ -84,17 +84,28 @@ things. Type as fast as you like: typos, shorthand and loose times are read for 
 “Sync me with mr. dennis at 1500 till 1600, then work on ATLAS imrpovementsd again” becomes “Sync with
 Mr. Dennis” today from 15:00 to 16:00 and “Work on ATLAS improvements again”, filed under ATLAS.
 
-Press Read it (or Cmd+Enter). While it reads, a thin line moves along the bottom of your note; it
-usually takes a second or two. Each item comes back as a card you can change before anything is saved:
-switch it between task and event, fix the title, day, time, place, reminder, priority or project, or
-remove it. A task with a day but no time is due at 17:00. An event that overlaps one already in your calendar
-gets a warning. Press Add to save them all, or Edit note to go back and rewrite. The whole flow works
-from the keyboard: after reading, Tab moves through the cards, and removing one moves you to the next.
+Tracky works like a chat, the way Claude or ChatGPT do. Type in the box at the bottom and press
+Enter to send; Shift+Enter starts a new line. On a phone, Return starts a new line and the round
+button sends. While Tracky reads, a thin line moves under its name and the send button turns into
+Stop. Each item comes back as one line, such as “Event · Tue 20 Oct, 15:00 to 16:00 · Client office”.
+Press the pencil to change anything on it (task or event, title, day, time, place, reminder,
+priority, project) or the cross to remove it. A task with a day but no time is due at 17:00. An event
+that overlaps one already in your calendar gets a warning. Press Add to save them, or Discard.
 
-Tracky only drafts. It can’t save, change or delete anything; you do that with the Add button. It runs
-on Google’s Gemini free tier. The best model allows 20 notes a day; after that Tracky switches by
-itself to lighter models with larger allowances, and the footer of each answer says which model read
-it. Only when all of them are used up does the app say so, and then you add items by hand until the
+You can also just reply. “Make it 4pm”, “also remind me 10 minutes before” or “drop the second one”
+changes the drafts on screen instead of starting over, and edits you made by hand travel with your
+reply. New chat, at the top, clears the conversation; closing Tracky keeps it until you do.
+
+Tracky can also help you plan. Ask “I have a client meeting at 3 and the ATLAS report due at 5, what
+should I do first?” or “can I fit a dentist appointment in on Thursday?” and it answers from your
+saved tasks and events: a recommendation first, then the reason and the trade-off. Advice alone
+adds nothing; ask it to plan or schedule something and it drafts it for you to check. What Tracky
+sees of your schedule, and how to turn that off, is under Settings → Tracky.
+
+Tracky only drafts and advises. It can’t save, change or delete anything; you do that with the Add
+button, or in the app. It runs on Google’s Gemini free tier. The best model allows 20 messages a day;
+after that Tracky switches by itself to lighter models with larger allowances, and each answer says
+which model wrote it. Only when all of them are used up does the app say so, and then you add items by hand until the
 next day. Tracky needs a one-time setup, described in
 [docs/SETUP.md](docs/SETUP.md).
 

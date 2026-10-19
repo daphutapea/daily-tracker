@@ -86,8 +86,12 @@ secret named `GEMINI_MODELS` with model names separated by commas, best first. Y
 listed in AI Studio under rate limits.
 
 **Privacy.** On the free tier, Google’s terms allow it to use what you send to improve its products.
-Tracky only sends the sentence you typed, today’s date and time, your time zone and your project
-names, never your existing tasks or notes. Leave out anything you wouldn’t want shared.
+With each message Tracky sends what you typed, the chat so far, the drafts on screen, today’s date
+and time, your time zone and your project names. So it can advise on your plans, it also sends a
+summary of your schedule: the titles, times, priority, status and project of open tasks from the
+last 30 days to two weeks ahead, and your events for the next two weeks. It never sends notes, links
+or finished tasks. Turn the schedule off in Settings → Tracky, and leave out of your messages
+anything you wouldn’t want shared.
 
 ## 4. Put it online
 

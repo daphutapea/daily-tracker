@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.8 (2026-10-19)
+
+### Added
+- Tracky is a chat, laid out like Claude or ChatGPT: your messages on the right, Tracky’s answers on the left under its mark, and a message box at the bottom. Enter sends and Shift+Enter starts a new line; on a phone, Return starts a new line and the round button sends. The send button turns into Stop while Tracky reads. New chat clears the conversation; closing Tracky keeps it.
+- You can reply to Tracky. “Make it 4pm”, “also remind me” or “drop the second one” change the drafts on screen instead of starting over, and edits you made by hand go with your reply.
+- Tracky helps you plan. Ask what to do first, whether something fits, or whether work or a client meeting should come first, and it answers from your saved tasks and events with a recommendation and the reason. Advice alone adds nothing.
+- Settings → Tracky, with a switch for whether Tracky sees your schedule.
+
+### Changed
+- Each draft is one line, such as “Event · Tue 20 Oct, 15:00 to 16:00 · Client office”, with a pencil to open every field and a cross to remove it. After Add, Tracky says what it added and the chat stays open.
+- Tracky now sends Google a summary of your schedule with each message: the titles, times, priority, status and project of open tasks from the last 30 days to two weeks ahead, and your events for the next two weeks. Never notes, links or finished tasks. Turn it off in Settings → Tracky.
+
 ## v1.7 (2026-10-19)
 
 ### Added
