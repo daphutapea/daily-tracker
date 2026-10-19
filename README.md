@@ -6,8 +6,10 @@
 # Daily Tracker
 
 A personal board for one person. It keeps your tasks and their deadlines, your notes, your events, a
-month calendar and the sites you open every day in one place. The Mac app sends reminders and a morning
-and weekly summary as notifications, and can pass them to your iPhone through Apple Calendar.
+month calendar and the sites you open every day in one place. Its assistant, Tracky, turns a note typed
+in a hurry into tasks and events and helps you plan around what's already there. The Mac app sends
+reminders and a morning and weekly summary as notifications, and can pass them to your iPhone through
+Apple Calendar.
 
 Setting it up for the first time? Follow [docs/SETUP.md](docs/SETUP.md) to create your account,
 install the Mac app and turn on Tracky. What changed in each version is in [CHANGELOG.md](CHANGELOG.md); the
@@ -135,8 +137,10 @@ which model wrote it. Only when all of them are used up does the app say so, and
 next day. Tracky needs a one-time setup, described in
 [docs/SETUP.md](docs/SETUP.md).
 
-How often the AI reads notes correctly is measured with a set of 34 test notes, ten of them full of typos. How to run it, and
-what it does and doesn't prove, is in
+How often Tracky reads notes correctly is measured with a set of 34 test notes, ten of them full of
+typos. The two models it tries first, gemini-3.6-flash and gemini-3.5-flash-lite, each read all 34
+correctly in October 2026. The set covers turning notes into drafts, not advice or replies to drafts.
+How to run it, and what it does and doesn't prove, is in
 [supabase/functions/tracky/eval/README.md](supabase/functions/tracky/eval/README.md).
 
 ## Tasks
@@ -250,7 +254,7 @@ iPhone (and an Apple Watch). macOS asks once whether Daily Tracker may use Calen
 - On the iPhone, Calendar alerts must be allowed (Settings → Notifications → Calendar), and the Daily
   Tracker calendar must be ticked in the Calendar app’s list of calendars.
 
-Reminder times follow the time zone shown in Settings, which updates to match the device you use.
+Summaries arrive at the times you pick in your Mac's time zone.
 
 ## Weekly review
 
@@ -272,11 +276,12 @@ Monday, keeping each one’s time. Undo works here too.
 
 | Section | What you can do there |
 |---|---|
-| You | Set the name used in the greeting, and see the time zone reminders use. |
+| You | Set the name used in the greeting. |
 | Mac app | In the Mac app only: turn reminder notifications on or off, let macOS show them, send a test, choose whether the Dock icon shows how many tasks are overdue, and turn on iPhone alerts. |
 | Summaries | Turn the morning summary and the weekly review on or off, and choose when they arrive. |
+| Tracky | Choose whether Tracky sees your schedule. When it does, each message sends Google the titles, times, priority, status and project of your open tasks from the last 30 days to two weeks ahead, and your events for the next two weeks. Never notes or links. Turned off, Tracky still drafts but can’t advise on your plans. |
 | Projects | Add, rename, archive or delete projects. Deleting a project keeps its tasks and notes; they just lose the label. |
-| Appearance | Match your system, or always use Light or Dark. Each mode has two colour sets: Sage or White for light, Navy or Charcoal for dark. Each card shows a small preview. These choices are saved on each device separately. |
+| Appearance | Match your system, or always use Light or Dark. Each mode has two colour sets: Sage or White for light, Navy or Charcoal for dark. Each card shows a small preview. Turn the intro that plays when the app opens on or off, or play it again. These choices are saved on each device separately. |
 | Your data | Download a copy of everything you’ve added as one JSON file. Keep one somewhere safe now and then. |
 | Account | See which account is signed in, sign out, and see which version of the tracker is running. |
 

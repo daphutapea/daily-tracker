@@ -3,9 +3,10 @@
 How often the AI reads a note correctly, measured against notes whose right answer was worked out by
 hand first.
 
-**Latest result: 34/34 on gemini-3.5-flash-lite, one run on 16 Oct 2026, typo notes included.**
-gemini-3.6-flash is nearly through: all 25 notes graded so far were right, and 9 typo notes are still
-to run. Read the [Limitations](#limitations) before quoting either.
+**Latest results: 34/34 on gemini-3.6-flash, finished on 19 Oct 2026 over three days, and 34/34 on
+gemini-3.5-flash-lite, one run on 16 Oct 2026.** The prompt changed during the gemini-3.6-flash
+measurement: 25 notes ran on the v1.5 prompt and the last 9 on v1.9's. Read the
+[Limitations](#limitations) before quoting either.
 
 ## Why
 
@@ -44,6 +45,7 @@ Titles are checked loosely on purpose (`"title_has": ["dennis"]`), because "Sync
 
 | Date | Model | Passed | Notes |
 |---|---|---:|---|
+| 19 Oct 2026 | gemini-3.6-flash | 34/34 | `--remaining`, the last 9 notes, all typo notes: 9/9. That completes the set with every note right, all 10 typo notes included. These 9 ran on the v1.9 prompt (Tracky), the other 25 on v1.5's. 3 requests got a 503 and passed on a retry. |
 | 18 Oct 2026 | gemini-3.6-flash | 25/25 so far | `--remaining`, adding 14/14 to the 11 from 16 Oct. Every kind passed, including the 3 refusals and the first typo note ("Sync with Mr. Dennis", 15:00 to 16:00, then "Work on ATLAS improvements"). 7 requests got a 503 and the allowance ran out with 9 typo notes left. |
 | 16 Oct 2026 | gemini-3.6-flash | 11/11 so far | Part 1, after all the fixes. Every note it answered was right. 8 of the day's 20 requests got a 503 from Google, so one note stayed busy after its retries and the allowance ran out with 5 notes of part 1 left. The other 23 notes are still to run. |
 | 16 Oct 2026 | gemini-3.5-flash-lite | 34/34 | One run, after the typo round below. Every kind passed, all 10 typo notes included. |
@@ -132,5 +134,6 @@ npm run test:functions
 - The 34/34 is one run. Run `--runs 3` to see whether any case passes only sometimes.
 - gemini-3.6-flash allows 20 free requests a day, fewer than the 34 notes, so measuring it takes at
   least two days. Requests answered with 503 (Google busy) count against the allowance too: about a
-  third of them on both 16 and 18 Oct. Run `--remaining` each day until nothing is left. The allowance resets at midnight
-  Pacific time, which is 14:00 in Jakarta.
+  third of them on both 16 and 18 Oct. Run `--remaining` each day until nothing is left, and keep
+  the prompt unchanged meanwhile, or the parts measure different prompts, as happened between 18 and
+  19 Oct. The allowance resets at midnight Pacific time, which is 14:00 in Jakarta.

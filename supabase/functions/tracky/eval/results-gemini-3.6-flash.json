@@ -1,9 +1,9 @@
 {
   "model": "gemini-3.6-flash",
-  "updated_at": "2026-10-18T13:01:00.916Z",
+  "updated_at": "2026-10-19T07:15:46.913Z",
   "runs": 1,
-  "passed": 25,
-  "attempted": 25,
+  "passed": 34,
+  "attempted": 34,
   "by_kind": {
     "task": {
       "passed": 8,
@@ -26,22 +26,12 @@
       "attempted": 3
     },
     "typo": {
-      "passed": 1,
-      "attempted": 1
+      "passed": 10,
+      "attempted": 10
     }
   },
   "flaky": [],
-  "not_run": [
-    "typo_weekday_and_words",
-    "typo_compact_time",
-    "typo_indonesian_slang",
-    "typo_project_name",
-    "typo_reminder_phrase",
-    "typo_next_week_abbrev",
-    "typo_joined_words",
-    "typo_dotted_time",
-    "typo_indonesian_word"
-  ],
+  "not_run": [],
   "cases": [
     {
       "id": "task_by_weekday",
@@ -637,6 +627,204 @@
         }
       ],
       "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "typo_weekday_and_words",
+      "kind": "typo",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "task",
+          "title": "Submit the report",
+          "date": "2026-10-16",
+          "time": "17:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-19T07:15:46.913Z"
+    },
+    {
+      "id": "typo_compact_time",
+      "kind": "typo",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Dentist",
+          "date": "2026-10-16",
+          "time": "09:30",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-19T07:15:46.913Z"
+    },
+    {
+      "id": "typo_indonesian_slang",
+      "kind": "typo",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Rapat dengan tim",
+          "date": "2026-10-16",
+          "time": "14:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-19T07:15:46.913Z"
+    },
+    {
+      "id": "typo_project_name",
+      "kind": "typo",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "task",
+          "title": "ATLAS handover notes",
+          "date": "2026-10-16",
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": "ATLAS",
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-19T07:15:46.913Z"
+    },
+    {
+      "id": "typo_reminder_phrase",
+      "kind": "typo",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Standup",
+          "date": "2026-10-16",
+          "time": "09:30",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": 15,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-19T07:15:46.913Z"
+    },
+    {
+      "id": "typo_next_week_abbrev",
+      "kind": "typo",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Quarterly review",
+          "date": "2026-10-23",
+          "time": "14:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-19T07:15:46.913Z"
+    },
+    {
+      "id": "typo_joined_words",
+      "kind": "typo",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Call Mom",
+          "date": "2026-10-18",
+          "time": "19:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-19T07:15:46.913Z"
+    },
+    {
+      "id": "typo_dotted_time",
+      "kind": "typo",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Gym",
+          "date": "2026-10-15",
+          "time": "17:30",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-19T07:15:46.913Z"
+    },
+    {
+      "id": "typo_indonesian_word",
+      "kind": "typo",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "task",
+          "title": "Kirim laporan ke Pak Budi",
+          "date": "2026-10-16",
+          "time": "09:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-19T07:15:46.913Z"
     }
   ]
 }
