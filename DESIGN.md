@@ -125,10 +125,13 @@ the teal spread thin and the "now" line stop standing out.
   alone. On a phone Return starts a new line and the send button sends.
 - The chat is kept on the device (the last 60 messages and any drafts not yet added) until New chat
   or `/clear`. `/compact` replaces it with Tracky's own few-line summary, marked "Earlier chat,
-  compacted", which Tracky reads as context from then on. Typing / lists the commands above the box.
+  compacted", which Tracky reads as context from then on. Typing / lists the commands above the box
+  as a listbox the message box points into (aria-activedescendant), so focus never leaves the box.
+  Signing out forgets the chat.
 - The sidebar folds into a 60px icon rail with every label as a tooltip and for screen readers, and
-  its right edge drags between 200 and 360px; narrower than 150px folds it. The edge is a keyboard
-  separator too. Its state is kept per device.
+  its right edge drags between 200 and 360px; narrower than 150px folds it. It is shown at no more
+  than 28vw (never under 200px), so a wide setting gives way on a small window. The edge is a
+  keyboard separator too, and 44px wide for a finger. Its state is kept per device.
 - Overdue rows carry a quiet text button, Tomorrow, at the right. Overdue is the one state where the
   next action is nearly always the same, so it gets a shortcut; other rows stay clean. Every move
   offers Undo in its toast rather than asking first: moving is easy to reverse, so a question would

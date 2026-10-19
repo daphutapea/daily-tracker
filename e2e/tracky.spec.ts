@@ -173,15 +173,23 @@ test('the chat survives a reload, /compact shrinks it to a summary that keeps th
     remind_minutes_before: null,
     location: null,
   }
-  const bodies: { text: string; history: { role: string; text: string }[]; drafts: { title: string }[] }[] = []
+  const bodies: {
+    text: string
+    compact?: boolean
+    history: { role: string; text: string }[]
+    drafts: { title: string }[]
+  }[] = []
+  // The first compaction comes back without a summary, as a confused model's answer might.
+  let summaries = 0
   await page.route('**/functions/v1/tracky', async (route) => {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS })
     const body = route.request().postDataJSON()
     bodies.push(body)
     const compacting = body.text.startsWith('Summarise our chat')
+    const summary = compacting && summaries++ > 0
     await route.fulfill({
       headers: CORS,
-      json: compacting
+      json: summary
         ? { model: 'fake-model', reply: '- You asked for a supplier call.\n- It is drafted, not added yet.', items: [] }
         : { model: 'fake-model', reply: null, items: [call] },
     })
@@ -201,9 +209,30 @@ test('the chat survives a reload, /compact shrinks it to a summary that keeps th
   await expect(dialog.getByText('call the supplier Thursday 9am')).toBeVisible()
   await expect(dialog.getByRole('region', { name: call.title })).toBeVisible()
 
-  // Typing / lists the commands; /compact runs instead of being sent as a message.
+  // Typing / lists the commands. "/c" could be either, so Enter fills in the highlighted one rather
+  // than sending it; the arrow keys move the highlight.
+  await box.fill('/c')
+  const commands = dialog.getByRole('listbox', { name: 'Commands' })
+  await expect(commands.getByRole('option')).toHaveText([/\/compact/, /\/clear/])
+  await box.press('ArrowDown')
+  await expect(commands.getByRole('option', { selected: true })).toContainText('/clear')
+  await box.press('ArrowUp')
+  await box.press('Enter')
+  await expect(box).toHaveValue('/compact')
+  expect(bodies).toHaveLength(1)
+
+  // A compaction that brings back no summary leaves the chat as it was.
+  await box.press('Enter')
+  await expect(
+    dialog.getByText('Couldn’t compact the chat, so it’s unchanged. Tracky didn’t send a summary.', { exact: true }),
+  ).toBeVisible()
+  await expect(dialog.getByText('call the supplier Thursday 9am')).toBeVisible()
+  expect(bodies.at(-1)!.compact).toBe(true)
+
+  // /compact runs instead of being sent as a message; Tab finishes the name. A draft opened for
+  // editing stays open through it.
+  await dialog.getByRole('button', { name: `Edit ${call.title}` }).click()
   await box.fill('/co')
-  await expect(dialog.getByRole('list', { name: 'Commands' })).toContainText('/compact')
   await box.press('Tab')
   await expect(box).toHaveValue('/compact')
   await box.press('Enter')
@@ -213,10 +242,11 @@ test('the chat survives a reload, /compact shrinks it to a summary that keeps th
   expect(bodies.at(-1)!.drafts.map((d) => d.title)).toEqual([call.title])
   // The drafts survive the compaction, and the summary is what Tracky remembers next time.
   await expect(dialog.getByRole('region', { name: call.title })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: `Done editing ${call.title}` })).toHaveAttribute('aria-expanded', 'true')
   await box.fill('thanks')
   await box.press('Enter')
-  await expect.poll(() => bodies.length).toBe(3)
-  expect(bodies[2].history[0]).toEqual({
+  await expect.poll(() => bodies.length).toBe(4)
+  expect(bodies[3].history[0]).toEqual({
     role: 'tracky',
     text: 'Summary of our chat so far:\n- You asked for a supplier call.\n- It is drafted, not added yet.',
   })

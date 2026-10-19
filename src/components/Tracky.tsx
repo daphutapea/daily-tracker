@@ -2,11 +2,12 @@ import { ArrowsInSimpleIcon, ArrowUpIcon, CaretUpIcon, NotePencilIcon, PencilSim
 import { useQueryClient } from '@tanstack/react-query'
 import { addHours, format, isValid, subMinutes } from 'date-fns'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import type { ChatTurn, ProposedItem, TrackyResult, ScheduleEntry } from '../../supabase/functions/tracky/logic.ts'
+import { SUMMARY_PREFIX, type ChatTurn, type ProposedItem, type ScheduleEntry, type TrackyResult } from '../../supabase/functions/tracky/logic.ts'
 import { deviceTimeZone, toDate } from '@/lib/dates'
 import { markNew } from '@/lib/motion'
 import { keys, useEvents, useProjects, useTasks } from '@/lib/queries'
 import { must, supabase } from '@/lib/supabase'
+import { TRACKY_CHAT_KEY } from '@/lib/trackyChat'
 import { scheduleForTracky, useTrackySeesSchedule } from '@/lib/trackySchedule'
 import { PRIORITIES, type CalEvent } from '@/lib/types'
 import { Dialog } from './Dialog'
@@ -85,7 +86,14 @@ const COMPACT_NOTE =
   'Summarise our chat so far so it can replace the conversation. In at most six short lines starting with "- ", say what I asked for, what you advised, what was added, and what is still open. Keep the current drafts exactly as they are.'
 
 async function readNote(
-  body: { text: string; projects: string[]; history: ChatTurn[]; drafts: ProposedItem[]; schedule: ScheduleEntry[] },
+  body: {
+    text: string
+    projects: string[]
+    history: ChatTurn[]
+    drafts: ProposedItem[]
+    schedule: ScheduleEntry[]
+    compact?: boolean
+  },
   signal: AbortSignal,
 ): Promise<TrackyResult> {
   const { data, error } = await supabase.functions.invoke<TrackyResult>('tracky', {
@@ -122,12 +130,11 @@ const toHistory = (messages: Message[]): ChatTurn[] =>
     .filter((m) => m.role === 'you' || m.kind !== 'error')
     .map((m) => ({
       role: m.role,
-      text: m.role === 'tracky' && m.kind === 'proposal' && m.summary ? `Summary of our chat so far:\n${m.text}` : m.text,
+      text: m.role === 'tracky' && m.kind === 'proposal' && m.summary ? `${SUMMARY_PREFIX}\n${m.text}` : m.text,
     }))
 
 // The chat is kept on this device, so it survives closing the app, until New chat or /clear. Only the
 // last 60 messages are kept; /compact shrinks it to one.
-const STORE_KEY = 'dt-tracky-chat'
 const KEEP = 60
 interface SavedChat {
   messages: Message[]
@@ -137,7 +144,7 @@ interface SavedChat {
 
 function loadChat(): SavedChat {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORE_KEY) ?? 'null') as SavedChat | null
+    const saved = JSON.parse(localStorage.getItem(TRACKY_CHAT_KEY) ?? 'null') as SavedChat | null
     if (saved && Array.isArray(saved.messages) && Array.isArray(saved.drafts)) return saved
   } catch {
     // Unreadable or blocked storage: start a fresh chat.
@@ -147,8 +154,14 @@ function loadChat(): SavedChat {
 
 function saveChat(chat: SavedChat) {
   try {
-    if (chat.messages.length === 0 && chat.drafts.length === 0) localStorage.removeItem(STORE_KEY)
-    else localStorage.setItem(STORE_KEY, JSON.stringify({ ...chat, messages: chat.messages.slice(-KEEP) }))
+    if (chat.messages.length === 0 && chat.drafts.length === 0) localStorage.removeItem(TRACKY_CHAT_KEY)
+    else {
+      // The message holding the drafts on screen is kept even when it is older than the last 60.
+      const kept = chat.messages.slice(-KEEP)
+      const live = chat.messages.find((m) => m.id === chat.liveId)
+      const messages = live && !kept.includes(live) ? [live, ...kept.slice(1)] : kept
+      localStorage.setItem(TRACKY_CHAT_KEY, JSON.stringify({ ...chat, messages }))
+    }
   } catch {
     // Full or blocked storage: the chat still works for this visit.
   }
@@ -202,10 +215,9 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
 
   useEffect(() => saveChat({ messages, drafts, liveId }), [messages, drafts, liveId])
 
-  /** Adds Tracky's message and types it out, unless reduced motion is on. */
+  /** Adds Tracky's message and marks it as just arrived: it types out, and its drafts rise in. */
   function trackySays(message: Message) {
     setMessages((m) => [...m, message])
-    if (reducedMotion()) return
     setTyping((t) => new Set(t).add(message.id))
     window.setTimeout(
       () =>
@@ -227,6 +239,7 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
     const text = raw.trim()
     if (!text || reading || saving) return
     const command = text.startsWith('/') ? matchCommand(text) : null
+    if (command === 'unclear') return
     if (command) {
       if (fromBox) setInput('')
       return command === '/clear' ? newChat() : compact()
@@ -286,24 +299,37 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
    */
   async function compact() {
     if (reading || saving || messages.length < 2) return
+    // The Compact button disables itself while it works; the message box keeps the focus.
+    composerRef.current?.focus()
     setError(null)
     setBusy('compacting')
     const controller = new AbortController()
     abort.current = controller
     try {
       const result = await readNote(
-        { text: COMPACT_NOTE, projects: activeProjects.map((p) => p.name), history: toHistory(messages), drafts: drafts.map(strip), schedule: [] },
+        {
+          text: COMPACT_NOTE,
+          projects: activeProjects.map((p) => p.name),
+          history: toHistory(messages),
+          drafts: drafts.map(strip),
+          schedule: [],
+          compact: true,
+        },
         controller.signal,
       )
       if (controller.signal.aborted) return
-      const summaryId = id()
+      // Without a summary there is nothing to replace the chat with, so it stays as it is.
+      if (!result.reply) throw new Error('Tracky didn’t send a summary.')
+      // The summary takes over the live proposal's id, so the drafts under it keep their place and
+      // any fields you had open, instead of being rebuilt.
+      const summaryId = drafts.length && liveId !== null ? liveId : id()
       setMessages([])
       trackySays({
         id: summaryId,
         role: 'tracky',
         kind: 'proposal',
         summary: true,
-        text: result.reply ?? 'We haven’t settled anything yet.',
+        text: result.reply,
         model: result.model,
         items: drafts,
       })
@@ -408,6 +434,7 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
   }, [input])
 
   const lastTracky = messages.findLast((m) => m.role === 'tracky')
+  const reduce = reducedMotion()
   const canCompact = messages.length >= 2 && !reading && !saving
 
   return (
@@ -422,7 +449,7 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
           <>
             <button
               type="button"
-              className="btn btn-ghost px-2.5 text-[13px]"
+              className="btn btn-ghost px-2.5 text-[13px] pointer-coarse:min-w-11"
               disabled={!canCompact}
               title="Shrink this chat to a short summary and keep going (/compact)"
               onClick={compact}
@@ -432,7 +459,7 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
             </button>
             <button
               type="button"
-              className="btn btn-ghost px-2.5 text-[13px]"
+              className="btn btn-ghost px-2.5 text-[13px] pointer-coarse:min-w-11"
               disabled={saving}
               title="Start a new chat (/clear)"
               onClick={newChat}
@@ -486,8 +513,11 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
                     {m.text}
                   </p>
                 )
-              const typed = typing.has(m.id)
+              // Just arrived: the drafts rise in. Typed out word by word too, unless reduced motion is on.
+              const fresh = typing.has(m.id)
+              const typed = fresh && !reduce
               const after = typed ? typingPace(m.text).total : 0
+              const arriving = fresh && !(m.kind === 'proposal' && m.summary)
               return (
                 <TrackyMessage key={m.id}>
                   {m.kind === 'error' ? (
@@ -519,7 +549,7 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
                             <DraftCard
                               key={d.key}
                               index={i + 1}
-                              arriving={typed}
+                              arriving={arriving}
                               draft={d}
                               projects={activeProjects.map((p) => p.name)}
                               clash={d.kind === 'event' ? findClash(d, events.data ?? []) : null}
@@ -533,7 +563,7 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
                             </p>
                           )}
                           <div
-                            className={`flex flex-wrap items-center gap-2 ${typed ? 'draft-in' : ''}`}
+                            className={`flex flex-wrap items-center gap-2 ${arriving ? 'draft-in' : ''}`}
                             style={{ '--i': drafts.length + 1 } as CSSProperties}
                           >
                             <button type="button" className="btn btn-primary" disabled={!ready || saving} onClick={add}>
@@ -548,7 +578,7 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
                       ) : (
                         <div className="space-y-3" style={{ '--after': `${after}ms` } as CSSProperties}>
                           {m.items.length > 0 && <DraftSummary items={m.items} />}
-                          <p className={`text-[12px] text-ink-3 ${typed ? 'draft-in' : ''}`}>Tracky, running on {m.model}</p>
+                          <p className={`text-[12px] text-ink-3 ${fresh ? 'draft-in' : ''}`}>Tracky, running on {m.model}</p>
                         </div>
                       )}
                     </>
@@ -573,12 +603,19 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
   )
 }
 
-/** The command a message box starting with "/" asks for: an exact name, or the only one it begins. */
-function matchCommand(text: string): (typeof COMMANDS)[number]['name'] | null {
+/**
+ * The command a message box starting with "/" asks for: an exact name, or the only one it begins.
+ * "unclear" when it begins more than one ("/c"), so it is neither run nor sent as a message.
+ */
+function matchCommand(text: string): (typeof COMMANDS)[number]['name'] | 'unclear' | null {
   const typed = text.trim().toLowerCase()
   const matches = COMMANDS.filter((c) => c.name.startsWith(typed))
-  return COMMANDS.find((c) => c.name === typed)?.name ?? (matches.length === 1 ? matches[0].name : null)
+  const exact = COMMANDS.find((c) => c.name === typed)
+  if (exact) return exact.name
+  return matches.length === 1 ? matches[0].name : matches.length > 1 ? 'unclear' : null
 }
+
+const commandId = (name: string) => `tracky-command-${name.slice(1)}`
 
 /**
  * Tracky's answers appear word by word, the way Claude's do, at a pace capped so a long answer never
@@ -676,7 +713,8 @@ function draftWhen(d: Draft) {
 /**
  * Enter sends and Shift+Enter starts a new line. On a phone, Return starts a new line and the send
  * button sends, as in other chat apps, because there is no Shift key to reach for. A message box that
- * starts with "/" lists the commands it can run.
+ * starts with "/" lists the commands it can run: the arrow keys pick one, and Tab or Enter fills in
+ * its name, so a second Enter runs it.
  */
 function Composer({
   ref,
@@ -696,9 +734,16 @@ function Composer({
   onSend: () => void
   onStop: () => void
 }) {
-  const canSend = value.trim() !== '' && !busy && !blocked
   const typedCommand = value.startsWith('/') && !value.includes('\n') ? value.trim().toLowerCase() : null
   const commands = typedCommand !== null ? COMMANDS.filter((c) => c.name.startsWith(typedCommand)) : []
+  const [picked, setPicked] = useState<string | null>(null)
+  const active = commands.find((c) => c.name === picked) ?? commands[0]
+  // "/c" could be either command, so it waits for you to pick one rather than going to Tracky.
+  const canSend = value.trim() !== '' && !busy && !blocked && !(commands.length > 1 && active.name !== typedCommand)
+  const move = (step: number) => {
+    const at = commands.indexOf(active)
+    setPicked(commands[(at + step + commands.length) % commands.length].name)
+  }
   return (
     <form
       className="relative w-full"
@@ -708,26 +753,38 @@ function Composer({
       }}
     >
       {commands.length > 0 && (
+        // Focus stays in the message box; it points at the highlighted command (aria-activedescendant).
         <ul
           id="tracky-commands"
+          role="listbox"
           aria-label="Commands"
           className="pop-in absolute right-0 bottom-full left-0 mb-2 origin-bottom-left rounded-[10px] border border-line bg-surface py-1 shadow-float"
         >
           {commands.map((c) => (
-            <li key={c.name}>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => onChange(c.name)}
-                className="row-hover flex min-h-9 w-full items-baseline gap-3 px-3 py-1.5 text-left pointer-coarse:min-h-11"
-              >
-                <span className="font-medium tnum">{c.name}</span>
-                <span className="text-[13px] text-ink-2">{c.hint}</span>
-              </button>
+            <li
+              key={c.name}
+              id={commandId(c.name)}
+              role="option"
+              aria-selected={c === active}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onChange(c.name)}
+              className={`row-hover flex min-h-9 cursor-pointer items-baseline gap-3 px-3 py-1.5 pointer-coarse:min-h-11 ${
+                c === active ? 'bg-surface-2' : ''
+              }`}
+            >
+              <span className="font-medium tnum">{c.name}</span>
+              <span className="text-[13px] text-ink-2">{c.hint}</span>
             </li>
           ))}
         </ul>
       )}
+      <p className="sr-only" aria-live="polite">
+        {commands.length > 1
+          ? `${commands.length} commands. Up and down arrows choose, Tab fills one in.`
+          : commands.length === 1 && value.trim() !== active.name
+            ? `${active.name}: ${active.hint}. Tab fills it in.`
+            : ''}
+      </p>
       {/* A tap anywhere on the box, not just on the line of text, puts the cursor in it. */}
       <div
         className="flex cursor-text items-end gap-2 rounded-[16px] border border-line-strong bg-surface py-1.5 pr-1.5 pl-4 focus-within:outline-2 focus-within:outline-offset-0 focus-within:outline-accent"
@@ -750,15 +807,26 @@ function Composer({
           placeholder="Message Tracky, or type / for commands"
           aria-describedby="tracky-hint"
           aria-controls={commands.length ? 'tracky-commands' : undefined}
+          aria-activedescendant={commands.length ? commandId(active.name) : undefined}
+          aria-autocomplete="list"
           className="block max-h-[min(192px,30dvh)] min-h-8 flex-1 resize-none self-center bg-transparent py-1 leading-6 outline-none placeholder:text-ink-3"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
-            // Tab finishes a command name, the way a terminal does.
-            if (e.key === 'Tab' && !e.shiftKey && commands.length === 1 && value !== commands[0].name) {
-              e.preventDefault()
-              onChange(commands[0].name)
-              return
+            if (commands.length > 0) {
+              if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault()
+                move(e.key === 'ArrowDown' ? 1 : -1)
+                return
+              }
+              // Tab, or Enter before the name is whole, fills in the highlighted command, the way a
+              // terminal finishes one. Enter on a whole name runs it.
+              const fill = (e.key === 'Tab' && !e.shiftKey) || (e.key === 'Enter' && !e.shiftKey)
+              if (fill && value.trim() !== active.name && !e.nativeEvent.isComposing) {
+                e.preventDefault()
+                onChange(active.name)
+                return
+              }
             }
             // keyCode 229 is the Enter that confirms an input-method word in Safari; it must not send.
             if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return

@@ -56,7 +56,10 @@ export function AppShell() {
    */
   const toggleSidebar = useCallback((animate: boolean) => {
     const content = contentRef.current
+    // Measured mid-slide when one is still running, so a quick second toggle starts from where the
+    // content is on screen. The old slide is dropped either way, or it would pull the content back.
     const before = content?.getBoundingClientRect().left ?? 0
+    content?.getAnimations().forEach((a) => a.cancel())
     flushSync(() => setSidebar({ collapsed: !getSidebar().collapsed }))
     const shift = before - (content?.getBoundingClientRect().left ?? 0)
     if (!content || !animate || shift === 0 || matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -81,7 +84,14 @@ export function AppShell() {
     <TrackyProvider>
       <div
         className="min-h-dvh"
-        style={{ '--sidebar-w': `${sidebar.collapsed ? SIDEBAR.rail : sidebar.width}px` } as CSSProperties}
+        // On a narrow window a wide sidebar gives way to the page: never more than 28% of the window.
+        style={
+          {
+            '--sidebar-w': sidebar.collapsed
+              ? `${SIDEBAR.rail}px`
+              : `min(${sidebar.width}px, max(${SIDEBAR.min}px, 28vw))`,
+          } as CSSProperties
+        }
       >
         <a
           href="#main"
@@ -89,8 +99,10 @@ export function AppShell() {
         >
           Skip to content
         </a>
-        <Sidebar collapsed={sidebar.collapsed} width={sidebar.width} onToggle={() => toggleSidebar(true)} />
-        <main id="main" tabIndex={-1} className="pb-24 outline-none md:pb-10 md:pl-(--sidebar-w)">
+        {/* A click slides the page; Enter or Space on the button (detail 0) changes it at once. */}
+        <Sidebar collapsed={sidebar.collapsed} width={sidebar.width} onToggle={(e) => toggleSidebar(e.detail !== 0)} />
+        {/* Clipped so the page sliding in from the right never adds a horizontal scrollbar. */}
+        <main id="main" tabIndex={-1} className="overflow-x-clip pb-24 outline-none md:pb-10 md:pl-(--sidebar-w)">
           <div ref={contentRef} className="mx-auto w-full max-w-[1200px] px-4 pt-5 md:px-8 md:pt-7">
             <div key={section} className="route-in">
               <Outlet />
@@ -106,14 +118,32 @@ export function AppShell() {
   )
 }
 
-function Sidebar({ collapsed, width, onToggle }: { collapsed: boolean; width: number; onToggle: () => void }) {
+function Sidebar({
+  collapsed,
+  width,
+  onToggle,
+}: {
+  collapsed: boolean
+  width: number
+  onToggle: (e: React.MouseEvent) => void
+}) {
   const email = useUserEmail()
   const links = useQuickLinks()
   const reorder = useReorderQuickLinks()
   const openTracky = useOpenTracky()
   // In the rail every label is there for screen readers and as a tooltip, and the icons stand alone.
-  const label = (text: string) => (collapsed ? <span className="sr-only">{text}</span> : <span className="label-in truncate">{text}</span>)
-  const row = collapsed ? 'justify-center px-0' : 'px-2.5'
+  // Keyed, so opening the sidebar makes new labels, which fade in.
+  const label = (text: string) =>
+    collapsed ? (
+      <span key="sr" className="sr-only">
+        {text}
+      </span>
+    ) : (
+      <span key="label" className="label-in truncate">
+        {text}
+      </span>
+    )
+  const row = collapsed ? 'justify-center px-0 pointer-coarse:min-h-11' : 'px-2.5'
 
   return (
     <aside className="fixed inset-y-0 left-0 z-20 hidden w-(--sidebar-w) flex-col border-r border-line bg-surface md:flex">
@@ -176,14 +206,21 @@ function Sidebar({ collapsed, width, onToggle }: { collapsed: boolean; width: nu
         aria-labelledby="quick-links-heading"
         className={`mt-6 min-h-0 flex-1 overflow-x-hidden overflow-y-auto ${collapsed ? 'px-2' : 'px-3'}`}
       >
-        <div className={`flex items-center justify-between pb-1 ${collapsed ? 'sr-only' : 'px-2.5'}`}>
-          <h2 id="quick-links-heading" className="section-label">
+        {/* The rail keeps the heading for screen readers, but not the Edit link: it can't be seen there. */}
+        {collapsed ? (
+          <h2 id="quick-links-heading" className="sr-only">
             Quick links
           </h2>
-          <NavLink to="/links" className="text-[13px] text-ink-3 hover:text-ink">
-            Edit
-          </NavLink>
-        </div>
+        ) : (
+          <div className="flex items-center justify-between px-2.5 pb-1">
+            <h2 id="quick-links-heading" className="section-label">
+              Quick links
+            </h2>
+            <NavLink to="/links" className="text-[13px] text-ink-3 hover:text-ink">
+              Edit
+            </NavLink>
+          </div>
+        )}
         {links.isError ? (
           !collapsed && <p className="px-2.5 text-[13px] text-danger">Couldn’t load links.</p>
         ) : links.data?.length === 0 ? (
@@ -242,13 +279,18 @@ function Sidebar({ collapsed, width, onToggle }: { collapsed: boolean; width: nu
   )
 }
 
+/** The sidebar's width on screen, from its edge. */
+const shownWidth = (edge: Element) => Math.round(edge.parentElement?.getBoundingClientRect().width ?? SIDEBAR.standard)
+
 const sidebarShortcut = () => (shortcutLabel().startsWith('⌘') ? '⌘\\' : 'Ctrl+\\')
 
 /**
  * The sidebar's right edge. Drag it to set the width; drag it narrower than the snap point and the
  * sidebar folds into the icon rail, or drag the rail's edge out to open it again. Double-click puts
  * the standard width back. From the keyboard it is a separator: the arrow keys change the width by
- * 16px, Home and End jump to the narrowest and widest, and Enter folds or opens it.
+ * 16px (Right opens the rail at its last width), Home folds it into the rail, End makes it as wide as
+ * it goes, and Enter folds or opens it. Widths are measured from the sidebar on screen, since a narrow
+ * window can show it narrower than the width you set.
  */
 function ResizeEdge({ collapsed, width }: { collapsed: boolean; width: number }) {
   const [dragging, setDragging] = useState(false)
@@ -258,7 +300,7 @@ function ResizeEdge({ collapsed, width }: { collapsed: boolean; width: number })
     if (e.button !== 0) return
     e.preventDefault()
     const startX = e.clientX
-    const startWidth = collapsed ? SIDEBAR.rail : width
+    const startWidth = shownWidth(e.currentTarget)
     setDragging(true)
     const move = (ev: PointerEvent) => {
       const next = startWidth + ev.clientX - startX
@@ -288,17 +330,22 @@ function ResizeEdge({ collapsed, width }: { collapsed: boolean; width: number })
       tabIndex={0}
       title="Drag to resize. Double-click for the standard width."
       data-dragging={dragging || undefined}
-      className="group absolute inset-y-0 -right-1.5 w-3 cursor-col-resize touch-none outline-none"
+      className="group absolute inset-y-0 -right-1.5 w-3 cursor-col-resize touch-none outline-none pointer-coarse:-right-9.5 pointer-coarse:w-11"
       onPointerDown={startDrag}
       onDoubleClick={() => setSidebar({ collapsed: false, width: SIDEBAR.standard })}
       onKeyDown={(e) => {
         const step = { ArrowLeft: -16, ArrowRight: 16 }[e.key]
         if (step) {
           e.preventDefault()
-          setSidebar(collapsed ? { collapsed: step < 0, width: SIDEBAR.min } : { width: width + step, collapsed: width + step < SIDEBAR.min })
+          if (collapsed) {
+            if (step > 0) setSidebar({ collapsed: false })
+            return
+          }
+          const next = shownWidth(e.currentTarget) + step
+          setSidebar(next < SIDEBAR.min ? { collapsed: true } : { width: next })
         } else if (e.key === 'Home') {
           e.preventDefault()
-          setSidebar({ collapsed: false, width: SIDEBAR.min })
+          setSidebar({ collapsed: true })
         } else if (e.key === 'End') {
           e.preventDefault()
           setSidebar({ collapsed: false, width: SIDEBAR.max })
@@ -308,9 +355,11 @@ function ResizeEdge({ collapsed, width }: { collapsed: boolean; width: number })
         }
       }}
     >
+      {/* On the border itself. For a finger the edge is 44px wide and reaches out over the page's
+          margin rather than over the sidebar, where it would cover the rail's icons. */}
       <span
         aria-hidden
-        className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 transition-colors duration-150 group-hover:bg-line-strong group-focus-visible:bg-accent group-data-dragging:bg-accent"
+        className="absolute inset-y-0 left-1.5 w-0.5 -translate-x-1/2 transition-colors duration-150 group-hover:bg-line-strong group-focus-visible:bg-accent group-data-dragging:bg-accent"
       />
     </div>
   )

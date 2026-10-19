@@ -34,6 +34,8 @@ export interface TrackyRequest {
   history?: ChatTurn[]
   /** Drafts on screen that haven't been added yet, as the person last left them. */
   drafts?: ProposedItem[]
+  /** True when the note asks for a summary that will replace the chat, so the whole chat is read. */
+  compact?: boolean
   /** Saved tasks and events, when the person lets Tracky see them. */
   schedule?: ScheduleEntry[]
 }
@@ -72,6 +74,12 @@ export const DEFAULT_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gem
 
 const MAX_ITEMS = 10
 const MAX_TURNS = 12
+/** A compaction reads the whole stored chat (the app keeps 60 messages), within a size budget. */
+const MAX_TURNS_COMPACT = 60
+const MAX_HISTORY_CHARS = 24000
+
+/** How a compacted chat's summary starts when it is sent back as history; it is always kept. */
+export const SUMMARY_PREFIX = 'Summary of our chat so far:'
 const MAX_SCHEDULE = 80
 const MAX_REPLY = 1200
 const PRIORITIES = ['urgent', 'high', 'medium', 'low'] as const
@@ -238,19 +246,32 @@ export function parseRequest(body: unknown): TrackyRequest {
   const projects = Array.isArray(b.projects)
     ? b.projects.filter((p): p is string => typeof p === 'string' && p.length <= 60).slice(0, 50)
     : []
-  const history = Array.isArray(b.history)
+  const compact = b.compact === true
+  const turns = Array.isArray(b.history)
     ? b.history
         .filter((t: unknown): t is ChatTurn => {
           const turn = t as Partial<ChatTurn> | null
           return (turn?.role === 'you' || turn?.role === 'tracky') && typeof turn.text === 'string' && turn.text.trim() !== ''
         })
-        .slice(-MAX_TURNS)
         .map((t) => ({ role: t.role, text: t.text.trim().slice(0, 2000) }))
     : []
+  const history = recentHistory(turns, compact ? MAX_TURNS_COMPACT : MAX_TURNS)
   // Drafts come back from the browser, so they go through the same checks as the model's answer.
   const drafts = validateItems({ items: b.drafts }, projects, { asTyped: true })
   const schedule = Array.isArray(b.schedule) ? b.schedule.slice(0, MAX_SCHEDULE).flatMap(parseScheduleEntry) : []
-  return { text, now, timezone, projects, history, drafts, schedule }
+  return { text, now, timezone, projects, history, drafts, schedule, compact }
+}
+
+/**
+ * The latest turns, up to `limit` and a size budget. A compacted chat's summary opens the history,
+ * and it stays however long the chat grows after it, or the gist it holds would be forgotten.
+ */
+function recentHistory(turns: ChatTurn[], limit: number): ChatTurn[] {
+  const summary = turns[0]?.role === 'tracky' && turns[0].text.startsWith(SUMMARY_PREFIX) ? turns[0] : null
+  const rest = (summary ? turns.slice(1) : turns).slice(-(summary ? limit - 1 : limit))
+  let size = (summary?.text.length ?? 0) + rest.reduce((n, t) => n + t.text.length, 0)
+  while (size > MAX_HISTORY_CHARS && rest.length > 1) size -= rest.shift()!.text.length
+  return summary ? [summary, ...rest] : rest
 }
 
 const STATUSES = ['todo', 'in_progress', 'waiting', 'done'] as const

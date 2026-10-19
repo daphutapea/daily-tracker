@@ -50,7 +50,8 @@ app. Turn it off in Settings → Mac app.
 On a computer, the sidebar folds into a narrow strip of icons, as Claude’s does, so the page gets the
 whole window: press the sidebar button at its top, or ⌘\ (Ctrl+\ on Windows). Drag its right edge
 to make it wider or narrower; drag it far enough left and it folds, and double-click the edge for the
-standard width. It remembers how you left it.
+standard width. It remembers how you left it. On a narrow window it never takes more than 28% of
+the width, whatever you set.
 
 ## Home
 
@@ -102,8 +103,9 @@ changes the drafts on screen instead of starting over, and edits you made by han
 reply.
 
 The chat is kept on this device, so it is still there after you close Tracky or quit the app, along
-with any drafts you haven’t added. Two commands, typed into the box like in Claude Code, keep it in
-check (type / to see them):
+with any drafts you haven’t added, until you sign out. Two commands, typed into the box like in
+Claude Code, keep it in check. Type / to see them; the arrow keys pick one, Tab or Enter fills it
+in, and Enter again runs it:
 
 - `/compact` asks Tracky to sum up the chat in a few lines, and that summary replaces the
   conversation. Drafts you haven’t added stay, and Tracky still remembers the gist next time. Use it

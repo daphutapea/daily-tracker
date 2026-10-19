@@ -8,8 +8,9 @@ test('the sidebar folds into a rail and back, resizes by its edge, and remembers
 
   await page.getByRole('button', { name: 'Close sidebar' }).click()
   await expect.poll(width).toBe(60)
-  // The rail keeps every destination, by name.
+  // The rail keeps every destination, by name, but not the Edit link it has no room to show.
   await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: 'Tasks' })).toBeVisible()
+  await expect(sidebar.getByRole('link', { name: 'Edit' })).toHaveCount(0)
   await page.reload()
   await expect.poll(width).toBe(60)
 
@@ -30,6 +31,20 @@ test('the sidebar folds into a rail and back, resizes by its edge, and remembers
   await edge.focus()
   await page.keyboard.press('ArrowLeft')
   await expect.poll(width).toBe(304)
+  await page.keyboard.press('Home')
+  await expect.poll(width).toBe(60)
+  await page.keyboard.press('ArrowLeft')
+  await expect.poll(width).toBe(60)
+  await page.keyboard.press('ArrowRight')
+  await expect.poll(width).toBe(304)
   await edge.dblclick()
   await expect.poll(width).toBe(240)
+
+  // A wide sidebar gives way to the page: it is never more than 28% of the window (358px of 1280).
+  await page.keyboard.press('End')
+  await expect.poll(width).toBe(358)
+  await page.setViewportSize({ width: 900, height: 720 })
+  await expect.poll(width).toBe(252)
+  await page.keyboard.press('ArrowLeft')
+  await expect.poll(width).toBe(236)
 })

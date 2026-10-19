@@ -84,8 +84,14 @@ npx supabase functions deploy tracky
 
 That’s all. Open Tracky and try a sentence.
 
-**Upgrading from Quick add.** Before v1.9 the function was called `quick-add`. After deploying
-`tracky`, remove the old one, which nothing calls any more:
+**Upgrading from Quick add.** Before v1.9 the function was called `quick-add`, and an app or browser
+tab still running an older version keeps calling it. Upgrade in this order, so nothing calls a
+function that isn’t there:
+
+1. Deploy `tracky` (above), before the new version of the app goes live.
+2. Put the new version online with `npx vercel --prod`, and rebuild the Mac app with `npm run app`.
+3. Reload any browser tab that still has the tracker open, and quit and reopen the Mac app.
+4. Only then remove the old function:
 
 ```bash
 npx supabase functions delete quick-add

@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
+import { forgetTrackyChat } from '@/lib/trackyChat'
 import { SessionContext, type SessionState } from './sessionContext'
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -12,7 +13,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setState(data.session ? { status: 'signed-in', session: data.session } : { status: 'signed-out' })
     })
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') qc.clear()
+      if (event === 'SIGNED_OUT') {
+        qc.clear()
+        forgetTrackyChat()
+      }
       setState(session ? { status: 'signed-in', session } : { status: 'signed-out' })
     })
     return () => sub.subscription.unsubscribe()

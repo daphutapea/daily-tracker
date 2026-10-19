@@ -5,11 +5,11 @@
 ### Added
 - Tracky’s answers appear word by word, the way Claude’s do, in well under a second, and its drafts rise in after them. While it works, a band of light sweeps across “Reading…”; after four seconds it says it is still working.
 - The chat is kept on this device, so it is still there after closing Tracky or quitting the app, with any drafts not yet added.
-- `/compact` and `/clear`, typed into Tracky’s box as in Claude Code. `/compact` replaces the chat with Tracky’s short summary of it, keeping the drafts and the gist; `/clear` starts a new chat. Typing / lists them, and Tab completes them. The Compact and New chat buttons at the top do the same.
-- On a computer, the sidebar folds into a strip of icons, as Claude’s does: its button at the top, or ⌘\. Drag its edge to make it wider or narrower, or far enough left to fold it; double-click the edge for the standard width. It remembers how you left it.
+- `/compact` and `/clear`, typed into Tracky’s box as in Claude Code. `/compact` replaces the chat with Tracky’s short summary of it, keeping the drafts and the gist; `/clear` starts a new chat. Typing / lists them; the arrow keys pick one, and Tab or Enter fills it in. The Compact and New chat buttons at the top do the same. Signing out forgets the chat.
+- On a computer, the sidebar folds into a strip of icons, as Claude’s does: its button at the top, or ⌘\. Drag its edge to make it wider or narrower, or far enough left to fold it; double-click the edge for the standard width. It remembers how you left it, and on a narrow window it never takes more than 28% of the width.
 
 ### Changed
-- Everything that still said Quick add is now Tracky, including the server function, which is now `tracky`. Deploy it with `npx supabase functions deploy tracky`, then remove the old one with `npx supabase functions delete quick-add`.
+- Everything that still said Quick add is now Tracky, including the server function, which is now `tracky`. Deploy `tracky` with `npx supabase functions deploy tracky` before the new version goes live, then update the web app and the Mac app and reload open tabs. Only after that remove the old function with `npx supabase functions delete quick-add`; [the setup guide](docs/SETUP.md#turn-on-tracky-free-gemini-key) has the steps.
 
 ### Fixed
 - Adding, removing, discarding or editing drafts while Tracky was reading a follow-up could bring them back with its answer, so a draft could be saved twice. The drafts now wait, dimmed, until the answer arrives, and you can’t send while drafts are being added.
@@ -19,6 +19,11 @@
 - Try again cleared what you were typing, and with no connection Tracky showed a code error instead of saying so.
 - A “thanks” or a question no longer risks emptying the drafts, Tracky keeps titles such as “iPhone repair” as you typed them, keeps a draft whose title you cleared, and says so when more than 10 drafts would not fit.
 - Long links in a draft wrapped off the card on a phone; reopening Tracky replayed the drafts’ animation; dialog footers had no space under them on a computer; and on a phone turned sideways the message box could grow taller than the dialog.
+- Compacting a chat that had no answer back emptied it; it now keeps the chat and says it couldn’t. Compacting reads the whole chat kept on the device (up to 60 messages), not just the last 12, and the summary stays first in what Tracky remembers after more messages. Drafts with fields open stay open through a compaction.
+- “/c” went to Tracky as a message, because it could be either command; it now waits for you to pick one.
+- With reduced motion on, the drafts in a new answer appeared without their short fade.
+- The message holding the drafts on screen could be dropped from a chat longer than 60 messages, losing the drafts after a reload.
+- The sidebar: Enter on its button slid the page instead of changing at once; a quick second click jumped; the hidden Edit link next to Quick links could be reached with Tab in the icon strip; the labels didn’t fade in when it opened; and on a touch screen its edge and icons were smaller than a fingertip.
 
 ## v1.8 (2026-10-19)
 

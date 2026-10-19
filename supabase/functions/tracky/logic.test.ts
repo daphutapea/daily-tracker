@@ -86,6 +86,25 @@ test('parseRequest keeps the last twelve messages and checks the types in drafts
   )
 })
 
+test('a compacted chat\'s summary stays at the start of the history however long the chat grows', () => {
+  const summary = { role: 'tracky', text: 'Summary of our chat so far:\n- Dentist on Friday is added.' }
+  const later = Array.from({ length: 20 }, (_, i) => ({ role: i % 2 ? 'tracky' : 'you', text: `turn ${i}` }))
+  const { history } = parseRequest({ text: 'and Saturday?', now: '2026-10-15T09:30', history: [summary, ...later] })
+  assert.equal(history!.length, 12)
+  assert.deepEqual(history![0], summary)
+  assert.equal(history![1].text, 'turn 9')
+  assert.equal(history!.at(-1)!.text, 'turn 19')
+})
+
+test('a compaction reads the whole stored chat, not just the last twelve turns', () => {
+  const turns = Array.from({ length: 40 }, (_, i) => ({ role: i % 2 ? 'tracky' : 'you', text: `turn ${i}` }))
+  assert.equal(parseRequest({ text: 'sum up', now: '2026-10-15T09:30', history: turns, compact: true }).history!.length, 40)
+  assert.equal(parseRequest({ text: 'sum up', now: '2026-10-15T09:30', history: turns }).history!.length, 12)
+  const long = Array.from({ length: 40 }, () => ({ role: 'you', text: 'x'.repeat(2000) }))
+  const kept = parseRequest({ text: 'sum up', now: '2026-10-15T09:30', history: long, compact: true }).history!
+  assert.ok(kept.reduce((n, t) => n + t.text.length, 0) <= 24000)
+})
+
 test('the saved schedule reaches the prompt as one readable line per entry', () => {
   const msg = buildUserMessage({
     ...req,
