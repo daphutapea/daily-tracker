@@ -28,7 +28,7 @@ test('Tracky turns a note into drafts and saves only the ones you keep', async (
 
   // The AI is faked: the test checks what the app does with an answer, not the model.
   let sentText = ''
-  await page.route('**/functions/v1/quick-add', async (route) => {
+  await page.route('**/functions/v1/tracky', async (route) => {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS })
     sentText = route.request().postDataJSON().text
     await route.fulfill({ headers: CORS, json: { model: 'fake-model', reply: null, items: [event, task, extra] } })
@@ -79,7 +79,7 @@ test('a follow-up sends the chat so far and the drafts as you left them, and Tra
     location: null,
   }
   const bodies: { text: string; history: { role: string; text: string }[]; drafts: { title: string; location: string | null }[] }[] = []
-  await page.route('**/functions/v1/quick-add', async (route) => {
+  await page.route('**/functions/v1/tracky', async (route) => {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS })
     const body = route.request().postDataJSON()
     bodies.push(body)
@@ -123,7 +123,7 @@ test('Tracky answers a planning question from your schedule, and the schedule st
   await db.addTask({ title: `${PREFIX}send the report`, due_at: jakarta(today, '23:00'), priority: 'high' })
 
   const bodies: { schedule: { title: string; priority?: string }[] }[] = []
-  await page.route('**/functions/v1/quick-add', async (route) => {
+  await page.route('**/functions/v1/tracky', async (route) => {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS })
     bodies.push(route.request().postDataJSON())
     await route.fulfill({
@@ -157,4 +157,76 @@ test('Tracky answers a planning question from your schedule, and the schedule st
   await expect.poll(() => bodies.length).toBe(2)
   expect(bodies[1].schedule).toEqual([])
   await page.evaluate(() => localStorage.removeItem('dt-tracky-schedule'))
+})
+
+test('the chat survives a reload, /compact shrinks it to a summary that keeps the drafts, and /clear empties it', async ({ page }) => {
+  const day = jakartaDay(4)
+  const call = {
+    kind: 'event',
+    title: `${PREFIX}call the supplier`,
+    date: day,
+    time: '09:00',
+    end_time: null,
+    all_day: false,
+    priority: 'medium',
+    project: null,
+    remind_minutes_before: null,
+    location: null,
+  }
+  const bodies: { text: string; history: { role: string; text: string }[]; drafts: { title: string }[] }[] = []
+  await page.route('**/functions/v1/tracky', async (route) => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS })
+    const body = route.request().postDataJSON()
+    bodies.push(body)
+    const compacting = body.text.startsWith('Summarise our chat')
+    await route.fulfill({
+      headers: CORS,
+      json: compacting
+        ? { model: 'fake-model', reply: '- You asked for a supplier call.\n- It is drafted, not added yet.', items: [] }
+        : { model: 'fake-model', reply: null, items: [call] },
+    })
+  })
+
+  await page.goto('/')
+  await page.keyboard.press('ControlOrMeta+k')
+  const dialog = page.getByRole('dialog', { name: 'Tracky' })
+  const box = dialog.getByLabel('Message Tracky')
+  await box.fill('call the supplier Thursday 9am')
+  await box.press('Enter')
+  await expect(dialog.getByRole('region', { name: call.title })).toBeVisible()
+
+  // Kept on this device: a reload brings back the message and the unsaved draft.
+  await page.reload()
+  await page.keyboard.press('ControlOrMeta+k')
+  await expect(dialog.getByText('call the supplier Thursday 9am')).toBeVisible()
+  await expect(dialog.getByRole('region', { name: call.title })).toBeVisible()
+
+  // Typing / lists the commands; /compact runs instead of being sent as a message.
+  await box.fill('/co')
+  await expect(dialog.getByRole('list', { name: 'Commands' })).toContainText('/compact')
+  await box.press('Tab')
+  await expect(box).toHaveValue('/compact')
+  await box.press('Enter')
+  await expect(dialog.getByText('Earlier chat, compacted')).toBeVisible()
+  await expect(dialog.getByText('call the supplier Thursday 9am')).toHaveCount(0)
+  expect(bodies.at(-1)!.text).toMatch(/^Summarise our chat/)
+  expect(bodies.at(-1)!.drafts.map((d) => d.title)).toEqual([call.title])
+  // The drafts survive the compaction, and the summary is what Tracky remembers next time.
+  await expect(dialog.getByRole('region', { name: call.title })).toBeVisible()
+  await box.fill('thanks')
+  await box.press('Enter')
+  await expect.poll(() => bodies.length).toBe(3)
+  expect(bodies[2].history[0]).toEqual({
+    role: 'tracky',
+    text: 'Summary of our chat so far:\n- You asked for a supplier call.\n- It is drafted, not added yet.',
+  })
+
+  await expect(dialog.getByRole('region', { name: call.title })).toBeVisible()
+  page.once('dialog', (d) => d.accept())
+  await box.fill('/clear')
+  await box.press('Enter')
+  await expect(dialog.getByRole('heading', { name: 'What’s coming up?' })).toBeVisible()
+  await page.reload()
+  await page.keyboard.press('ControlOrMeta+k')
+  await expect(dialog.getByRole('heading', { name: 'What’s coming up?' })).toBeVisible()
 })

@@ -68,7 +68,7 @@ Reminders and summaries come from the Mac app, so install it first (above).
 ## Turn on Tracky (free Gemini key)
 
 Tracky sends what you type to Google’s Gemini API through a small server function in your Supabase
-project (`supabase/functions/quick-add`), so the key never reaches the browser or the Mac app.
+project (`supabase/functions/tracky`), so the key never reaches the browser or the Mac app.
 
 1. Open [Google AI Studio](https://aistudio.google.com/apikey), sign in with your Google account, and
    create an API key. No card is needed for the free tier.
@@ -76,7 +76,20 @@ project (`supabase/functions/quick-add`), so the key never reaches the browser o
    for `daily-tracker`, go to Edge Functions, then Secrets, and add a secret named `GEMINI_API_KEY` with
    that key as its value.
 
+Then deploy the function from this folder:
+
+```bash
+npx supabase functions deploy tracky
+```
+
 That’s all. Open Tracky and try a sentence.
+
+**Upgrading from Quick add.** Before v1.9 the function was called `quick-add`. After deploying
+`tracky`, remove the old one, which nothing calls any more:
+
+```bash
+npx supabase functions delete quick-add
+```
 
 **Which model it uses.** It asks `gemini-3.6-flash` first, the best Flash model on the free tier,
 which allows 20 requests a day. If that allowance is used up, the model is busy, or your key can’t use
@@ -156,7 +169,7 @@ answers that the AI isn’t set up, which is enough to test the screens. To call
 `GEMINI_API_KEY=...` in `supabase/functions/.env` (Git ignores it) first.
 
 ```bash
-npx supabase functions serve quick-add
+npx supabase functions serve tracky
 ```
 
 The function’s parsing, its model fallback and the eval grader have tests that run without a key or
@@ -168,16 +181,16 @@ npm run test:functions
 
 To measure how well the AI reads notes, run the gold set of 34 notes against Gemini. It needs the key
 in `supabase/functions/.env` and uses about 34 of the day’s free requests per run;
-[the eval README](../supabase/functions/quick-add/eval/README.md) explains the options and the limits.
+[the eval README](../supabase/functions/tracky/eval/README.md) explains the options and the limits.
 
 ```bash
-npm run eval:quick-add
+npm run eval:tracky
 ```
 
 After changing the function, deploy it to the hosted project:
 
 ```bash
-npx supabase functions deploy quick-add
+npx supabase functions deploy tracky
 ```
 
 When you change something people will notice, add it to [CHANGELOG.md](../CHANGELOG.md). Start a new
@@ -233,12 +246,12 @@ client or office work here, check your company’s rules on where that informati
 | `src/pages/` | Home, Tasks, Notes, Calendar, Links, Weekly review and Settings |
 | `macos/` | The Mac app window and its icon |
 | `scripts/build-mac-app.sh` | Builds, checks and installs the Mac app (`npm run app`) |
-| `src/components/` | The task and event dialogs, Tracky (`QuickAdd.tsx`), the day ruler, charts, the notes editor |
+| `src/components/` | The task and event dialogs, Tracky (`Tracky.tsx`), the day ruler, charts, the notes editor |
 | `src/lib/queries.ts` | Every read and write to the database |
 | `supabase/migrations/` | Tables, access rules and the summary settings; the last one removes Telegram |
 | `src/lib/reminders.ts`, `src/components/MacAppBridge.tsx` | What the Mac app schedules: reminders, summaries, the Today list |
-| `supabase/functions/quick-add/` | The server function that sends Tracky’s notes to Gemini, and its tests |
-| `supabase/functions/quick-add/eval/` | The 34-note gold set, its grader and `npm run eval:quick-add` |
+| `supabase/functions/tracky/` | The server function that sends Tracky’s notes to Gemini, and its tests |
+| `supabase/functions/tracky/eval/` | The 34-note gold set, its grader and `npm run eval:tracky` |
 | `e2e/`, `playwright.config.ts` | Browser tests (`npm run test:e2e`) |
 | `.github/workflows/checks.yml` | The checks GitHub runs on every push |
 | `scripts/make-logo.swift`, `docs/brand/` | The logo: one script draws every version (`npm run logo`) |

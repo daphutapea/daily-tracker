@@ -1,6 +1,6 @@
 import { addDays, format, startOfDay } from 'date-fns'
 import { useSyncExternalStore } from 'react'
-import type { ScheduleEntry } from '../../supabase/functions/quick-add/logic.ts'
+import type { ScheduleEntry } from '../../supabase/functions/tracky/logic.ts'
 import { toDate } from './dates'
 import { PRIORITY_RANK, type CalEvent, type Project, type TaskSummary } from './types'
 

@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router'
 import { Breakdown, FinishedPerDay, Meter } from '@/components/Charts'
 import { DayRuler } from '@/components/DayRuler'
 import { MiniMonth } from '@/components/MiniMonth'
-import { useOpenQuickAdd } from '@/components/quickAddContext'
+import { useOpenTracky } from '@/components/trackyContext'
 import { MoveAllToTomorrow, TaskRow } from '@/components/TaskRow'
 import { Loading, QueryError, SiteIcon, StateMessage } from '@/components/ui'
 import { formatDay, greeting, lastNDays, sameDay, toDate, weekRange } from '@/lib/dates'
@@ -26,7 +26,7 @@ export function HomePage() {
   const { openTask, openEvent } = useDialogs()
   const navigate = useNavigate()
   const createNote = useCreateNote()
-  const openQuickAdd = useOpenQuickAdd()
+  const openTracky = useOpenTracky()
 
   const projectById = useMemo(() => new Map(projects.data?.map((p) => [p.id, p])), [projects.data])
   const d = useMemo(() => derive(tasks.data ?? [], events.data ?? [], now), [tasks.data, events.data, now])
@@ -100,7 +100,7 @@ export function HomePage() {
         {/* Looks like a text field because that's what it opens: write a sentence, get items back. */}
         <button
           type="button"
-          onClick={() => openQuickAdd()}
+          onClick={() => openTracky()}
           aria-label="Ask Tracky: describe tasks or events in a sentence"
           className="field mt-3 flex items-center gap-2 text-left text-ink-3"
         >

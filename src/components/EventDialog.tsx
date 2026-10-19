@@ -283,7 +283,7 @@ function EventForm({
         </p>
       )}
       {/* -bottom-4 cancels the scroll area's bottom padding so the bar sits flush with the dialog edge. */}
-      <div className="safe-bottom sticky -bottom-4 -mx-5 -mb-4 flex items-center gap-2 border-t border-line bg-surface px-5 py-3">
+      <div className="sticky -bottom-4 -mx-5 -mb-4 flex items-center gap-2 border-t border-line bg-surface px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {event && (
           <button type="button" className="btn btn-danger -ml-2" onClick={() => quietly(remove)()} disabled={del.isPending}>
             <TrashIcon size={16} weight="bold" />

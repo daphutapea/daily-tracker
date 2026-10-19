@@ -63,7 +63,7 @@ The first run scored badly, and the reasons were in the code, not the model:
    fields even when the note gave them. Every field is now required (empty allowed), and the order is
    set so the time comes before `all_day`. With the fix, the flight note that had come back as all day
    came back right: 06:40, reminder 60 minutes.
-2. **A busy model (503) stopped Quick add** instead of trying the next model. Google returned 503 for
+2. **A busy model (503) stopped Tracky** instead of trying the next model. Google returned 503 for
    10 of the 21 requests that evening. It now moves to the next model, and the eval retries a busy
    model twice before counting the case.
 3. **Any 429 was reported as the day's allowance being used up.** Google uses 429 for its per-minute
@@ -96,7 +96,7 @@ GEMINI_API_KEY=your-key-here
 Then:
 
 ```bash
-npm run eval:quick-add
+npm run eval:tracky
 ```
 
 Options: `--model` (default `gemini-3.6-flash`), `--runs 3` to repeat the set and find flaky cases,

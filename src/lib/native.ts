@@ -39,7 +39,7 @@ export type FromMac =
   | { type: 'permission'; status: 'granted' | 'denied' | 'undetermined' }
   | { type: 'open'; path: string }
   | { type: 'done'; taskId: string }
-  | { type: 'quickAdd' }
+  | { type: 'tracky' }
   | { type: 'saved'; name: string }
   | { type: 'calendar'; status: CalendarStatus }
 

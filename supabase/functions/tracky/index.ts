@@ -3,7 +3,7 @@
 //   GEMINI_API_KEY  required, from aistudio.google.com/apikey
 //   GEMINI_MODELS   optional, comma-separated, best first (defaults to DEFAULT_MODELS)
 
-import { DEFAULT_MODELS, parseRequest, proposeItems, QuickAddError } from './logic.ts'
+import { DEFAULT_MODELS, parseRequest, proposeItems, TrackyError } from './logic.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -52,11 +52,11 @@ Deno.serve(async (req) => {
     const result = await proposeItems(body, { apiKey, models: models.length ? models : DEFAULT_MODELS, fetch })
     return json(200, result)
   } catch (e) {
-    if (e instanceof QuickAddError) {
+    if (e instanceof TrackyError) {
       const status = { bad_request: 400, quota: 429, busy: 503, key: 502, model: 502 }[e.code]
       return json(status, { error: e.code, message: e.message })
     }
-    console.error('quick-add failed', e instanceof Error ? e.message : e)
+    console.error('tracky failed', e instanceof Error ? e.message : e)
     return json(500, { error: 'internal', message: 'Something went wrong on the server. Try again.' })
   }
 })

@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.9 (2026-10-19)
+
+### Added
+- Tracky’s answers appear word by word, the way Claude’s do, in well under a second, and its drafts rise in after them. While it works, a band of light sweeps across “Reading…”; after four seconds it says it is still working.
+- The chat is kept on this device, so it is still there after closing Tracky or quitting the app, with any drafts not yet added.
+- `/compact` and `/clear`, typed into Tracky’s box as in Claude Code. `/compact` replaces the chat with Tracky’s short summary of it, keeping the drafts and the gist; `/clear` starts a new chat. Typing / lists them, and Tab completes them. The Compact and New chat buttons at the top do the same.
+- On a computer, the sidebar folds into a strip of icons, as Claude’s does: its button at the top, or ⌘\. Drag its edge to make it wider or narrower, or far enough left to fold it; double-click the edge for the standard width. It remembers how you left it.
+
+### Changed
+- Everything that still said Quick add is now Tracky, including the server function, which is now `tracky`. Deploy it with `npx supabase functions deploy tracky`, then remove the old one with `npx supabase functions delete quick-add`.
+
+### Fixed
+- Adding, removing, discarding or editing drafts while Tracky was reading a follow-up could bring them back with its answer, so a draft could be saved twice. The drafts now wait, dimmed, until the answer arrives, and you can’t send while drafts are being added.
+- Typing a year with five digits into a draft’s date blanked the app.
+- Pressing Enter to confirm a word in a Japanese, Chinese or Korean input method sent the message in Safari and the Mac app.
+- A task draft without a deadline read “Task, due No date”, and an event without a start time showed 17:00.
+- Try again cleared what you were typing, and with no connection Tracky showed a code error instead of saying so.
+- A “thanks” or a question no longer risks emptying the drafts, Tracky keeps titles such as “iPhone repair” as you typed them, keeps a draft whose title you cleared, and says so when more than 10 drafts would not fit.
+- Long links in a draft wrapped off the card on a phone; reopening Tracky replayed the drafts’ animation; dialog footers had no space under them on a computer; and on a phone turned sideways the message box could grow taller than the dialog.
+
 ## v1.8 (2026-10-19)
 
 ### Added

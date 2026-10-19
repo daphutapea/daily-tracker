@@ -1,9 +1,9 @@
 /**
  * Runs the gold set against Gemini and grades every answer.
  *
- *   npm run eval:quick-add -- --model gemini-3.6-flash --runs 3 --pause 6
- *   npm run eval:quick-add -- --part 1/2     (then --part 2/2 on another day)
- *   npm run eval:quick-add -- --remaining    (only the cases this model has no graded answer for yet)
+ *   npm run eval:tracky -- --model gemini-3.6-flash --runs 3 --pause 6
+ *   npm run eval:tracky -- --part 1/2     (then --part 2/2 on another day)
+ *   npm run eval:tracky -- --remaining    (only the cases this model has no graded answer for yet)
  *
  * A model whose free allowance is smaller than the set (gemini-3.6-flash allows 20 requests a day)
  * can be measured in parts. --part, --only and --remaining merge into that model's results file
@@ -16,7 +16,7 @@
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
-import { DEFAULT_MODELS, proposeItems, QuickAddError, type ProposedItem } from '../logic.ts'
+import { DEFAULT_MODELS, proposeItems, TrackyError, type ProposedItem } from '../logic.ts'
 import { gradeCase, type GoldCase } from './grade.ts'
 
 const here = (file: string) => new URL(file, import.meta.url)
@@ -98,7 +98,7 @@ async function askWithRetry(c: GoldCase) {
         { apiKey: key, models: [args.model!], fetch },
       )
     } catch (e) {
-      if (!(e instanceof QuickAddError && e.code === 'busy') || attempt === 3) throw e
+      if (!(e instanceof TrackyError && e.code === 'busy') || attempt === 3) throw e
       console.log(`busy  ${c.id}, retrying in 20s`)
       await sleep(20_000)
     }
@@ -120,11 +120,11 @@ outer: for (let run = 1; run <= runs; run++) {
       else t.problems.push(...graded.problems.map((p) => `run ${run}: ${p}`))
       console.log(`${graded.passed ? 'pass' : 'FAIL'}  ${c.id}${graded.passed ? '' : `\n      ${graded.problems.join('\n      ')}`}`)
     } catch (e) {
-      if (e instanceof QuickAddError && (e.code === 'quota' || e.code === 'key')) {
+      if (e instanceof TrackyError && (e.code === 'quota' || e.code === 'key')) {
         console.error(`\nStopped: ${e.message}`)
         break outer
       }
-      if (e instanceof QuickAddError && e.code === 'busy') {
+      if (e instanceof TrackyError && e.code === 'busy') {
         console.log(`skip  ${c.id}, Google stayed busy, so it is not graded`)
         continue
       }
@@ -184,4 +184,4 @@ writeFileSync(
   JSON.stringify({ model: args.model, updated_at: ranAt, runs, passed, attempted, by_kind: byKind, flaky, not_run: missing, cases: rows }, null, 2) +
     '\n',
 )
-console.log(`Details written to supabase/functions/quick-add/eval/${resultsFile}`)
+console.log(`Details written to supabase/functions/tracky/eval/${resultsFile}`)

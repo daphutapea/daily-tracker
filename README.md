@@ -47,6 +47,11 @@ there from the moment you sign in to your Mac.
 The Dock icon shows how many tasks are past their deadline, so you can see it without opening the
 app. Turn it off in Settings → Mac app.
 
+On a computer, the sidebar folds into a narrow strip of icons, as Claude’s does, so the page gets the
+whole window: press the sidebar button at its top, or ⌘\ (Ctrl+\ on Windows). Drag its right edge
+to make it wider or narrower; drag it far enough left and it folds, and double-click the edge for the
+standard width. It remembers how you left it.
+
 ## Home
 
 Home is built to answer one question: what is left today?
@@ -86,15 +91,24 @@ Mr. Dennis” today from 15:00 to 16:00 and “Work on ATLAS improvements again�
 
 Tracky works like a chat, the way Claude or ChatGPT do. Type in the box at the bottom and press
 Enter to send; Shift+Enter starts a new line. On a phone, Return starts a new line and the round
-button sends. While Tracky reads, a thin line moves under its name and the send button turns into
-Stop. Each item comes back as one line, such as “Event · Tue 20 Oct, 15:00 to 16:00 · Client office”.
+button sends. While Tracky works, a band of light sweeps across its status, and the send button
+turns into Stop. Its answer then appears word by word, the way Claude’s does, in well under a second. Each item comes back as one line, such as “Event · Tue 20 Oct, 15:00 to 16:00 · Client office”.
 Press the pencil to change anything on it (task or event, title, day, time, place, reminder,
 priority, project) or the cross to remove it. A task with a day but no time is due at 17:00. An event
 that overlaps one already in your calendar gets a warning. Press Add to save them, or Discard.
 
 You can also just reply. “Make it 4pm”, “also remind me 10 minutes before” or “drop the second one”
 changes the drafts on screen instead of starting over, and edits you made by hand travel with your
-reply. New chat, at the top, clears the conversation; closing Tracky keeps it until you do.
+reply.
+
+The chat is kept on this device, so it is still there after you close Tracky or quit the app, along
+with any drafts you haven’t added. Two commands, typed into the box like in Claude Code, keep it in
+check (type / to see them):
+
+- `/compact` asks Tracky to sum up the chat in a few lines, and that summary replaces the
+  conversation. Drafts you haven’t added stay, and Tracky still remembers the gist next time. Use it
+  when a long chat gets slow to scroll. The Compact button at the top does the same.
+- `/clear` starts a new chat. New chat at the top does the same.
 
 Tracky can also help you plan. Ask “I have a client meeting at 3 and the ATLAS report due at 5, what
 should I do first?” or “can I fit a dentist appointment in on Thursday?” and it answers from your
@@ -111,7 +125,7 @@ next day. Tracky needs a one-time setup, described in
 
 How often the AI reads notes correctly is measured with a set of 34 test notes, ten of them full of typos. How to run it, and
 what it does and doesn't prove, is in
-[supabase/functions/quick-add/eval/README.md](supabase/functions/quick-add/eval/README.md).
+[supabase/functions/tracky/eval/README.md](supabase/functions/tracky/eval/README.md).
 
 ## Tasks
 

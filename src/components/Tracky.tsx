@@ -1,8 +1,8 @@
-import { ArrowUpIcon, CaretUpIcon, NotePencilIcon, PencilSimpleIcon, StopIcon, WarningIcon, XIcon } from '@phosphor-icons/react'
+import { ArrowsInSimpleIcon, ArrowUpIcon, CaretUpIcon, NotePencilIcon, PencilSimpleIcon, StopIcon, WarningIcon, XIcon } from '@phosphor-icons/react'
 import { useQueryClient } from '@tanstack/react-query'
-import { addHours, format, subMinutes } from 'date-fns'
+import { addHours, format, isValid, subMinutes } from 'date-fns'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import type { ChatTurn, ProposedItem, QuickAddResult, ScheduleEntry } from '../../supabase/functions/quick-add/logic.ts'
+import type { ChatTurn, ProposedItem, TrackyResult, ScheduleEntry } from '../../supabase/functions/tracky/logic.ts'
 import { deviceTimeZone, toDate } from '@/lib/dates'
 import { markNew } from '@/lib/motion'
 import { keys, useEvents, useProjects, useTasks } from '@/lib/queries'
@@ -11,11 +11,11 @@ import { scheduleForTracky, useTrackySeesSchedule } from '@/lib/trackySchedule'
 import { PRIORITIES, type CalEvent } from '@/lib/types'
 import { Dialog } from './Dialog'
 import { LogoMark } from './Logo'
-import { OpenQuickAdd } from './quickAddContext'
+import { OpenTracky } from './trackyContext'
 import { Segmented } from './ui'
 
 /** Tracky, mounted once in the app shell. Cmd+K (Ctrl+K elsewhere) opens it from any page. */
-export function QuickAddProvider({ children }: { children: ReactNode }) {
+export function TrackyProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState({ open: false, instant: false })
   const open = useCallback(
     (opts?: { instant?: boolean }) => setState((s) => (s.open ? s : { open: true, instant: !!opts?.instant })),
@@ -36,10 +36,10 @@ export function QuickAddProvider({ children }: { children: ReactNode }) {
 
   // The chat stays mounted, so closing and reopening Tracky keeps the conversation until New chat.
   return (
-    <OpenQuickAdd.Provider value={open}>
+    <OpenTracky.Provider value={open}>
       {children}
-      <QuickAddDialog open={state.open} instant={state.instant} onClose={() => setState((s) => ({ ...s, open: false }))} />
-    </OpenQuickAdd.Provider>
+      <TrackyDialog open={state.open} instant={state.instant} onClose={() => setState((s) => ({ ...s, open: false }))} />
+    </OpenTracky.Provider>
   )
 }
 
@@ -49,8 +49,11 @@ interface Draft extends ProposedItem {
 
 type Message =
   | { id: number; role: 'you'; text: string }
-  /** What Tracky proposed: its reply and a copy of the drafts as they were at that point. */
-  | { id: number; role: 'tracky'; kind: 'proposal'; text: string; model: string; items: Draft[] }
+  /**
+   * What Tracky proposed: its reply and a copy of the drafts as they were at that point. `summary`
+   * marks the one message a compacted chat is reduced to.
+   */
+  | { id: number; role: 'tracky'; kind: 'proposal'; text: string; model: string; items: Draft[]; summary?: boolean }
   | { id: number; role: 'tracky'; kind: 'added' | 'note'; text: string }
   | { id: number; role: 'tracky'; kind: 'error'; text: string; retry: string }
 /** A message before it gets its id. */
@@ -72,18 +75,28 @@ const EXAMPLES = [
   'I have a client meeting at 3 and a report due at 5. What should I do first?',
 ]
 
+/** Typed into the message box, these run instead of being sent. */
+const COMMANDS = [
+  { name: '/compact', hint: 'Shrink this chat to a short summary and keep going' },
+  { name: '/clear', hint: 'Start a new chat' },
+] as const
+
+const COMPACT_NOTE =
+  'Summarise our chat so far so it can replace the conversation. In at most six short lines starting with "- ", say what I asked for, what you advised, what was added, and what is still open. Keep the current drafts exactly as they are.'
+
 async function readNote(
   body: { text: string; projects: string[]; history: ChatTurn[]; drafts: ProposedItem[]; schedule: ScheduleEntry[] },
   signal: AbortSignal,
-): Promise<QuickAddResult> {
-  const { data, error } = await supabase.functions.invoke<QuickAddResult>('quick-add', {
+): Promise<TrackyResult> {
+  const { data, error } = await supabase.functions.invoke<TrackyResult>('tracky', {
     body: { ...body, now: format(new Date(), "yyyy-MM-dd'T'HH:mm"), timezone: deviceTimeZone() },
     signal,
   })
   if (error) {
-    // The function answers errors with { error, message }; show its message when there is one.
-    const context = (error as { context?: Response }).context
-    const answer = context ? await context.json().catch(() => null) : null
+    // The function answers errors with { error, message }; show its message when there is one. With
+    // no connection the context is the network error itself, not a response.
+    const context = (error as { context?: unknown }).context
+    const answer = context instanceof Response ? await context.json().catch(() => null) : null
     throw new Error(answer?.message ?? 'Couldn’t reach Tracky. Check your connection and try again.')
   }
   return data!
@@ -103,21 +116,79 @@ function addedText(titles: string[]) {
   return `Added ${titles.length} items: ${list}.`
 }
 
-function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: boolean; onClose: () => void }) {
+/** What Tracky needs to follow the chat: what was said, minus errors, with a compacted chat as its summary. */
+const toHistory = (messages: Message[]): ChatTurn[] =>
+  messages
+    .filter((m) => m.role === 'you' || m.kind !== 'error')
+    .map((m) => ({
+      role: m.role,
+      text: m.role === 'tracky' && m.kind === 'proposal' && m.summary ? `Summary of our chat so far:\n${m.text}` : m.text,
+    }))
+
+// The chat is kept on this device, so it survives closing the app, until New chat or /clear. Only the
+// last 60 messages are kept; /compact shrinks it to one.
+const STORE_KEY = 'dt-tracky-chat'
+const KEEP = 60
+interface SavedChat {
+  messages: Message[]
+  drafts: Draft[]
+  liveId: number | null
+}
+
+function loadChat(): SavedChat {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) ?? 'null') as SavedChat | null
+    if (saved && Array.isArray(saved.messages) && Array.isArray(saved.drafts)) return saved
+  } catch {
+    // Unreadable or blocked storage: start a fresh chat.
+  }
+  return { messages: [], drafts: [], liveId: null }
+}
+
+function saveChat(chat: SavedChat) {
+  try {
+    if (chat.messages.length === 0 && chat.drafts.length === 0) localStorage.removeItem(STORE_KEY)
+    else localStorage.setItem(STORE_KEY, JSON.stringify({ ...chat, messages: chat.messages.slice(-KEEP) }))
+  } catch {
+    // Full or blocked storage: the chat still works for this visit.
+  }
+}
+
+/**
+ * How long an answer takes to appear word by word: about 25ms a word, never more than 650ms, so a long
+ * answer is never slower to read than it would be all at once.
+ */
+const typingPace = (text: string) => {
+  const words = text.split(/\s+/).filter(Boolean).length
+  const perWord = Math.min(25, 650 / Math.max(words, 1))
+  return { perWord, total: Math.round(words * perWord + 180) }
+}
+
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
+
+type Busy = false | 'reading' | 'compacting'
+
+function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: boolean; onClose: () => void }) {
   const qc = useQueryClient()
   const projects = useProjects()
   const tasks = useTasks()
   const events = useEvents()
   const seesSchedule = useTrackySeesSchedule()
-  const [messages, setMessages] = useState<Message[]>([])
-  const [drafts, setDrafts] = useState<Draft[]>([])
+  const [saved] = useState(loadChat)
+  const [messages, setMessages] = useState<Message[]>(saved.messages)
+  const [drafts, setDrafts] = useState<Draft[]>(saved.drafts)
   // The proposal whose drafts are still on screen to edit; older proposals show a summary.
-  const [liveId, setLiveId] = useState<number | null>(null)
+  const [liveId, setLiveId] = useState<number | null>(saved.liveId)
   const [input, setInput] = useState('')
-  const [reading, setReading] = useState(false)
+  const [busy, setBusy] = useState<Busy>(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const nextId = useRef(1)
+  // Answers that arrived in this visit and are still typing out. Older ones, and anything restored
+  // from the device, show at once.
+  const [typing, setTyping] = useState<ReadonlySet<number>>(new Set())
+  const nextId = useRef(
+    Math.max(0, ...saved.messages.map((m) => m.id), ...saved.drafts.map((d) => d.key)) + 1,
+  )
   const abort = useRef<AbortController | null>(null)
   const composerRef = useRef<HTMLTextAreaElement>(null)
   const threadRef = useRef<HTMLDivElement>(null)
@@ -126,21 +197,47 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
 
   const activeProjects = (projects.data ?? []).filter((p) => !p.archived)
   const ready = drafts.length > 0 && drafts.every((d) => draftProblem(d) === null)
+  const reading = busy !== false
   const id = () => nextId.current++
-  const say = (message: Unsent) => setMessages((m) => [...m, { ...message, id: id() } as Message])
 
-  async function send(raw: string) {
+  useEffect(() => saveChat({ messages, drafts, liveId }), [messages, drafts, liveId])
+
+  /** Adds Tracky's message and types it out, unless reduced motion is on. */
+  function trackySays(message: Message) {
+    setMessages((m) => [...m, message])
+    if (reducedMotion()) return
+    setTyping((t) => new Set(t).add(message.id))
+    window.setTimeout(
+      () =>
+        setTyping((t) => {
+          const next = new Set(t)
+          next.delete(message.id)
+          return next
+        }),
+      typingPace(message.text).total + 400,
+    )
+  }
+  const say = (message: Unsent) => {
+    const full = { ...message, id: id() } as Message
+    if (full.role === 'you') setMessages((m) => [...m, full])
+    else trackySays(full)
+  }
+
+  async function send(raw: string, { fromBox = true } = {}) {
     const text = raw.trim()
-    if (!text || reading) return
-    // What Tracky needs to follow the chat: what was said, and the drafts as you left them.
-    const history: ChatTurn[] = messages
-      .filter((m) => m.role === 'you' || m.kind !== 'error')
-      .map((m) => ({ role: m.role, text: m.text }))
+    if (!text || reading || saving) return
+    const command = text.startsWith('/') ? matchCommand(text) : null
+    if (command) {
+      if (fromBox) setInput('')
+      return command === '/clear' ? newChat() : compact()
+    }
+    const history = toHistory(messages)
     const hadDrafts = drafts.length > 0
     say({ role: 'you', text })
-    setInput('')
+    if (fromBox) setInput('')
     setError(null)
-    setReading(true)
+    setBusy('reading')
+    composerRef.current?.focus()
     const controller = new AbortController()
     abort.current = controller
     try {
@@ -154,17 +251,14 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
       if (controller.signal.aborted) return
       const items = result.items.map((item) => ({ ...item, key: id() }))
       const proposalId = id()
-      setMessages((m) => [
-        ...m,
-        {
-          id: proposalId,
-          role: 'tracky',
-          kind: 'proposal',
-          text: result.reply ?? replyFor(items.length, hadDrafts),
-          model: result.model,
-          items,
-        },
-      ])
+      trackySays({
+        id: proposalId,
+        role: 'tracky',
+        kind: 'proposal',
+        text: result.reply ?? replyFor(items.length, hadDrafts),
+        model: result.model,
+        items,
+      })
       setDrafts(items)
       setLiveId(items.length ? proposalId : null)
     } catch (e) {
@@ -173,19 +267,61 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
         if (abort.current !== controller) return
         say({ role: 'tracky', kind: 'note', text: 'Stopped. Your message is back in the box if you want to change it.' })
         setInput((current) => current || text)
+        composerRef.current?.focus()
       } else {
         say({ role: 'tracky', kind: 'error', text: e instanceof Error ? e.message : String(e), retry: text })
       }
     } finally {
-      // A request New chat let go of must not end the reading state of one sent after it.
+      // A request New chat let go of must not end the busy state of one sent after it.
       if (abort.current === controller) {
         abort.current = null
-        setReading(false)
+        setBusy(false)
+      }
+    }
+  }
+
+  /**
+   * Like Claude Code's /compact: Tracky sums up the chat in a few lines, and that summary replaces the
+   * conversation. Drafts on screen stay as they are, and later messages still have the context.
+   */
+  async function compact() {
+    if (reading || saving || messages.length < 2) return
+    setError(null)
+    setBusy('compacting')
+    const controller = new AbortController()
+    abort.current = controller
+    try {
+      const result = await readNote(
+        { text: COMPACT_NOTE, projects: activeProjects.map((p) => p.name), history: toHistory(messages), drafts: drafts.map(strip), schedule: [] },
+        controller.signal,
+      )
+      if (controller.signal.aborted) return
+      const summaryId = id()
+      setMessages([])
+      trackySays({
+        id: summaryId,
+        role: 'tracky',
+        kind: 'proposal',
+        summary: true,
+        text: result.reply ?? 'We haven’t settled anything yet.',
+        model: result.model,
+        items: drafts,
+      })
+      setLiveId(drafts.length ? summaryId : null)
+    } catch (e) {
+      if (!controller.signal.aborted) {
+        say({ role: 'tracky', kind: 'note', text: `Couldn’t compact the chat, so it’s unchanged. ${e instanceof Error ? e.message : ''}`.trim() })
+      }
+    } finally {
+      if (abort.current === controller) {
+        abort.current = null
+        setBusy(false)
       }
     }
   }
 
   async function add() {
+    if (reading) return
     setSaving(true)
     setError(null)
     try {
@@ -218,14 +354,16 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
   }
 
   function newChat() {
+    if (saving) return
     if (drafts.length && !window.confirm('Start a new chat? The drafts you haven’t added will be lost.')) return
     const pending = abort.current
     abort.current = null
     pending?.abort()
-    setReading(false)
+    setBusy(false)
     setMessages([])
     setDrafts([])
     setLiveId(null)
+    setTyping(new Set())
     setInput('')
     setError(null)
     composerRef.current?.focus()
@@ -255,11 +393,11 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
   useEffect(() => {
     if (!open) return
     const last = messages.at(-1)
-    const asked = last?.role === 'you' || (last?.role === 'tracky' && last.kind === 'proposal')
+    const asked = last?.role === 'you' || (last?.role === 'tracky' && last.kind === 'proposal' && !last.summary)
     const you = [...(threadRef.current?.querySelectorAll<HTMLElement>('[data-you]') ?? [])].at(-1)
     if (asked && you) you.scrollIntoView({ block: 'start' })
     else endRef.current?.scrollIntoView({ block: 'end' })
-  }, [open, messages, reading])
+  }, [open, messages, busy])
 
   // The message box grows with what you type, up to about eight lines, then scrolls.
   useLayoutEffect(() => {
@@ -270,6 +408,7 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
   }, [input])
 
   const lastTracky = messages.findLast((m) => m.role === 'tracky')
+  const canCompact = messages.length >= 2 && !reading && !saving
 
   return (
     <Dialog
@@ -280,17 +419,36 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
       instant={instant}
       actions={
         messages.length > 0 && (
-          <button type="button" className="btn btn-ghost px-2.5 text-[13px]" onClick={newChat}>
-            <NotePencilIcon size={16} weight="bold" />
-            New chat
-          </button>
+          <>
+            <button
+              type="button"
+              className="btn btn-ghost px-2.5 text-[13px]"
+              disabled={!canCompact}
+              title="Shrink this chat to a short summary and keep going (/compact)"
+              onClick={compact}
+            >
+              <ArrowsInSimpleIcon size={16} weight="bold" />
+              <span className="max-sm:sr-only">Compact</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost px-2.5 text-[13px]"
+              disabled={saving}
+              title="Start a new chat (/clear)"
+              onClick={newChat}
+            >
+              <NotePencilIcon size={16} weight="bold" />
+              <span className="max-sm:sr-only">New chat</span>
+            </button>
+          </>
         )
       }
       footer={
         <Composer
           ref={composerRef}
           value={input}
-          reading={reading}
+          busy={reading}
+          blocked={saving}
           onChange={setInput}
           onSend={() => send(input)}
           onStop={() => abort.current?.abort()}
@@ -298,7 +456,13 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
       }
     >
       <p className="sr-only" aria-live="polite">
-        {reading ? 'Tracky is reading.' : lastTracky ? `Tracky: ${lastTracky.text}` : ''}
+        {busy === 'compacting'
+          ? 'Tracky is compacting the chat.'
+          : busy
+            ? 'Tracky is reading.'
+            : lastTracky
+              ? `Tracky: ${lastTracky.text}`
+              : ''}
       </p>
       <div ref={threadRef} className="flex min-h-full flex-col">
         {messages.length === 0 && !reading ? (
@@ -310,36 +474,52 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
           />
         ) : (
           <div className="mx-auto w-full max-w-[640px] space-y-6 pb-2">
-            {messages.map((m) =>
-              m.role === 'you' ? (
-                <p
-                  key={m.id}
-                  data-you
-                  className="ml-auto w-fit max-w-[85%] scroll-mt-2 rounded-[16px] bg-surface-2 px-4 py-2.5 break-words whitespace-pre-wrap"
-                >
-                  <span className="sr-only">You: </span>
-                  {m.text}
-                </p>
-              ) : (
+            {messages.map((m) => {
+              if (m.role === 'you')
+                return (
+                  <p
+                    key={m.id}
+                    data-you
+                    className="ml-auto w-fit max-w-[85%] scroll-mt-2 rounded-[16px] bg-surface-2 px-4 py-2.5 break-words whitespace-pre-wrap"
+                  >
+                    <span className="sr-only">You: </span>
+                    {m.text}
+                  </p>
+                )
+              const typed = typing.has(m.id)
+              const after = typed ? typingPace(m.text).total : 0
+              return (
                 <TrackyMessage key={m.id}>
                   {m.kind === 'error' ? (
                     <div className="space-y-2">
-                      <p role="alert" className="text-danger">
-                        {m.text}
-                      </p>
-                      <button type="button" className="btn btn-quiet" disabled={reading} onClick={() => send(m.retry)}>
+                      <p className="text-danger">{m.text}</p>
+                      <button
+                        type="button"
+                        className="btn btn-quiet"
+                        disabled={reading || saving}
+                        onClick={() => send(m.retry, { fromBox: false })}
+                      >
                         Try again
                       </button>
                     </div>
                   ) : m.kind === 'proposal' ? (
                     <>
-                      <p className="draft-in break-words whitespace-pre-wrap">{m.text}</p>
+                      {m.summary && <p className="text-[12px] font-medium text-ink-3">Earlier chat, compacted</p>}
+                      <p className="break-words whitespace-pre-wrap">
+                        <TypedText text={m.text} animate={typed} />
+                      </p>
                       {m.id === liveId && drafts.length > 0 ? (
-                        <div className="space-y-3">
+                        // Frozen while Tracky reads a follow-up, whose answer replaces these drafts.
+                        <div
+                          className={`space-y-3 transition-opacity duration-150 ${reading ? 'opacity-60' : ''}`}
+                          inert={reading}
+                          style={{ '--after': `${after}ms` } as CSSProperties}
+                        >
                           {drafts.map((d, i) => (
                             <DraftCard
                               key={d.key}
                               index={i + 1}
+                              arriving={typed}
                               draft={d}
                               projects={activeProjects.map((p) => p.name)}
                               clash={d.kind === 'event' ? findClash(d, events.data ?? []) : null}
@@ -352,7 +532,10 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
                               {error}
                             </p>
                           )}
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div
+                            className={`flex flex-wrap items-center gap-2 ${typed ? 'draft-in' : ''}`}
+                            style={{ '--i': drafts.length + 1 } as CSSProperties}
+                          >
                             <button type="button" className="btn btn-primary" disabled={!ready || saving} onClick={add}>
                               {saving ? 'Adding…' : drafts.length === 1 ? 'Add 1 item' : `Add ${drafts.length} items`}
                             </button>
@@ -363,24 +546,23 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
                           </div>
                         </div>
                       ) : (
-                        <>
+                        <div className="space-y-3" style={{ '--after': `${after}ms` } as CSSProperties}>
                           {m.items.length > 0 && <DraftSummary items={m.items} />}
-                          <p className="text-[12px] text-ink-3">Tracky, running on {m.model}</p>
-                        </>
+                          <p className={`text-[12px] text-ink-3 ${typed ? 'draft-in' : ''}`}>Tracky, running on {m.model}</p>
+                        </div>
                       )}
                     </>
                   ) : (
-                    <p className={m.kind === 'note' ? 'text-ink-2' : ''}>{m.text}</p>
+                    <p className={`break-words whitespace-pre-wrap ${m.kind === 'note' ? 'text-ink-2' : ''}`}>
+                      <TypedText text={m.text} animate={typed} />
+                    </p>
                   )}
                 </TrackyMessage>
-              ),
-            )}
+              )
+            })}
             {reading && (
               <TrackyMessage>
-                <p className="text-ink-2">Reading…</p>
-                <span aria-hidden className="relative block h-[3px] w-32 overflow-hidden rounded-full">
-                  <span className="working-line" />
-                </span>
+                <Thinking label={busy === 'compacting' ? 'Compacting the chat' : 'Reading'} />
               </TrackyMessage>
             )}
           </div>
@@ -389,6 +571,46 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
       </div>
     </Dialog>
   )
+}
+
+/** The command a message box starting with "/" asks for: an exact name, or the only one it begins. */
+function matchCommand(text: string): (typeof COMMANDS)[number]['name'] | null {
+  const typed = text.trim().toLowerCase()
+  const matches = COMMANDS.filter((c) => c.name.startsWith(typed))
+  return COMMANDS.find((c) => c.name === typed)?.name ?? (matches.length === 1 ? matches[0].name : null)
+}
+
+/**
+ * Tracky's answers appear word by word, the way Claude's do, at a pace capped so a long answer never
+ * takes more than about two thirds of a second. Each word fades in from a slight blur; the text is
+ * all there from the start, so screen readers and copying get it whole.
+ */
+function TypedText({ text, animate }: { text: string; animate: boolean }) {
+  if (!animate) return text
+  const { perWord } = typingPace(text)
+  let word = 0
+  return text.split(/(\s+)/).map((part, i) =>
+    part.trim() ? (
+      <span key={i} className="type-in" style={{ '--d': `${Math.round(word++ * perWord)}ms` } as CSSProperties}>
+        {part}
+      </span>
+    ) : (
+      part
+    ),
+  )
+}
+
+/**
+ * While Tracky works: its status with a light sweeping across the words, as Claude shows when it
+ * thinks. After four seconds it says it is still going, so a slow answer doesn't look stuck.
+ */
+function Thinking({ label }: { label: string }) {
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSlow(true), 4000)
+    return () => window.clearTimeout(timer)
+  }, [])
+  return <p className="thinking">{slow ? 'Still working on it…' : `${label}…`}</p>
 }
 
 /** Tracky's side of the chat: the mark and its name, then what it says. */
@@ -441,41 +663,81 @@ function DraftSummary({ items }: { items: Draft[] }) {
   )
 }
 
-const draftWhen = (d: Draft) =>
-  d.date
-    ? format(new Date(`${d.date}T${d.time ?? '00:00'}`), d.time ? 'EEE d MMM, HH:mm' : 'EEE d MMM') +
-      (d.kind === 'event' && d.all_day ? ', all day' : '')
-    : ''
+/** "Tue 20 Oct, 15:00", "Tue 20 Oct, all day", or the raw text when the date can't be read. */
+function draftWhen(d: Draft) {
+  if (!d.date) return ''
+  const day = at(d.date, '00:00')
+  if (!isValid(day)) return d.date
+  if (d.kind === 'event' && d.all_day) return `${format(day, 'EEE d MMM')}, all day`
+  if (d.kind === 'event' && !d.time) return `${format(day, 'EEE d MMM')}, no start time`
+  return format(at(d.date, d.time ?? '17:00'), 'EEE d MMM, HH:mm')
+}
 
 /**
  * Enter sends and Shift+Enter starts a new line. On a phone, Return starts a new line and the send
- * button sends, as in other chat apps, because there is no Shift key to reach for.
+ * button sends, as in other chat apps, because there is no Shift key to reach for. A message box that
+ * starts with "/" lists the commands it can run.
  */
 function Composer({
   ref,
   value,
-  reading,
+  busy,
+  blocked,
   onChange,
   onSend,
   onStop,
 }: {
-  ref: React.Ref<HTMLTextAreaElement>
+  ref: React.RefObject<HTMLTextAreaElement | null>
   value: string
-  reading: boolean
+  busy: boolean
+  /** True while drafts are being added: sending would race the save. */
+  blocked: boolean
   onChange: (value: string) => void
   onSend: () => void
   onStop: () => void
 }) {
-  const canSend = value.trim() !== '' && !reading
+  const canSend = value.trim() !== '' && !busy && !blocked
+  const typedCommand = value.startsWith('/') && !value.includes('\n') ? value.trim().toLowerCase() : null
+  const commands = typedCommand !== null ? COMMANDS.filter((c) => c.name.startsWith(typedCommand)) : []
   return (
     <form
-      className="w-full"
+      className="relative w-full"
       onSubmit={(e) => {
         e.preventDefault()
         if (canSend) onSend()
       }}
     >
-      <div className="flex items-end gap-2 rounded-[16px] border border-line-strong bg-surface py-1.5 pr-1.5 pl-4 focus-within:outline-2 focus-within:outline-offset-0 focus-within:outline-accent">
+      {commands.length > 0 && (
+        <ul
+          id="tracky-commands"
+          aria-label="Commands"
+          className="pop-in absolute right-0 bottom-full left-0 mb-2 origin-bottom-left rounded-[10px] border border-line bg-surface py-1 shadow-float"
+        >
+          {commands.map((c) => (
+            <li key={c.name}>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onChange(c.name)}
+                className="row-hover flex min-h-9 w-full items-baseline gap-3 px-3 py-1.5 text-left pointer-coarse:min-h-11"
+              >
+                <span className="font-medium tnum">{c.name}</span>
+                <span className="text-[13px] text-ink-2">{c.hint}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {/* A tap anywhere on the box, not just on the line of text, puts the cursor in it. */}
+      <div
+        className="flex cursor-text items-end gap-2 rounded-[16px] border border-line-strong bg-surface py-1.5 pr-1.5 pl-4 focus-within:outline-2 focus-within:outline-offset-0 focus-within:outline-accent"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) {
+            e.preventDefault()
+            ref.current?.focus()
+          }
+        }}
+      >
         <label htmlFor="tracky-message" className="sr-only">
           Message Tracky
         </label>
@@ -485,38 +747,41 @@ function Composer({
           data-autofocus
           rows={1}
           maxLength={2000}
-          placeholder="Message Tracky"
-          className="block min-h-8 flex-1 resize-none self-center bg-transparent py-1 leading-6 outline-none placeholder:text-ink-3"
+          placeholder="Message Tracky, or type / for commands"
+          aria-describedby="tracky-hint"
+          aria-controls={commands.length ? 'tracky-commands' : undefined}
+          className="block max-h-[min(192px,30dvh)] min-h-8 flex-1 resize-none self-center bg-transparent py-1 leading-6 outline-none placeholder:text-ink-3"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return
+            // Tab finishes a command name, the way a terminal does.
+            if (e.key === 'Tab' && !e.shiftKey && commands.length === 1 && value !== commands[0].name) {
+              e.preventDefault()
+              onChange(commands[0].name)
+              return
+            }
+            // keyCode 229 is the Enter that confirms an input-method word in Safari; it must not send.
+            if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return
             if (matchMedia('(pointer: coarse)').matches && !(e.metaKey || e.ctrlKey)) return
             e.preventDefault()
             if (canSend) onSend()
           }}
         />
-        {reading ? (
-          <button
-            type="button"
-            aria-label="Stop"
-            onClick={onStop}
-            className="press grid size-8 shrink-0 place-items-center rounded-full bg-ink text-surface pointer-coarse:size-11"
-          >
-            <StopIcon size={14} weight="fill" />
-          </button>
-        ) : (
-          <button
-            type="submit"
-            aria-label="Send"
-            disabled={!canSend}
-            className="press grid size-8 shrink-0 place-items-center rounded-full bg-accent text-on-accent disabled:bg-surface-2 disabled:text-ink-3 pointer-coarse:size-11"
-          >
-            <ArrowUpIcon size={16} weight="bold" />
-          </button>
-        )}
+        {/* One button that changes between Send and Stop, so focus never falls off it, and it never takes focus from the box. */}
+        <button
+          type="button"
+          aria-label={busy ? 'Stop' : 'Send'}
+          disabled={!busy && !canSend}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={busy ? onStop : onSend}
+          className={`press grid size-8 shrink-0 place-items-center rounded-full pointer-coarse:size-11 ${
+            busy ? 'bg-ink text-surface' : 'bg-accent text-on-accent disabled:bg-surface-2 disabled:text-ink-3'
+          }`}
+        >
+          {busy ? <StopIcon size={14} weight="fill" /> : <ArrowUpIcon size={16} weight="bold" />}
+        </button>
       </div>
-      <p className="mt-1.5 text-center text-[12px] text-ink-3">
+      <p id="tracky-hint" className="mt-1.5 text-center text-[12px] text-ink-3">
         <span className="pointer-coarse:hidden">Enter sends, Shift+Enter starts a new line. </span>
         Nothing is saved until you add it.
       </p>
@@ -528,6 +793,7 @@ function Composer({
 
 function DraftCard({
   index,
+  arriving,
   draft: d,
   projects,
   clash,
@@ -535,6 +801,8 @@ function DraftCard({
   onRemove,
 }: {
   index: number
+  /** True for drafts that just arrived; they rise into place once. */
+  arriving: boolean
   draft: Draft
   projects: string[]
   clash: CalEvent | null
@@ -553,7 +821,7 @@ function DraftCard({
   return (
     <section
       aria-label={d.title}
-      className="draft-in rounded-[10px] border border-line p-3"
+      className={`rounded-[10px] border border-line p-3 ${arriving ? 'draft-in' : ''}`}
       style={{ '--i': index } as CSSProperties}
     >
       <div className="flex items-start gap-3">
@@ -567,7 +835,7 @@ function DraftCard({
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-medium break-words">{d.title.trim() || 'Untitled'}</p>
-          <p className="text-[13px] text-ink-2 tnum">{draftDetails(d)}</p>
+          <p className="text-[13px] break-words text-ink-2 tnum">{draftDetails(d)}</p>
         </div>
         <button
           type="button"
@@ -621,6 +889,7 @@ function DraftCard({
               <input
                 id={`${id}-date`}
                 type="date"
+                max="9999-12-31"
                 className="field"
                 value={d.date ?? ''}
                 onChange={(e) => onChange({ date: e.target.value || null })}
@@ -747,9 +1016,11 @@ function DraftCard({
       )}
       {problem && <p className="mt-2 text-[13px] text-danger">{problem}</p>}
       {clash && (
-        <p className="mt-2 flex items-center gap-1.5 text-[13px] text-warn">
-          <WarningIcon size={14} weight="bold" aria-hidden />
-          Overlaps with “{clash.title}” at {format(toDate(clash.starts_at), 'HH:mm')}
+        <p className="mt-2 flex items-start gap-1.5 text-[13px] text-warn">
+          <WarningIcon size={14} weight="bold" aria-hidden className="mt-0.5 shrink-0" />
+          <span className="min-w-0 break-words">
+            Overlaps with “{clash.title}” at {format(toDate(clash.starts_at), 'HH:mm')}
+          </span>
         </p>
       )}
     </section>
@@ -758,15 +1029,10 @@ function DraftCard({
 
 /** "Event · Tue 20 Oct, 15:00 to 16:00 · Client office · Reminder 15 min before · High · ATLAS" */
 function draftDetails(d: Draft) {
-  const when = !d.date
-    ? 'No date'
-    : d.kind === 'event' && d.all_day
-      ? `${format(at(d.date, '00:00'), 'EEE d MMM')}, all day`
-      : `${format(at(d.date, d.time ?? '17:00'), 'EEE d MMM, HH:mm')}${d.kind === 'event' && d.end_time ? ` to ${d.end_time}` : ''}`
   const reminder = REMINDER_OPTIONS.find((o) => o.value === String(d.remind_minutes_before ?? ''))?.label
+  const time = d.kind === 'task' ? (d.date ? `Task, due ${draftWhen(d)}` : 'Task, no deadline') : `Event · ${d.date ? draftWhen(d) : 'no day'}`
   return [
-    d.kind === 'task' ? 'Task, due' : 'Event',
-    when,
+    d.kind === 'event' && d.time && d.end_time ? `${time} to ${d.end_time}` : time,
     d.kind === 'event' && d.location,
     d.remind_minutes_before !== null && `Reminder ${reminder ? reminder.toLowerCase() : `${d.remind_minutes_before} min before`}`,
     d.kind === 'task' && d.priority !== 'medium' && PRIORITIES.find((p) => p.value === d.priority)?.label,
@@ -774,7 +1040,6 @@ function draftDetails(d: Draft) {
   ]
     .filter(Boolean)
     .join(' · ')
-    .replace('Task, due · ', 'Task, due ')
 }
 
 // ---------------------------------------------------------------- turning drafts into rows

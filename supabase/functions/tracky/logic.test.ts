@@ -5,15 +5,15 @@ import {
   buildUserMessage,
   parseRequest,
   proposeItems,
-  QuickAddError,
+  TrackyError,
   RESPONSE_SCHEMA,
   scheduleLine,
   SYSTEM_PROMPT,
   validateItems,
-  type QuickAddRequest,
+  type TrackyRequest,
 } from './logic.ts'
 
-const req: QuickAddRequest = {
+const req: TrackyRequest = {
   text: 'sync with Dennis Tuesday 10am, remind me 15 min before; finish labelling by Friday, high priority',
   now: '2026-10-15T09:30',
   timezone: 'Asia/Jakarta',
@@ -69,7 +69,7 @@ test('a follow-up carries the chat so far and the drafts on screen', () => {
   assert.ok(msg.endsWith('make it 4pm'))
 })
 
-test('parseRequest keeps the last twelve messages and checks drafts like the model\'s answer', () => {
+test('parseRequest keeps the last twelve messages and checks the types in drafts', () => {
   const history = Array.from({ length: 15 }, (_, i) => ({ role: i % 2 ? 'tracky' : 'you', text: `message ${i}` }))
   const parsed = parseRequest({
     text: 'and lunch on Friday',
@@ -82,7 +82,7 @@ test('parseRequest keeps the last twelve messages and checks drafts like the mod
   assert.ok(parsed.history!.every((t) => t.role === 'you' || t.role === 'tracky'))
   assert.deepEqual(
     parsed.drafts!.map((d) => [d.title, d.date, d.priority]),
-    [['Finish labelling', null, 'medium']],
+    [['finish labelling', null, 'medium']],
   )
 })
 
@@ -136,14 +136,57 @@ test('the prompt lets Tracky advise from the schedule without adding items for a
   assert.match(SYSTEM_PROMPT, /SCHEDULE entries are saved: never return them as items/)
 })
 
+test('drafts sent back keep what the person typed, so nothing is dropped or renumbered', () => {
+  const parsed = parseRequest({
+    text: 'the second one is urgent',
+    now: '2026-10-15T09:30',
+    drafts: [
+      { kind: 'task', title: '', date: null, priority: 'medium' },
+      { kind: 'task', title: 'iPhone screen repair', date: '2026-10-16', priority: 'medium' },
+      { kind: 'event', title: 'dentist', date: '2026-10-17', time: null, all_day: false, priority: 'medium' },
+      { kind: 'event', title: 'Call', date: '2026-10-17', time: '15:00', end_time: '14:00', all_day: false, priority: 'medium' },
+    ],
+  })
+  assert.deepEqual(
+    parsed.drafts!.map((d) => [d.title, d.all_day, d.end_time]),
+    [
+      ['', false, null],
+      ['iPhone screen repair', false, null],
+      ['dentist', false, null],
+      ['Call', false, '14:00'],
+    ],
+  )
+})
+
+test('the model\'s titles get a capital, unless the first word already has one inside it', () => {
+  const titles = validateItems(
+    { items: ['buy milk', 'iPhone repair', 'eBay return'].map((title) => ({ kind: 'task', title, priority: 'medium' })) },
+    [],
+  ).map((d) => d.title)
+  assert.deepEqual(titles, ['Buy milk', 'iPhone repair', 'eBay return'])
+})
+
+test('a reply that runs past ten drafts says what was cut', async () => {
+  const items = Array.from({ length: 12 }, (_, i) => ({ kind: 'task', title: `Item ${i + 1}`, priority: 'medium' }))
+  const { fetch } = fakeFetch([{ status: 200, body: geminiReply({ items, reply: 'Here they are.' }) }])
+  const result = await proposeItems(req, { apiKey: 'k', models: ['m'], fetch })
+  assert.equal(result.items.length, 10)
+  assert.match(result.reply!, /^Here they are\.\nI can hold 10 drafts at a time/)
+})
+
+test('the prompt keeps the current drafts when there is nothing to add', () => {
+  assert.doesNotMatch(SYSTEM_PROMPT, /nothing to add and asks nothing, return no items/)
+  assert.match(SYSTEM_PROMPT, /return the current drafts unchanged \(no\s+items when there are none\)/)
+})
+
 test('the prompt explains how follow-ups change the drafts', () => {
   assert.match(SYSTEM_PROMPT, /items is always the complete list of drafts/)
   assert.match(SYSTEM_PROMPT, /Items already added are saved/)
 })
 
 test('parseRequest rejects empty notes and bad timestamps', () => {
-  assert.throws(() => parseRequest({ text: '  ', now: '2026-10-15T09:30' }), QuickAddError)
-  assert.throws(() => parseRequest({ text: 'x', now: 'yesterday' }), QuickAddError)
+  assert.throws(() => parseRequest({ text: '  ', now: '2026-10-15T09:30' }), TrackyError)
+  assert.throws(() => parseRequest({ text: 'x', now: 'yesterday' }), TrackyError)
   assert.deepEqual(parseRequest({ text: ' hi ', now: '2026-10-15T09:30', projects: ['A', 3] }).projects, ['A'])
 })
 
@@ -202,19 +245,19 @@ test('quota, busy and unavailable models fall through to the next model', async 
 
 test('every daily allowance used up is a quota error', async () => {
   const { fetch } = fakeFetch([{ status: 429, body: perDay }, { status: 429, body: perDay }])
-  await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a', 'b'], fetch }), (e: QuickAddError) => e.code === 'quota')
+  await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a', 'b'], fetch }), (e: TrackyError) => e.code === 'quota')
 })
 
 test('a per-minute limit or a busy model is reported as busy, not as the day being used up', async () => {
   const minute = fakeFetch([{ status: 429, body: perDay }, { status: 429, body: perMinute }])
-  await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a', 'b'], fetch: minute.fetch }), (e: QuickAddError) => e.code === 'busy')
+  await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a', 'b'], fetch: minute.fetch }), (e: TrackyError) => e.code === 'busy')
   const busy = fakeFetch([{ status: 503 }, { status: 500 }])
-  await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a', 'b'], fetch: busy.fetch }), (e: QuickAddError) => e.code === 'busy')
+  await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a', 'b'], fetch: busy.fetch }), (e: TrackyError) => e.code === 'busy')
 })
 
 test('a bad request stops instead of sending it to more models', async () => {
   const { fetch, calls } = fakeFetch([{ status: 400, body: { error: { message: 'Invalid schema' } } }, { status: 200 }])
-  await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a', 'b'], fetch }), (e: QuickAddError) => e.code === 'model')
+  await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a', 'b'], fetch }), (e: TrackyError) => e.code === 'model')
   assert.equal(calls.length, 1)
 })
 
@@ -243,11 +286,11 @@ test('every item field is required and written in an order that settles the time
 
 test('a rejected API key is reported as a key problem', async () => {
   const { fetch, calls } = fakeFetch([{ status: 400, body: { error: { message: 'API key not valid. Please pass a valid API key.' } } }])
-  await assert.rejects(proposeItems(req, { apiKey: 'bad', models: ['a', 'b'], fetch }), (e: QuickAddError) => e.code === 'key')
+  await assert.rejects(proposeItems(req, { apiKey: 'bad', models: ['a', 'b'], fetch }), (e: TrackyError) => e.code === 'key')
   assert.equal(calls.length, 1)
 })
 
 test('unreadable model output is a clear error, not a crash', async () => {
   const { fetch } = fakeFetch([{ status: 200, body: { candidates: [{ content: { parts: [{ text: 'not json' }] } }] } }])
-  await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a'], fetch }), (e: QuickAddError) => e.code === 'model')
+  await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a'], fetch }), (e: TrackyError) => e.code === 'model')
 })

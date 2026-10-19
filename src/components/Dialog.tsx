@@ -85,7 +85,7 @@ export function Dialog({
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
         {footer && (
-          <footer className="safe-bottom flex flex-wrap items-center gap-2 border-t border-line px-5 py-3">{footer}</footer>
+          <footer className="flex flex-wrap items-center gap-2 border-t border-line px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{footer}</footer>
         )}
       </div>
     </dialog>

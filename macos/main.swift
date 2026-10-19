@@ -147,7 +147,7 @@ private func note(_ message: String) {
 /// ⌥⌘T from any app opens Tracky. Carbon's hot keys need no Accessibility permission, unlike
 /// watching every key press. The handler is a C function, so it reaches the app through `shared`.
 @MainActor
-private enum QuickAddHotKey {
+private enum TrackyHotKey {
   static weak var shared: AppDelegate?
   private static var ref: EventHotKeyRef?
 
@@ -159,7 +159,7 @@ private enum QuickAddHotKey {
     let handler = InstallEventHandler(GetEventDispatcherTarget(), { _, _, _ in
       note("⌥⌘T pressed")
       DispatchQueue.main.async {
-        MainActor.assumeIsolated { QuickAddHotKey.shared?.quickAddFromAnywhere() }
+        MainActor.assumeIsolated { TrackyHotKey.shared?.trackyFromAnywhere() }
       }
       return noErr
     }, 1, &spec, nil, nil)
@@ -243,7 +243,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
       ),
     ])
     makeStatusItem()
-    QuickAddHotKey.register(for: self)
+    TrackyHotKey.register(for: self)
 
     // Stay hidden until the first page paints so dark mode never flashes white. The timer is a
     // fallback in case the load is slow.
@@ -651,10 +651,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     let menu = NSMenu()
     menu.autoenablesItems = false
     menu.addItem(menuItem("Open Daily Tracker", #selector(openFromMenu(_:))))
-    let quickAdd = menuItem("Ask Tracky…", #selector(quickAddFromMenu(_:)))
-    quickAdd.keyEquivalent = "t"
-    quickAdd.keyEquivalentModifierMask = [.command, .option]
-    menu.addItem(quickAdd)
+    let askTracky = menuItem("Ask Tracky…", #selector(trackyFromMenu(_:)))
+    askTracky.keyEquivalent = "t"
+    askTracky.keyEquivalentModifierMask = [.command, .option]
+    menu.addItem(askTracky)
     menu.addItem(.separator())
 
     menu.addItem(info("Today"))
@@ -712,18 +712,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
   }
 
   /// The global shortcut: whatever app you're in, Daily Tracker comes forward with Tracky open.
-  func quickAddFromAnywhere() {
+  func trackyFromAnywhere() {
     note("Opening Tracky (page listening: \(pageListening), window loaded: \(webView.url != nil))")
-    quickAddFromMenu(nil)
+    trackyFromMenu(nil)
   }
 
   @objc private func openFromMenu(_ sender: Any?) {
     bringToFront()
   }
 
-  @objc private func quickAddFromMenu(_ sender: Any?) {
+  @objc private func trackyFromMenu(_ sender: Any?) {
     bringToFront()
-    sendToPage(["type": "quickAdd"])
+    sendToPage(["type": "tracky"])
   }
 
   @objc private func openSettings(_ sender: Any?) {

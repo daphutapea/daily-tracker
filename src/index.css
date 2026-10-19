@@ -379,8 +379,16 @@
     --slide-from: -8px;
   }
 
+  /* The sidebar's labels fade back in when it opens from the rail, so the text doesn't pop. */
+  .label-in {
+    transition: opacity 150ms var(--ease-out);
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
   /* Keyboard actions stay instant (see lib/motion.ts). */
-  :root[data-input="key"] :is(.route-in, .slide-in) {
+  :root[data-input="key"] :is(.route-in, .slide-in, .label-in) {
     transition: none;
   }
 
@@ -412,7 +420,8 @@
     transition:
       opacity 200ms var(--ease-out),
       transform 200ms var(--ease-out);
-    transition-delay: calc(min(var(--i, 0), 4) * 40ms);
+    /* --after holds the drafts back until Tracky's reply has finished typing out. */
+    transition-delay: calc(var(--after, 0ms) + min(var(--i, 0), 4) * 40ms);
     @starting-style {
       opacity: 0;
       transform: translateY(4px);
@@ -420,29 +429,26 @@
   }
 
   /*
-   * While the AI reads a note (one to several seconds), a short line sweeps along the bottom of the
-   * note so the wait doesn't look frozen. It is the only looping motion in the app and exists only
-   * while a request is in flight. It shows after 300ms, so a quick answer never flashes it.
+   * While Tracky works (one to several seconds), a band of light sweeps across its status, as Claude
+   * shows when it thinks, so the wait doesn't look frozen. It is the only looping motion in the app
+   * and exists only while a request is in flight. It shows after 300ms, so a quick answer never
+   * flashes it. The darkest point is --ink and the lightest --ink-3, which still reads at 4.5:1.
    */
-  .working-line {
-    position: absolute;
-    inset-inline: 1px;
-    bottom: 1px;
-    height: 2px;
-    overflow: hidden;
-    border-radius: 0 0 var(--radius-control) var(--radius-control);
+  .thinking {
+    width: fit-content;
+    color: transparent;
+    background: linear-gradient(90deg, var(--ink-3) 35%, var(--ink) 50%, var(--ink-3) 65%) 0 0 / 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
     opacity: 0;
-    animation: working-show 150ms var(--ease-out) 300ms forwards;
+    animation:
+      thinking-show 150ms var(--ease-out) 300ms forwards,
+      thinking-sweep 1.6s linear 300ms infinite;
   }
-  .working-line::before {
-    content: "";
-    position: absolute;
-    inset-block: 0;
-    left: 0;
-    width: 30%;
-    background: var(--ink-2);
-    /* -100% to 333% of its own width carries it from just off the left edge to just off the right. */
-    animation: working-sweep 1.2s linear infinite;
+
+  /* Tracky's answer appears word by word; components/Tracky.tsx sets each word's --d. */
+  .type-in {
+    animation: type-in 180ms var(--ease-out) var(--d, 0ms) both;
   }
 }
 
@@ -507,17 +513,23 @@
   }
 }
 
-@keyframes working-show {
+@keyframes thinking-show {
   to {
     opacity: 1;
   }
 }
-@keyframes working-sweep {
+@keyframes thinking-sweep {
   from {
-    transform: translateX(-100%);
+    background-position: 100% 0;
   }
   to {
-    transform: translateX(333%);
+    background-position: 0% 0;
+  }
+}
+@keyframes type-in {
+  from {
+    opacity: 0;
+    filter: blur(2px);
   }
 }
 
@@ -573,7 +585,7 @@ dialog.sheet.sheet-sm {
 dialog.sheet.sheet-chat {
   height: min(760px, calc(100dvh - 48px));
 }
-/* Pinned near the top so a dialog whose content grows (Quick add's drafts) extends downward. Phones
+/* Pinned near the top so a dialog whose content grows (Tracky's drafts) extends downward. Phones
    keep the bottom sheet. */
 @media (min-width: 640px) {
   dialog.sheet.sheet-top {
@@ -657,14 +669,19 @@ dialog.sheet.sheet-instant::backdrop {
   .chip:active:not(:disabled) {
     scale: none;
   }
-  /* Drafts still fade in, without rising. The busy line goes; the button keeps saying Reading…. */
+  /* Drafts still fade in, without rising. Tracky's status stays still and its answers appear whole. */
   .draft-in {
     @starting-style {
       transform: none;
     }
   }
-  .working-line {
-    display: none;
+  .thinking {
+    color: var(--ink-2);
+    background: none;
+    animation: thinking-show 150ms ease 300ms forwards;
+  }
+  .type-in {
+    animation: none;
   }
   .pop-in {
     @starting-style {

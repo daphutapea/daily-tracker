@@ -1,7 +1,7 @@
 {
   "name": "daily-tracker",
   "private": true,
-  "version": "1.8.0",
+  "version": "1.9.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,8 +13,8 @@
     "db:types": "supabase gen types typescript --local > src/lib/database.types.ts",
     "logo": "xcrun swift scripts/make-logo.swift",
     "app": "bash scripts/build-mac-app.sh",
-    "test:functions": "node --test supabase/functions/quick-add/logic.test.ts supabase/functions/quick-add/eval/grade.test.ts",
-    "eval:quick-add": "node supabase/functions/quick-add/eval/run_eval.ts",
+    "test:functions": "node --test supabase/functions/tracky/logic.test.ts supabase/functions/tracky/eval/grade.test.ts",
+    "eval:tracky": "node supabase/functions/tracky/eval/run_eval.ts",
     "test": "npm run test:functions && node --test scripts/changelog.test.mjs",
     "test:e2e": "playwright test"
   },

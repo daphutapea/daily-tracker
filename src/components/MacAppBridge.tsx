@@ -12,7 +12,7 @@ import {
 import { useEvents, useProfile, useSetTaskStatus, useTasks } from '@/lib/queries'
 import { todaySummary, upcomingReminders, upcomingSummaries } from '@/lib/reminders'
 import { useNow } from '@/lib/useNow'
-import { useOpenQuickAdd } from './quickAddContext'
+import { useOpenTracky } from './trackyContext'
 
 /**
  * Rendered only in the Mac app. Keeps the reminders macOS holds in step with your tasks and events,
@@ -28,11 +28,11 @@ export function MacAppBridge() {
   const now = useNow()
   const navigate = useNavigate()
   const setStatus = useSetTaskStatus()
-  const openQuickAdd = useOpenQuickAdd()
+  const openTracky = useOpenTracky()
 
   const handle = useEffectEvent((m: FromMac) => {
     if (m.type === 'open') navigate(m.path)
-    if (m.type === 'quickAdd') openQuickAdd({ instant: true })
+    if (m.type === 'tracky') openTracky({ instant: true })
     if (m.type === 'saved') toast.success(`Saved ${m.name}`)
     if (m.type === 'done') {
       setStatus.mutate({ id: m.taskId, status: 'done' })

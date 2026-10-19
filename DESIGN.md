@@ -123,6 +123,12 @@ the teal spread thin and the "now" line stop standing out.
   with "- ". Each answer ends with a quiet line naming the model that wrote it.
 - Enter sends, Shift+Enter starts a new line, and text being composed with an input method is left
   alone. On a phone Return starts a new line and the send button sends.
+- The chat is kept on the device (the last 60 messages and any drafts not yet added) until New chat
+  or `/clear`. `/compact` replaces it with Tracky's own few-line summary, marked "Earlier chat,
+  compacted", which Tracky reads as context from then on. Typing / lists the commands above the box.
+- The sidebar folds into a 60px icon rail with every label as a tooltip and for screen readers, and
+  its right edge drags between 200 and 360px; narrower than 150px folds it. The edge is a keyboard
+  separator too. Its state is kept per device.
 - Overdue rows carry a quiet text button, Tomorrow, at the right. Overdue is the one state where the
   next action is nearly always the same, so it gets a shortcut; other rows stay clean. Every move
   offers Undo in its toast rather than asking first: moving is easy to reverse, so a question would
@@ -170,22 +176,32 @@ the teal spread thin and the "now" line stop standing out.
 - Board drag: the card lifts into a floating copy (shadow, scale 1.02) while the original dims in
   place; on drop the copy settles into its new column in 200ms with ease-out.
 - Switching palettes never animates; colors change in one frame.
-- Nothing loops, with one exception: while Tracky reads, a short `--ink-2` line
-  sweeps under its name (1.2s, linear). A wait of one to several seconds with nothing
-  moving looks frozen; a database load of a tenth of a second doesn't, which is why other loading
-  states stay as text. The line appears only after 300ms, so a quick answer never flashes it, and it
-  disappears the moment the answer arrives.
-- Tracky's answer rises into place (4px and opacity, 200ms ease-out): its reply first, then each draft
-  40ms apart, capped at 160ms, so they read as separate things to check. Your own message appears at
-  once, because you sent it with a key. Removing a draft is instant: a fade would still leave the
+- Nothing loops, with one exception: while Tracky works, a band of light sweeps across its status
+  ("Reading…", "Compacting the chat…"), from `--ink-3` through `--ink` (1.6s, linear), as Claude shows
+  when it thinks. A wait of one to several seconds with nothing moving looks frozen; a database load
+  of a tenth of a second doesn't, which is why other loading states stay as text. It appears only
+  after 300ms, so a quick answer never flashes it, and after four seconds the status says it is still
+  working.
+- Tracky's answer appears word by word, like Claude's: each word fades in from a 2px blur over 180ms,
+  about 25ms after the one before, capped so the whole answer takes at most 650ms. The answer is
+  already there in full (screen readers and copying get it whole); only its appearance is paced.
+  Then its drafts rise into place (4px and opacity, 200ms ease-out), 40ms apart, capped at 160ms, so
+  they read as separate things to check. Only answers that just arrived do this: reopening Tracky or
+  restoring the chat shows everything at once. Your own message appears at once, because you sent it
+  with a key.
+- The sidebar folding or opening from its button slides the page into place: the layout changes at
+  once and a transform carries the content from where it was (200ms, `cubic-bezier(0.77, 0, 0.175,
+  1)`); the labels fade back in over 150ms. From ⌘\, or with reduced motion, it just changes.
+  Dragging the edge follows the pointer with no easing. Removing a draft is instant: a fade would still leave the
   cards below jumping up. Opening a draft's fields is instant too.
 - Keyboard shortcuts open things instantly with no animation: Tracky opened with Cmd+K skips the
   dialog's scale and fade, while the same dialog opened by a click still animates. The same goes
   for pages and months: after a key press (Tab and Enter on a link, Cmd+,) they change without the
   fade or slide. `lib/motion.ts` notes whether the last input was a key or a pointer.
-- `prefers-reduced-motion`: keep fades, drop movement. The drafts only fade, and the busy line is
-  hidden; Tracky's answer area still says Reading…. The intro shows the ruler, the line and the greeting in
-  place and fades them in, then leaves after 0.9s. Months, weeks and new rows only fade.
+- `prefers-reduced-motion`: keep fades, drop movement. Tracky's drafts only fade, its answers appear
+  whole, and its status doesn't shimmer. The intro shows the ruler, the line and the greeting in place
+  and fades them in, then leaves after 0.9s. Months, weeks and new rows only fade, and the sidebar
+  folds without sliding the page.
 
 ## Copy
 

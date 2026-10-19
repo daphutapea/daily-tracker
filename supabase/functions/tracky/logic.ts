@@ -24,7 +24,7 @@ export interface ChatTurn {
   text: string
 }
 
-export interface QuickAddRequest {
+export interface TrackyRequest {
   text: string
   /** The device's local date and time, "YYYY-MM-DDTHH:mm". */
   now: string
@@ -53,15 +53,15 @@ export interface ProposedItem {
   location: string | null
 }
 
-export interface QuickAddResult {
+export interface TrackyResult {
   items: ProposedItem[]
   reply: string | null
   model: string
 }
 
-export class QuickAddError extends Error {
+export class TrackyError extends Error {
   readonly code: 'quota' | 'busy' | 'model' | 'bad_request' | 'key'
-  constructor(code: QuickAddError['code'], message: string) {
+  constructor(code: TrackyError['code'], message: string) {
     super(message)
     this.code = code
   }
@@ -101,11 +101,13 @@ Rules:
   example "cek invoce yg baru" becomes "Cek invoice yang baru", and "prep slides fr the demo"
   becomes "Prep slides for the demo". Never copy a typo into a title. Keep codes and project names
   as written, apart from capitals. Leave dates and times out of the title.
-- One item per thing to do or attend. Never invent items the note doesn't mention. "Remind me"
+- One item per thing to do or attend. Apart from the current drafts, never invent items the note
+  doesn't mention. There can be at most 10 drafts at a time. "Remind me"
   sets remind_minutes_before on the item it refers to; it is not an item of its own, and an event
   doesn't need a separate task to go to it.
-- If the note contains nothing to add and asks nothing, return no items and use reply to say why in
-  one sentence. Also use reply, briefly, when you had to guess something important.
+- If the note contains nothing to add and asks nothing, return the current drafts unchanged (no
+  items when there are none) and use reply to say why in one sentence. Also use reply, briefly,
+  when you had to guess something important.
 - reply is in the note's language, in the first person, in plain text: no greetings, emoji, or
   markdown such as ** or #. For a list, start each line with "- ".
 - If the note asks who or what you are, answer in reply: you are Tracky, Daily Tracker's assistant,
@@ -204,7 +206,7 @@ export function scheduleLine(e: ScheduleEntry, now: string): string {
   return `- Task, ${details.join(', ')}: ${e.title}`
 }
 
-export function buildUserMessage(req: QuickAddRequest): string {
+export function buildUserMessage(req: TrackyRequest): string {
   const weekday = WEEKDAYS[new Date(`${req.now.slice(0, 10)}T12:00:00Z`).getUTCDay()]
   const history = req.history ?? []
   const drafts = req.drafts ?? []
@@ -225,13 +227,13 @@ export function buildUserMessage(req: QuickAddRequest): string {
 }
 
 /** Checks the request body before any model call. */
-export function parseRequest(body: unknown): QuickAddRequest {
+export function parseRequest(body: unknown): TrackyRequest {
   const b = (body ?? {}) as Record<string, unknown>
   const text = typeof b.text === 'string' ? b.text.trim() : ''
-  if (!text) throw new QuickAddError('bad_request', 'Write something to add.')
-  if (text.length > 2000) throw new QuickAddError('bad_request', 'That note is too long. Keep it under 2,000 characters.')
+  if (!text) throw new TrackyError('bad_request', 'Write something to add.')
+  if (text.length > 2000) throw new TrackyError('bad_request', 'That note is too long. Keep it under 2,000 characters.')
   const now = typeof b.now === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(b.now) ? b.now : null
-  if (!now) throw new QuickAddError('bad_request', 'Missing the current date and time.')
+  if (!now) throw new TrackyError('bad_request', 'Missing the current date and time.')
   const timezone = typeof b.timezone === 'string' && b.timezone.length < 64 ? b.timezone : 'UTC'
   const projects = Array.isArray(b.projects)
     ? b.projects.filter((p): p is string => typeof p === 'string' && p.length <= 60).slice(0, 50)
@@ -246,7 +248,7 @@ export function parseRequest(body: unknown): QuickAddRequest {
         .map((t) => ({ role: t.role, text: t.text.trim().slice(0, 2000) }))
     : []
   // Drafts come back from the browser, so they go through the same checks as the model's answer.
-  const drafts = validateItems({ items: b.drafts }, projects)
+  const drafts = validateItems({ items: b.drafts }, projects, { asTyped: true })
   const schedule = Array.isArray(b.schedule) ? b.schedule.slice(0, MAX_SCHEDULE).flatMap(parseScheduleEntry) : []
   return { text, now, timezone, projects, history, drafts, schedule }
 }
@@ -287,8 +289,13 @@ const isDate = (v: unknown): v is string => {
 }
 const isTime = (v: unknown): v is string => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v)
 
-/** Keeps only well-formed items; anything the app couldn't save safely is dropped or nulled. */
-export function validateItems(raw: unknown, projects: string[]): ProposedItem[] {
+/**
+ * Keeps only well-formed items; anything the app couldn't save safely is dropped or nulled.
+ * `asTyped` is for drafts coming back from the browser: what the person typed stays as it is (an
+ * empty or lower-case title, all day turned off, an end before the start), because the app already
+ * blocks Add until they fix it, and dropping or repairing a draft here would renumber "the second one".
+ */
+export function validateItems(raw: unknown, projects: string[], { asTyped = false } = {}): ProposedItem[] {
   const list = Array.isArray((raw as { items?: unknown })?.items) ? (raw as { items: unknown[] }).items : []
   const byLower = new Map(projects.map((p) => [p.toLowerCase(), p]))
   const items: ProposedItem[] = []
@@ -296,13 +303,14 @@ export function validateItems(raw: unknown, projects: string[]): ProposedItem[] 
   for (const entry of list.slice(0, MAX_ITEMS)) {
     const r = (entry ?? {}) as Record<string, unknown>
     const raw = typeof r.title === 'string' ? r.title.trim().slice(0, 200) : ''
-    // A title starts with a capital whatever the model wrote; the rest is left as it is.
-    const title = raw.charAt(0).toUpperCase() + raw.slice(1)
-    if (!title) continue
+    // The model's titles start with a capital, unless the first word already has one inside it
+    // ("iPhone", "eBay"). The rest is left as it is.
+    const title = asTyped || /^\p{Ll}\S*\p{Lu}/u.test(raw) ? raw : raw.charAt(0).toUpperCase() + raw.slice(1)
+    if (!title && !(asTyped && typeof r.title === 'string')) continue
     const kind = r.kind === 'event' ? 'event' : 'task'
     const date = isDate(r.date) ? r.date : null
     const time = isTime(r.time) ? r.time : null
-    const endTime = isTime(r.end_time) && time && r.end_time > time ? r.end_time : null
+    const endTime = isTime(r.end_time) && time && (asTyped || r.end_time > time) ? r.end_time : null
     const priority = PRIORITIES.includes(r.priority as (typeof PRIORITIES)[number])
       ? (r.priority as ProposedItem['priority'])
       : 'medium'
@@ -323,7 +331,7 @@ export function validateItems(raw: unknown, projects: string[]): ProposedItem[] 
       time,
       end_time: kind === 'event' ? endTime : null,
       // An event with a day but no time can only be all day; a task never is.
-      all_day: kind === 'event' && (r.all_day === true || (date !== null && time === null)),
+      all_day: kind === 'event' && (r.all_day === true || (!asTyped && date !== null && time === null)),
       priority,
       project,
       remind_minutes_before: remind,
@@ -346,9 +354,9 @@ type FetchLike = (url: string, init: { method: string; headers: Record<string, s
  * model would be sent the same request.
  */
 export async function proposeItems(
-  req: QuickAddRequest,
+  req: TrackyRequest,
   opts: { apiKey: string; models: string[]; fetch: FetchLike },
-): Promise<QuickAddResult> {
+): Promise<TrackyResult> {
   const failures = new Set<'day' | 'minute' | 'busy' | 'unavailable'>()
   for (const model of opts.models) {
     const res = await opts.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
@@ -364,9 +372,9 @@ export async function proposeItems(
     if (res.status === 400 || res.status === 401) {
       const detail = await res.text()
       if (/api[ _]?key/i.test(detail)) {
-        throw new QuickAddError('key', 'Google rejected the Gemini API key. Check the GEMINI_API_KEY secret in Supabase.')
+        throw new TrackyError('key', 'Google rejected the Gemini API key. Check the GEMINI_API_KEY secret in Supabase.')
       }
-      throw new QuickAddError('model', `The AI service returned an error (${res.status}). Try rephrasing the note.`)
+      throw new TrackyError('model', `The AI service returned an error (${res.status}). Try rephrasing the note.`)
     }
     if (res.status === 429) {
       // Google sends 429 for its per-minute and its per-day limits alike; only the quota id differs.
@@ -382,7 +390,7 @@ export async function proposeItems(
       continue
     }
     if (!res.ok) {
-      throw new QuickAddError('model', `The AI service returned an error (${res.status}). Try again in a moment.`)
+      throw new TrackyError('model', `The AI service returned an error (${res.status}). Try again in a moment.`)
     }
 
     const data = (await res.json()) as {
@@ -393,22 +401,28 @@ export async function proposeItems(
     try {
       parsed = JSON.parse(text)
     } catch {
-      throw new QuickAddError('model', 'The AI sent back something unreadable. Try rephrasing the note.')
+      throw new TrackyError('model', 'The AI sent back something unreadable. Try rephrasing the note.')
     }
     const reply = (parsed as { reply?: unknown }).reply
+    const said = typeof reply === 'string' && reply.trim() ? reply.trim().slice(0, MAX_REPLY) : null
+    // Past ten drafts the rest are cut; say so rather than let them vanish.
+    const found = (parsed as { items?: unknown }).items
+    const cut = Array.isArray(found) && found.length > MAX_ITEMS
+      ? `I can hold ${MAX_ITEMS} drafts at a time, so I kept the first ${MAX_ITEMS}. Add these, then ask me for the rest.`
+      : null
     return {
       items: validateItems(parsed, req.projects),
-      reply: typeof reply === 'string' && reply.trim() ? reply.trim().slice(0, MAX_REPLY) : null,
+      reply: [said, cut].filter(Boolean).join('\n') || null,
       model,
     }
   }
 
   // A busy model or a per-minute limit may clear in a minute; a used-up daily allowance won't.
   if (failures.has('busy') || failures.has('minute')) {
-    throw new QuickAddError('busy', 'The AI is busy right now. Try again in a minute.')
+    throw new TrackyError('busy', 'The AI is busy right now. Try again in a minute.')
   }
   if (failures.has('day')) {
-    throw new QuickAddError('quota', "Today's free AI allowance is used up. Add items by hand, or try again tomorrow.")
+    throw new TrackyError('quota', "Today's free AI allowance is used up. Add items by hand, or try again tomorrow.")
   }
-  throw new QuickAddError('model', 'None of the configured AI models are available to this API key.')
+  throw new TrackyError('model', 'None of the configured AI models are available to this API key.')
 }

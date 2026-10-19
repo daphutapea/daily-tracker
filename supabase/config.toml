@@ -414,7 +414,7 @@ enabled = true
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
 
-# The function checks the signed-in user itself (see quick-add/index.ts), so the gateway's JWT check
+# The function checks the signed-in user itself (see tracky/index.ts), so the gateway's JWT check
 # is off; that also keeps it working with the newer publishable keys.
-[functions.quick-add]
+[functions.tracky]
 verify_jwt = false
