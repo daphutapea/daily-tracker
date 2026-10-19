@@ -4,8 +4,8 @@ How often the AI reads a note correctly, measured against notes whose right answ
 hand first.
 
 **Latest result: 34/34 on gemini-3.5-flash-lite, one run on 16 Oct 2026, typo notes included.**
-gemini-3.6-flash has not been measured since the fixes below. Read the [Limitations](#limitations)
-before quoting either.
+gemini-3.6-flash is nearly through: all 25 notes graded so far were right, and 9 typo notes are still
+to run. Read the [Limitations](#limitations) before quoting either.
 
 ## Why
 
@@ -44,6 +44,8 @@ Titles are checked loosely on purpose (`"title_has": ["dennis"]`), because "Sync
 
 | Date | Model | Passed | Notes |
 |---|---|---:|---|
+| 18 Oct 2026 | gemini-3.6-flash | 25/25 so far | `--remaining`, adding 14/14 to the 11 from 16 Oct. Every kind passed, including the 3 refusals and the first typo note ("Sync with Mr. Dennis", 15:00 to 16:00, then "Work on ATLAS improvements"). 7 requests got a 503 and the allowance ran out with 9 typo notes left. |
+| 16 Oct 2026 | gemini-3.6-flash | 11/11 so far | Part 1, after all the fixes. Every note it answered was right. 8 of the day's 20 requests got a 503 from Google, so one note stayed busy after its retries and the allowance ran out with 5 notes of part 1 left. The other 23 notes are still to run. |
 | 16 Oct 2026 | gemini-3.5-flash-lite | 34/34 | One run, after the typo round below. Every kind passed, all 10 typo notes included. |
 | 16 Oct 2026 | gemini-3.5-flash-lite | 7/10 typo notes | The typo notes alone, before the typo round: dates and times right, misspellings copied into titles. |
 | 15 Oct 2026 | gemini-3.5-flash-lite | 24/24 | One run, after the fixes below. Every kind passed, including all 3 refusals. |
@@ -98,11 +100,17 @@ npm run eval:quick-add
 ```
 
 Options: `--model` (default `gemini-3.6-flash`), `--runs 3` to repeat the set and find flaky cases,
-`--pause 6` seconds between requests to stay inside the free tier's per-minute limit, and
-`--only id1,id2` to rerun some cases, and `--part 1/2` to run the first half (then `--part 2/2` on
-another day) for a model whose free allowance is smaller than the set. Parts and `--only` merge into
-the model's results file, so they add up to one score. One run is 34 requests out of the model's free daily
-allowance. Each run writes `results.json` with every failure and what the model returned.
+`--pause 6` seconds between requests to stay inside the free tier's per-minute limit, `--only id1,id2`
+to rerun some cases, and `--part 1/2` to run the first half (then `--part 2/2` on another day) for a
+model whose free allowance is smaller than the set. `--remaining` runs only the notes that model has no
+graded answer for yet, which is the easiest way to finish a set over several days. Parts, `--only` and
+`--remaining` merge into the model's results file, so they add up to one score. One run is 34 requests
+out of the model's free daily allowance. Each run writes `results-<model>.json` with every failure and
+what the model returned.
+
+When Google answers 503 (busy), the note is retried twice, 20 seconds apart. If it is still busy, the
+note is skipped and not graded, since that says nothing about the answer. `--remaining` picks it up
+next time.
 
 It calls the same `proposeItems()` the server function uses, against one model with no fallback, so
 the score belongs to the model you named.
@@ -121,7 +129,8 @@ npm run test:functions
 - Everything is read on one Thursday morning. Notes written late at night, or across a month or year
   end, aren't covered.
 - Free-tier models change without notice. A score is for the model on the day it ran.
-- The 24/24 is one run. Run `--runs 3` to see whether any case passes only sometimes.
-- gemini-3.6-flash allows 20 free requests a day, fewer than the 34 notes, so measuring it takes two
-  days: `--part 1/2`, then `--part 2/2`. Requests answered with 503 (Google busy) count against the
-  allowance too, so run it when the model isn't overloaded.
+- The 34/34 is one run. Run `--runs 3` to see whether any case passes only sometimes.
+- gemini-3.6-flash allows 20 free requests a day, fewer than the 34 notes, so measuring it takes at
+  least two days. Requests answered with 503 (Google busy) count against the allowance too: about a
+  third of them on both 16 and 18 Oct. Run `--remaining` each day until nothing is left. The allowance resets at midnight
+  Pacific time, which is 14:00 in Jakarta.

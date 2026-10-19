@@ -1,0 +1,642 @@
+{
+  "model": "gemini-3.6-flash",
+  "updated_at": "2026-10-18T13:01:00.916Z",
+  "runs": 1,
+  "passed": 25,
+  "attempted": 25,
+  "by_kind": {
+    "task": {
+      "passed": 8,
+      "attempted": 8
+    },
+    "event": {
+      "passed": 8,
+      "attempted": 8
+    },
+    "multi": {
+      "passed": 3,
+      "attempted": 3
+    },
+    "either": {
+      "passed": 2,
+      "attempted": 2
+    },
+    "refusal": {
+      "passed": 3,
+      "attempted": 3
+    },
+    "typo": {
+      "passed": 1,
+      "attempted": 1
+    }
+  },
+  "flaky": [],
+  "not_run": [
+    "typo_weekday_and_words",
+    "typo_compact_time",
+    "typo_indonesian_slang",
+    "typo_project_name",
+    "typo_reminder_phrase",
+    "typo_next_week_abbrev",
+    "typo_joined_words",
+    "typo_dotted_time",
+    "typo_indonesian_word"
+  ],
+  "cases": [
+    {
+      "id": "task_by_weekday",
+      "kind": "task",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "task",
+          "title": "Finish the labelling sheet",
+          "date": "2026-10-16",
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-16T07:17:53.020Z"
+    },
+    {
+      "id": "event_with_time",
+      "kind": "event",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "date": "2026-10-20",
+          "time": "10:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-16T07:17:53.020Z"
+    },
+    {
+      "id": "event_range_and_reminder",
+      "kind": "event",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "date": "2026-10-20",
+          "time": "10:00",
+          "end_time": "11:00",
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": 15,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-16T07:17:53.020Z"
+    },
+    {
+      "id": "task_high_priority_project",
+      "kind": "task",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "task",
+          "title": "Submit the ATLAS weekly report",
+          "date": "2026-10-16",
+          "time": "17:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "high",
+          "project": "ATLAS",
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-16T07:17:53.020Z"
+    },
+    {
+      "id": "task_urgent",
+      "kind": "task",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "task",
+          "title": "Renew the passport photo",
+          "date": "2026-10-19",
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "urgent",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-16T07:17:53.020Z"
+    },
+    {
+      "id": "two_items_example",
+      "kind": "multi",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "date": "2026-10-20",
+          "time": "10:00",
+          "end_time": "11:00",
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": 15,
+          "location": null
+        },
+        {
+          "kind": "task",
+          "title": "Finish the labelling sheet",
+          "date": "2026-10-16",
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "high",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-16T07:17:53.020Z"
+    },
+    {
+      "id": "three_items_mixed",
+      "kind": "multi",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Dentist",
+          "date": "2026-10-17",
+          "time": "09:30",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": "Personal",
+          "remind_minutes_before": null,
+          "location": null
+        },
+        {
+          "kind": "event",
+          "title": "Call Mom",
+          "date": "2026-10-18",
+          "time": "19:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": "Personal",
+          "remind_minutes_before": null,
+          "location": null
+        },
+        {
+          "kind": "task",
+          "title": "Pay the internet bill",
+          "date": "2026-10-20",
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": "Personal",
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "all_day_event",
+      "kind": "event",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Company offsite",
+          "date": "2026-10-21",
+          "time": null,
+          "end_time": null,
+          "all_day": true,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-16T07:17:53.020Z"
+    },
+    {
+      "id": "next_friday",
+      "kind": "event",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Quarterly review meeting",
+          "date": "2026-10-23",
+          "time": "14:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-16T07:17:53.020Z"
+    },
+    {
+      "id": "indonesian_besok",
+      "kind": "event",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Rapat dengan tim ATLAS",
+          "date": "2026-10-16",
+          "time": "15:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": "ATLAS",
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-16T07:17:53.020Z"
+    },
+    {
+      "id": "indonesian_lusa_penting",
+      "kind": "task",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "task",
+          "title": "Kirim laporan ke Pak Budi",
+          "date": "2026-10-17",
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "high",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-16T07:17:53.020Z"
+    },
+    {
+      "id": "indonesian_kamis_depan",
+      "kind": "event",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Meeting dengan vendor",
+          "date": "2026-10-22",
+          "time": "10:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-16T07:17:53.020Z"
+    },
+    {
+      "id": "reminder_one_hour",
+      "kind": "event",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Flight to Singapore",
+          "date": "2026-10-18",
+          "time": "06:40",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": 60,
+          "location": "Singapore"
+        }
+      ],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "reminder_day_before_next_month",
+      "kind": "task",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "task",
+          "title": "Pay rent",
+          "date": "2026-11-01",
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": "Personal",
+          "remind_minutes_before": 1440,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "tonight_24h_range",
+      "kind": "event",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Deploy window",
+          "date": "2026-10-15",
+          "time": "22:00",
+          "end_time": "23:30",
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "relative_hours",
+      "kind": "either",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Call back the bank",
+          "date": "2026-10-15",
+          "time": "11:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "task_no_date",
+      "kind": "task",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "task",
+          "title": "Buy a new HDMI cable",
+          "date": null,
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "project_match",
+      "kind": "task",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "task",
+          "title": "Write the eval summary",
+          "date": "2026-10-19",
+          "time": "09:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": "FinChat",
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "project_none",
+      "kind": "task",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "task",
+          "title": "Plan the team lunch",
+          "date": "2026-10-16",
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "single_item_only",
+      "kind": "either",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "task",
+          "title": "Stretch",
+          "date": "2026-10-15",
+          "time": "15:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "four_items_today",
+      "kind": "multi",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Standup",
+          "date": "2026-10-15",
+          "time": "09:30",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        },
+        {
+          "kind": "task",
+          "title": "Review PR #42",
+          "date": "2026-10-15",
+          "time": "12:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        },
+        {
+          "kind": "event",
+          "title": "Gym",
+          "date": "2026-10-15",
+          "time": "18:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        },
+        {
+          "kind": "task",
+          "title": "Order groceries",
+          "date": "2026-10-15",
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "nothing_to_add_thanks",
+      "kind": "refusal",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "nothing_to_add_question",
+      "kind": "refusal",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "nothing_to_add_past_tense",
+      "kind": "refusal",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    },
+    {
+      "id": "typo_user_example",
+      "kind": "typo",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_items": [
+        {
+          "kind": "event",
+          "title": "Sync with Mr. Dennis",
+          "date": "2026-10-15",
+          "time": "15:00",
+          "end_time": "16:00",
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        },
+        {
+          "kind": "task",
+          "title": "Work on ATLAS improvements",
+          "date": "2026-10-15",
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": "ATLAS",
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "ran_at": "2026-10-18T13:01:00.916Z"
+    }
+  ]
+}

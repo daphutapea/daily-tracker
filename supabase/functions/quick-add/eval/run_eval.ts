@@ -3,15 +3,16 @@
  *
  *   npm run eval:quick-add -- --model gemini-3.6-flash --runs 3 --pause 6
  *   npm run eval:quick-add -- --part 1/2     (then --part 2/2 on another day)
+ *   npm run eval:quick-add -- --remaining    (only the cases this model has no graded answer for yet)
  *
  * A model whose free allowance is smaller than the set (gemini-3.6-flash allows 20 requests a day)
- * can be measured in parts. --part and --only merge into that model's results file instead of
- * replacing it, so the parts add up to one score.
+ * can be measured in parts. --part, --only and --remaining merge into that model's results file
+ * instead of replacing it, so the parts add up to one score.
  *
  * It calls the same proposeItems() the server function uses, against one model with no fallback, so
  * the score belongs to that model. The key comes from GEMINI_API_KEY in the environment or in
- * supabase/functions/.env. Each case is one request, so a full run uses about 24 of the day's free
- * requests per run.
+ * supabase/functions/.env. Each case is one request, so a full run uses about 34 of the day's free
+ * requests, more when Google is busy, because retries count too.
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
@@ -27,6 +28,7 @@ const { values: args } = parseArgs({
     pause: { type: 'string', default: '6' },
     only: { type: 'string' },
     part: { type: 'string' },
+    remaining: { type: 'boolean', default: false },
   },
 })
 const runs = Math.max(1, Number(args.runs))
@@ -51,7 +53,17 @@ const gold = JSON.parse(readFileSync(here('./gold_set.json'), 'utf8')) as {
   projects: string[]
   cases: GoldCase[]
 }
+function graded(): Set<string> {
+  const path = here(`./results-${args.model}.json`)
+  if (!existsSync(path)) return new Set()
+  const cases = (JSON.parse(readFileSync(path, 'utf8')).cases ?? []) as { id: string; attempts: number }[]
+  return new Set(cases.filter((c) => c.attempts > 0).map((c) => c.id))
+}
 function pick(): GoldCase[] {
+  if (args.remaining) {
+    const done = graded()
+    return gold.cases.filter((c) => !done.has(c.id))
+  }
   if (args.only) return gold.cases.filter((c) => args.only!.split(',').includes(c.id))
   if (args.part) {
     const [i, n] = args.part.split('/').map(Number)
@@ -77,7 +89,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 let first = true
 const resultsFile = `results-${args.model}.json`
 
-/** A busy model (503) is Google's problem, not the model's answer, so it is retried twice before it counts. */
+/** A busy model (503) is Google's problem, not the model's answer, so it is retried twice and then left ungraded. */
 async function askWithRetry(c: GoldCase) {
   for (let attempt = 1; ; attempt++) {
     try {
@@ -111,6 +123,10 @@ outer: for (let run = 1; run <= runs; run++) {
       if (e instanceof QuickAddError && (e.code === 'quota' || e.code === 'key')) {
         console.error(`\nStopped: ${e.message}`)
         break outer
+      }
+      if (e instanceof QuickAddError && e.code === 'busy') {
+        console.log(`skip  ${c.id}, Google stayed busy, so it is not graded`)
+        continue
       }
       t.attempts++
       t.problems.push(`run ${run}: error: ${e instanceof Error ? e.message : String(e)}`)
