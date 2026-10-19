@@ -146,7 +146,10 @@ tint (it fails in the dark palettes), and on `--accent-soft` only ink text or te
 - The board fills the window whenever Home's column is at least 56rem wide and the window at least
   42rem tall (the `board` variant: a container query on Home plus a height query). Each panel is as
   tall as its content up to the room left in its column, then scrolls inside itself, so nothing is
-  stretched to fill space. In a smaller window or on a phone the panels stack in reading order
+  stretched to fill space. Month and Numbers keep their full height; on a short window their
+  column scrolls as one. Between 48rem and 56rem (or wide but shorter than 42rem) the panels sit in
+  two columns: Today and In progress on the left, Next 7 days, Month and Numbers on the right. On a
+  phone the panels stack in reading order
   (Today, In progress and waiting, Next 7 days, Month, Numbers) and the page scrolls; long lists show
   their first rows (Today 6, In progress 4, Next 7 days 6) with "Show n more".
 - Tracky is the assistant's name, used wherever the feature is named (the dialog title, the sidebar's

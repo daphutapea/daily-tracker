@@ -186,6 +186,11 @@
   }
 }
 
+/* Set before first paint (index.html) while the intro is about to play, so the page doesn't flash light first. */
+:root[data-intro] body {
+  background: #133a68;
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -404,6 +409,10 @@
     }
     .row-hover:hover {
       background: var(--surface-2);
+    }
+    /* A grey icon square would vanish into its hovered tile. */
+    .row-hover:hover .stat-icon:is([data-tone="neutral"], [data-tone="quiet"]) {
+      background: var(--surface);
     }
     .row-hover-surface:hover {
       background: var(--surface);
@@ -735,6 +744,7 @@
 @container (48rem <= width < 56rem) {
   .home-split {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
     align-items: start;
   }
   .home-split > :first-child {
@@ -745,6 +755,7 @@
   @media (height < 42rem) {
     .home-split {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto 1fr;
       align-items: start;
     }
     .home-split > :first-child {

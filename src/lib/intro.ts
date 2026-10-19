@@ -25,6 +25,9 @@ function write(storage: () => Storage, key: string, value: string | null) {
 const listeners = new Set<() => void>()
 let playing = read(() => localStorage, OFF_KEY) !== 'off' && read(() => sessionStorage, SEEN_KEY) === null
 if (playing) write(() => sessionStorage, SEEN_KEY, '1')
+// index.html painted the page navy for the intro; the intro paints itself once it mounts.
+const clearBootColor = () => delete document.documentElement.dataset.intro
+if (!playing) clearBootColor()
 
 const emit = () => listeners.forEach((l) => l())
 const subscribe = (cb: () => void) => {
@@ -38,6 +41,7 @@ export function playIntro() {
   emit()
 }
 export function endIntro() {
+  clearBootColor()
   playing = false
   emit()
 }

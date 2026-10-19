@@ -63,12 +63,12 @@ export function MiniMonth({
               aria-label={parts.join(', ')}
               aria-current={isToday ? 'date' : undefined}
               onClick={() => onPick(d)}
-              className={`row-hover press flex h-11 flex-col items-center justify-center rounded-[6px] text-[13px] tnum board:pointer-fine:h-9 ${
+              className={`row-hover press flex h-11 flex-col items-center justify-center rounded-[6px] text-[13px] tnum board:pointer-fine:h-9 board:pointer-fine:gap-px ${
                 inMonth ? 'text-ink' : 'text-ink-3'
               }`}
             >
               <span
-                className={`grid size-7 place-items-center rounded-full ${isToday ? 'bg-accent font-semibold text-on-accent' : ''}`}
+                className={`grid size-7 place-items-center rounded-full board:pointer-fine:size-6 ${isToday ? 'bg-accent font-semibold text-on-accent' : ''}`}
               >
                 {format(d, 'd')}
               </span>

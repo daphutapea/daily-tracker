@@ -475,7 +475,9 @@ function PalettePreview({ palette }: { palette: Palette }) {
       <span className="mt-1.5 flex items-center gap-1.5 rounded-[4px] border border-line bg-surface p-2">
         <span className="block h-1.5 w-16 rounded-full bg-ink-3" />
         <span className="block size-1.5 rounded-full bg-progress" />
-        <span className="ml-auto block h-2.5 w-6 rounded-[3px] bg-warn-soft" />
+        <span className="ml-auto flex h-2.5 w-6 items-center rounded-[3px] bg-warn-soft px-1">
+          <span className="block h-1 w-full rounded-full bg-warn" />
+        </span>
       </span>
     </span>
   )

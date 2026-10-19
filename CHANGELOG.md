@@ -10,6 +10,7 @@
 ### Changed
 - Home fits on one screen on a computer. The counts sit right under the header; below them Today with In progress and waiting, then Next 7 days, then the month with Numbers, which shows one chart at a time (Finished, Deadlines, Open). A panel with more than fits scrolls inside itself, so no panel is stretched and the page doesn't scroll. In a medium window the panels sit in two columns, and on a phone they stack, with long lists cut short behind Show more.
 - Waiting is plum instead of amber, so amber means High priority only.
+- Segmented controls (List and Board, the Numbers charts) are toggle buttons, and the chosen one has a border, so it stands out from the others.
 
 ## v1.9 (2026-10-19)
 

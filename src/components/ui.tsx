@@ -155,16 +155,17 @@ export function Segmented<T extends string>({
   label: string
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-[6px] border border-line bg-surface p-0.5">
+    // Toggle buttons rather than radios: Tab reaches each one and the pressed one is announced. The
+    // pressed one also gets a border, since its fill alone is too close to the others to see.
+    <div role="group" aria-label={label} className="inline-flex rounded-[6px] border border-line bg-surface p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
-          role="radio"
-          aria-checked={value === o.value}
+          aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`press min-h-8 rounded-[4px] px-3 text-[13px] font-medium pointer-coarse:min-h-11 ${
-            value === o.value ? 'bg-surface-2 text-ink' : 'text-ink-2'
+          className={`press min-h-8 rounded-[4px] border px-3 text-[13px] font-medium pointer-coarse:min-h-11 ${
+            value === o.value ? 'border-line-strong bg-surface-2 text-ink' : 'border-transparent text-ink-2'
           }`}
         >
           {o.label}

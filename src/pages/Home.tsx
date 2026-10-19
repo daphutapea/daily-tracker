@@ -32,7 +32,6 @@ import {
   STATUSES,
   type CalEvent,
   type Project,
-  type TaskStatus,
   type TaskSummary,
 } from '@/lib/types'
 import { useNow } from '@/lib/useNow'
@@ -78,9 +77,9 @@ export function HomePage() {
     <div className="@container">
       <div className="flex flex-col gap-4 board:h-[calc(100dvh-4.25rem)] board:min-h-0">
         <header className="arrive hero shrink-0 px-4 pt-4 pb-3 md:px-5">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 board:flex-nowrap">
             {/* The clock comes first on screen; the greeting stays first for screen readers. */}
-            <div className="mr-auto flex flex-row-reverse items-center gap-4">
+            <div className="mr-auto flex min-w-0 flex-row-reverse items-center gap-4">
               <div className="min-w-0">
                 <h1 className="text-lg leading-tight font-semibold">
                   {greeting(now)}
@@ -90,7 +89,7 @@ export function HomePage() {
               </div>
               <Clock />
             </div>
-            <div className="flex w-full flex-wrap items-center gap-2 @3xl:w-auto">
+            <div className="flex w-full flex-wrap items-center gap-2 @3xl:w-auto board:min-w-0 board:flex-nowrap">
               <div className="grid flex-1 grid-cols-3 gap-2 @3xl:flex @3xl:flex-none">
                 <button
                   type="button"
@@ -127,7 +126,7 @@ export function HomePage() {
                 onClick={() => openTracky()}
                 aria-label="Ask Tracky: describe tasks or events in a sentence"
                 aria-keyshortcuts={shortcutKeys()}
-                className="field flex min-h-9 w-full items-center gap-2 text-left text-ink-3 @3xl:w-72"
+                className="field flex min-h-9 w-full items-center gap-2 text-left text-ink-3 @3xl:w-72 board:w-auto board:max-w-72 board:min-w-40 board:flex-1"
               >
                 <ChatTextIcon size={16} weight="bold" aria-hidden className="shrink-0" />
                 <span className="truncate">Tell Tracky what’s coming up</span>
@@ -144,7 +143,7 @@ export function HomePage() {
           <>
             {/* Phones: three tiles over two, both rows full. Wider: one row of five. */}
             <ul aria-label="Numbers at a glance" className="arrive grid shrink-0 grid-cols-6 gap-2 @3xl:grid-cols-5 @3xl:gap-3" style={{ '--i': 1 } as CSSProperties}>
-              <Stat to="/tasks" icon={ListChecksIcon} tone="neutral" label="Open tasks" value={d.open.length} strip={d.openByStatus} />
+              <Stat to="/tasks" icon={ListChecksIcon} tone="neutral" label="Open tasks" value={d.open.length} />
               <Stat to="/tasks?show=today" icon={TimerIcon} tone="today" label="Due today" value={d.dueToday.filter((t) => t.status !== 'done').length} />
               <Stat to="/tasks?show=overdue" icon={WarningIcon} tone={d.overdue.length > 0 ? 'danger' : 'quiet'} label="Overdue" value={d.overdue.length} />
               <Stat to="/tasks?show=done" icon={CheckCircleIcon} tone="ok" label="Done, 7 days" value={d.finishedCounts.reduce((a, b) => a + b, 0)} wide />
@@ -208,7 +207,8 @@ export function HomePage() {
                 </Panel>
               </div>
 
-              <div className="flex min-h-0 flex-col gap-4">
+              {/* Month and Numbers keep their full heights; on a short window this column scrolls as one. */}
+              <div className="flex min-h-0 flex-col gap-4 board:overflow-y-auto board:overscroll-contain">
                 <Panel title="Month" bare fixed>
                   <div className="px-3 pb-2">
                     <MiniMonth busy={d.busy} onPick={(day) => navigate(`/calendar?date=${format(day, 'yyyy-MM-dd')}`)} />
@@ -262,7 +262,7 @@ function TodayPanel({
   const firstAhead = d.todayItems.findIndex((item) => item.at > now.getTime())
   const nowAt = firstAhead > 0 ? firstAhead : -1
   return (
-    <Panel title="Today" aside={d.leftToday > 0 ? `${d.leftToday} left` : undefined}>
+    <Panel title="Today" fixed={empty} aside={d.leftToday > 0 ? `${d.leftToday} left` : undefined}>
       {empty ? (
         <StateMessage
           title="Nothing due today."
@@ -275,7 +275,10 @@ function TodayPanel({
         />
       ) : (
         <Capped limit={6} total={d.overdue.length + d.todayItems.length}>
-          {(extra) => (
+          {(extra) => {
+            // The Today heading hides with the rows under it; with none, it goes with the last overdue row.
+            const todayCut = extra(d.todayItems.length > 0 ? d.overdue.length : d.overdue.length - 1)
+            return (
             <>
               {d.overdue.length > 0 && (
                 <>
@@ -289,9 +292,11 @@ function TodayPanel({
                   </ul>
                 </>
               )}
-              {d.overdue.length > 0 && <SubHead extra={extra(d.overdue.length)}>Today</SubHead>}
+              {d.overdue.length > 0 && <SubHead extra={todayCut}>Today</SubHead>}
               {d.todayItems.length === 0 ? (
-                <p className="px-4 py-3 text-ink-2">Nothing else is scheduled for today.</p>
+                <p data-extra={todayCut || undefined} className="px-4 py-3 text-ink-2">
+                  Nothing else is scheduled for today.
+                </p>
               ) : (
                 <ul className="divide-y divide-line">
                   {d.todayItems.map((item, i) => (
@@ -303,7 +308,8 @@ function TodayPanel({
                 </ul>
               )}
             </>
-          )}
+            )
+          }}
         </Capped>
       )}
     </Panel>
@@ -312,13 +318,8 @@ function TodayPanel({
 
 function NowRule({ now, extra }: { now: Date; extra: boolean }) {
   return (
-    <li
-      role="separator"
-      aria-label={`Now, ${format(now, 'HH:mm')}`}
-      data-extra={extra || undefined}
-      className="flex items-center gap-2 px-4 py-1"
-    >
-      <span aria-hidden className="text-[12px] font-medium text-accent tnum">
+    <li data-extra={extra || undefined} className="flex items-center gap-2 px-4 py-1">
+      <span className="text-[12px] font-medium text-accent tnum">
         Now {format(now, 'HH:mm')}
       </span>
       <span aria-hidden className="h-0.5 flex-1 rounded-full bg-accent" />
@@ -381,8 +382,12 @@ function Capped({
           type="button"
           aria-expanded={open}
           aria-controls={id}
-          className="show-more row-hover w-full border-t border-line px-4 py-2 text-left text-[13px] font-medium text-ink-2 pointer-coarse:min-h-11"
-          onClick={() => setOpen((v) => !v)}
+          className="show-more row-hover -mt-px w-full border-t border-line px-4 py-2 text-left text-[13px] font-medium text-ink-2 focus-visible:-outline-offset-2 pointer-coarse:min-h-11"
+          onClick={() => {
+            // The rows appear above the button, so focus moves to the first of them.
+            if (!open) requestAnimationFrame(() => document.getElementById(id)?.querySelector<HTMLElement>('[data-extra] button')?.focus())
+            setOpen((v) => !v)
+          }}
         >
           {open ? 'Show fewer' : `Show ${hidden} more`}
         </button>
@@ -413,7 +418,7 @@ function NumbersPanel({ d }: { d: Derived }) {
     }
   }
   return (
-    <Panel title="Numbers" action={<Link to="/review" className="hit text-[13px] text-ink-2 hover:text-ink">Weekly review</Link>}>
+    <Panel title="Numbers" fixed action={<Link to="/review" className="hit text-[13px] text-ink-2 hover:text-ink">Weekly review</Link>}>
       <div className="space-y-3 px-4 pt-1 pb-4">
         <Segmented
           label="Numbers to show"
@@ -494,7 +499,7 @@ function Panel({
         </h2>
         {action}
       </div>
-      <div className={fixed ? '' : 'min-h-0 flex-1 board:overflow-y-auto board:overscroll-contain'}>{children}</div>
+      <div className={fixed ? '' : 'min-h-0 flex-1 board:scroll-py-2 board:overflow-y-auto board:overscroll-contain'}>{children}</div>
     </section>
   )
 }
@@ -545,14 +550,13 @@ function EventRow({ event, onOpen, extra = false }: { event: CalEvent; onOpen: (
 /** What a count's icon square says: today is teal, done green, events indigo, overdue red while above 0. */
 type Tone = 'neutral' | 'quiet' | 'today' | 'danger' | 'ok' | 'event'
 
-/** A count that opens its list. `strip` splits it by status under the label (open tasks). */
+/** A count that opens its list. */
 function Stat({
   to,
   icon: Glyph,
   tone,
   label,
   value,
-  strip,
   wide = false,
 }: {
   to: string
@@ -560,11 +564,9 @@ function Stat({
   tone: Tone
   label: string
   value: number
-  strip?: { status: TaskStatus; label: string; value: number }[]
   /** On a phone, the two tiles of the second row are wider. */
   wide?: boolean
 }) {
-  const parts = strip?.filter((p) => p.value > 0) ?? []
   return (
     <li className={`${wide ? 'col-span-3' : 'col-span-2'} @3xl:col-span-1`}>
       {/* Wide: the icon beside the number and label. Narrow: icon and number on one line, the label under them. */}
@@ -578,15 +580,7 @@ function Stat({
         <span className={`text-xl leading-tight font-semibold tnum ${tone === 'danger' ? 'text-danger' : ''}`}>{value}</span>
         <span className="col-span-2 text-[13px] leading-snug text-ink-2 @3xl:col-span-1 @3xl:col-start-2">
           {label}
-          {parts.length > 0 && <span className="sr-only">: {parts.map((p) => `${p.value} ${p.label.toLowerCase()}`).join(', ')}</span>}
         </span>
-        {parts.length > 0 && (
-          <span aria-hidden className="col-span-2 mt-1 flex h-1 gap-0.5 @3xl:col-span-1 @3xl:col-start-2">
-            {parts.map((p) => (
-              <span key={p.status} className={`rounded-full ${STATUS_COLOR[p.status]}`} style={{ flexGrow: p.value }} />
-            ))}
-          </span>
-        )}
       </Link>
     </li>
   )
@@ -678,11 +672,6 @@ function derive(tasks: TaskSummary[], events: CalEvent[], now: Date) {
     weekDone: dueThisWeek.filter((t) => t.status === 'done').length,
     upcoming: upcomingGroups,
     upcomingCount: seen,
-    openByStatus: STATUSES.filter((st) => st.value !== 'done').map((st) => ({
-      status: st.value,
-      label: st.label,
-      value: open.filter((t) => t.status === st.value).length,
-    })),
     active,
     last7,
     finishedCounts,

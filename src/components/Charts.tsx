@@ -17,7 +17,7 @@ export function FinishedPerDay({
 }) {
   const [asTable, setAsTable] = useState(false)
   // The bars stand in a 120px area (88px compact): 7px above the tallest bar for its axis line.
-  const area = compact ? 88 : 120
+  const area = compact ? 64 : 120
   const max = Math.max(1, ...counts)
   const total = counts.reduce((a, b) => a + b, 0)
   const today = useNow()
@@ -80,7 +80,7 @@ export function FinishedPerDay({
                     </div>
                     <span
                       role="tooltip"
-                      className={`pointer-events-none absolute bottom-full z-10 mb-1 rounded-[6px] border border-line bg-surface px-2 py-1 text-[12px] whitespace-nowrap opacity-0 shadow-float transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 ${
+                      className={`pointer-events-none absolute z-10 ${compact ? 'top-0' : 'bottom-full mb-1'} rounded-[6px] border border-line bg-surface px-2 py-1 text-[12px] whitespace-nowrap opacity-0 shadow-float transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 ${
                         // Kept inside the chart at both ends; a tooltip past the edge widens the page on a phone.
                         i < 2 ? 'left-0' : i > days.length - 3 ? 'right-0' : 'left-1/2 -translate-x-1/2'
                       }`}

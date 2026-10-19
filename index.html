@@ -17,6 +17,9 @@
         var dark = localStorage.getItem('dt-dark') === 'charcoal' ? 'charcoal' : 'navy'
         var isDark = mode === 'dark' || (mode !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
         document.documentElement.dataset.palette = isDark ? dark : light
+        // Mirrors lib/intro.ts: the intro is navy, so the page starts navy under it.
+        if (localStorage.getItem('dt-intro') !== 'off' && !sessionStorage.getItem('dt-intro-seen'))
+          document.documentElement.dataset.intro = ''
       } catch (e) {}
     </script>
   </head>

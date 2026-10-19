@@ -723,6 +723,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
   @objc private func trackyFromMenu(_ sender: Any?) {
     bringToFront()
+    // A loaded page that isn't listening is the sign-in screen; holding the request would open
+    // Tracky by surprise after signing in.
+    if !pageListening && webView.url != nil && !webView.isLoading { return }
     sendToPage(["type": "tracky"])
   }
 

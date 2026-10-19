@@ -68,8 +68,7 @@ events, and the teal line is the current time. A filled red diamond is a deadlin
 missed. Click any mark to open it. When several fall at almost the same time, such as three tasks due
 at 17:00, they share one mark with a number above it; click it to list them and open the one you want.
 
-Right under the header are five counts: open tasks (with a strip showing how many are to do, in
-progress and waiting), due today, overdue, done in the last 7 days, and events today. Click one to
+Right under the header are five counts: open tasks, due today, overdue, done in the last 7 days, and events today. Click one to
 open the matching list.
 
 | Panel | What it shows |

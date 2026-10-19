@@ -16,6 +16,7 @@ export function Intro() {
   const [leaving, setLeaving] = useState(false)
 
   useEffect(() => {
+    delete document.documentElement.dataset.intro
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
     const hold = window.setTimeout(() => setLeaving(true), reduce ? 900 : 1300)
     const skip = () => endIntro()
