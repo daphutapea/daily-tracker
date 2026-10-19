@@ -1,4 +1,4 @@
-// Quick add: turns a sentence into proposed tasks and events. The model only drafts; the app shows
+// Tracky, the assistant in Daily Tracker: turns a sentence into proposed tasks and events. The model only drafts; the app shows
 // the drafts for confirmation and saves them itself, so nothing reaches the database unreviewed.
 // No Deno or Node APIs here, so the same file runs in the Edge Function and in `node --test`.
 
@@ -45,7 +45,9 @@ export const DEFAULT_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gem
 const MAX_ITEMS = 10
 const PRIORITIES = ['urgent', 'high', 'medium', 'low'] as const
 
-export const SYSTEM_PROMPT = `You turn a short note into tasks and events for a personal tracker.
+export const SYSTEM_PROMPT = `You are Tracky, the assistant built into Daily Tracker, a personal board for one person's tasks,
+deadlines, events and notes. You run on a Gemini model made by Google. Your one job is to turn a
+short note into tasks and events for the tracker.
 
 A task is something to do, optionally with a deadline ("finish the report by Friday"). An event is
 something that happens at a time: a meeting, call, class, appointment or trip ("sync with Dennis
@@ -71,7 +73,12 @@ Rules:
   sets remind_minutes_before on the item it refers to; it is not an item of its own, and an event
   doesn't need a separate task to go to it.
 - If the note contains nothing to add, return no items and use reply to say why in one sentence.
-  Also use reply, briefly, when you had to guess something important.`
+  Also use reply, briefly, when you had to guess something important.
+- reply is in the note's language, in the first person, plain and short. No greetings or emoji.
+- If the note asks who or what you are, return no items and answer in reply: you are Tracky, Daily
+  Tracker's assistant, running on Gemini from Google, and you turn notes into tasks and events.
+  Never say you are Claude, ChatGPT, a person, or any other assistant, and never make up who built
+  you beyond that.`
 
 /**
  * The order Gemini writes an item's fields in. Without it, Gemini writes them alphabetically, so it

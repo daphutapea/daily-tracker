@@ -144,7 +144,7 @@ private func note(_ message: String) {
   }
 }
 
-/// ⌥⌘T from any app opens Quick add. Carbon's hot keys need no Accessibility permission, unlike
+/// ⌥⌘T from any app opens Tracky. Carbon's hot keys need no Accessibility permission, unlike
 /// watching every key press. The handler is a C function, so it reaches the app through `shared`.
 @MainActor
 private enum QuickAddHotKey {
@@ -651,7 +651,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     let menu = NSMenu()
     menu.autoenablesItems = false
     menu.addItem(menuItem("Open Daily Tracker", #selector(openFromMenu(_:))))
-    let quickAdd = menuItem("Quick Add…", #selector(quickAddFromMenu(_:)))
+    let quickAdd = menuItem("Ask Tracky…", #selector(quickAddFromMenu(_:)))
     quickAdd.keyEquivalent = "t"
     quickAdd.keyEquivalentModifierMask = [.command, .option]
     menu.addItem(quickAdd)
@@ -711,9 +711,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     sendToPage(["type": "open", "path": path])
   }
 
-  /// The global shortcut: whatever app you're in, Daily Tracker comes forward with Quick add open.
+  /// The global shortcut: whatever app you're in, Daily Tracker comes forward with Tracky open.
   func quickAddFromAnywhere() {
-    note("Opening Quick add (page listening: \(pageListening), window loaded: \(webView.url != nil))")
+    note("Opening Tracky (page listening: \(pageListening), window loaded: \(webView.url != nil))")
     quickAddFromMenu(nil)
   }
 

@@ -123,6 +123,15 @@ function TaskForm({
   }, [dirty, dirtyRef])
 
   const up = <K extends keyof FormState>(k: K, v: FormState[K]) => setF((s) => ({ ...s, [k]: v }))
+  // A reminder set relative to the deadline stays that far ahead of it when the deadline moves.
+  function moveDue(next: string) {
+    setF((s) => {
+      const remind = s.due && s.remind && next ? new Date(new Date(s.remind).getTime() + new Date(next).getTime() - new Date(s.due).getTime()) : null
+      if (!remind || Number.isNaN(remind.getTime())) return { ...s, due: next }
+      return { ...s, due: next, remind: format(remind, "yyyy-MM-dd'T'HH:mm") }
+    })
+  }
+
   const dueDate = f.due ? new Date(f.due) : null
   const remindDate = f.remind ? new Date(f.remind) : null
   const now = useNow(30_000)
@@ -262,9 +271,9 @@ function TaskForm({
             type="datetime-local"
             className="field"
             value={f.due}
-            onChange={(e) => up('due', e.target.value)}
+            onChange={(e) => moveDue(e.target.value)}
           />
-          <label className="mt-2 flex min-h-9 cursor-pointer items-center gap-2 text-ink-2">
+          <label className="mt-2 flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 text-ink-2">
             <input
               type="checkbox"
               className="size-4 accent-[var(--ink)]"

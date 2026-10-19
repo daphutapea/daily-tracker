@@ -124,6 +124,16 @@ function EventForm({
     }))
   }
 
+  // Moving the start keeps the event's length, the way calendars do, so the end can't end up first.
+  function moveStart(next: string) {
+    setF((s) => {
+      const parse = (v: string) => new Date(s.allDay ? `${v}T00:00` : v)
+      const end = s.start && s.end && next ? new Date(parse(s.end).getTime() + parse(next).getTime() - parse(s.start).getTime()) : null
+      if (!end || Number.isNaN(end.getTime())) return { ...s, start: next }
+      return { ...s, start: next, end: format(end, s.allDay ? 'yyyy-MM-dd' : "yyyy-MM-dd'T'HH:mm") }
+    })
+  }
+
   const startDate = f.start ? new Date(f.allDay ? `${f.start}T00:00` : f.start) : null
 
   async function submit(e?: FormEvent) {
@@ -185,7 +195,7 @@ function EventForm({
           onChange={(e) => up('title', e.target.value)}
         />
       </div>
-      <label className="flex min-h-9 cursor-pointer items-center gap-2 text-ink-2">
+      <label className="flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 text-ink-2">
         <input
           type="checkbox"
           className="size-4 accent-[var(--ink)]"
@@ -199,7 +209,7 @@ function EventForm({
           <label htmlFor="event-start" className="label">
             Starts
           </label>
-          <input id="event-start" type={inputType} className="field" value={f.start} onChange={(e) => up('start', e.target.value)} />
+          <input id="event-start" type={inputType} className="field" value={f.start} onChange={(e) => moveStart(e.target.value)} />
         </div>
         <div>
           <label htmlFor="event-end" className="label">

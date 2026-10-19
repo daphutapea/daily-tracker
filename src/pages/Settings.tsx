@@ -11,7 +11,6 @@ import { Link, useLocation } from 'react-router'
 import { toast } from 'sonner'
 import { useUserEmail } from '@/auth/sessionContext'
 import { Loading, QueryError, Segmented } from '@/components/ui'
-import { deviceTimeZone } from '@/lib/dates'
 import {
   inMacApp,
   postToMac,
@@ -79,7 +78,6 @@ function Section({ id, title, intro, children }: { id?: string; title: string; i
 function ProfileSection({ profile }: { profile: Profile }) {
   const update = useUpdateProfile()
   const [name, setName] = useState(profile.display_name ?? '')
-  const device = deviceTimeZone()
 
   async function save(e: FormEvent) {
     e.preventDefault()
@@ -107,23 +105,6 @@ function ProfileSection({ profile }: { profile: Profile }) {
           Save name
         </button>
       </form>
-      <p className="mt-4 text-ink-2">
-        Time zone: <span className="font-medium text-ink">{profile.timezone}</span>
-        {profile.timezone !== device && (
-          <>
-            {' '}
-            (this device is on {device}){' '}
-            <button
-              type="button"
-              className="font-medium text-ink underline underline-offset-2"
-              onClick={() => update.mutate({ timezone: device })}
-            >
-              Use {device}
-            </button>
-          </>
-        )}
-      </p>
-      <p className="mt-1 text-[13px] text-ink-3">Telegram reminders and the morning summary use this time zone.</p>
     </Section>
   )
 }
@@ -153,7 +134,7 @@ function SummariesSection({ profile }: { profile: Profile }) {
     >
     <div className="space-y-5">
       <div className="space-y-2">
-        <label className="flex min-h-9 cursor-pointer items-center gap-2 font-medium">
+        <label className="flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 font-medium">
           <input
             type="checkbox"
             className="size-4 accent-[var(--ink)]"
@@ -179,7 +160,7 @@ function SummariesSection({ profile }: { profile: Profile }) {
       </div>
 
       <div className="space-y-2">
-        <label className="flex min-h-9 cursor-pointer items-center gap-2 font-medium">
+        <label className="flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 font-medium">
           <input
             type="checkbox"
             className="size-4 accent-[var(--ink)]"
@@ -455,10 +436,10 @@ function MacAppSection() {
     >
       <div className="space-y-3">
         <p className="text-ink-2">
-          Press <kbd className="font-sans font-medium text-ink">⌥⌘T</kbd> in any app to open Quick add. The menu bar icon
+          Press <kbd className="font-sans font-medium text-ink">⌥⌘T</kbd> in any app to ask Tracky. The menu bar icon
           lists what’s left today.
         </p>
-        <label className="flex min-h-9 cursor-pointer items-center gap-2 font-medium">
+        <label className="flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 font-medium">
           <input
             type="checkbox"
             className="size-4 accent-[var(--ink)]"
@@ -467,7 +448,7 @@ function MacAppSection() {
           />
           Show reminders as Mac notifications
         </label>
-        <label className="flex min-h-9 cursor-pointer items-center gap-2 font-medium">
+        <label className="flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 font-medium">
           <input
             type="checkbox"
             className="size-4 accent-[var(--ink)]"
@@ -477,7 +458,7 @@ function MacAppSection() {
           Show how many tasks are overdue on the Dock icon
         </label>
         <div className="space-y-1">
-          <label className="flex min-h-9 cursor-pointer items-center gap-2 font-medium">
+          <label className="flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 font-medium">
             <input
               type="checkbox"
               className="size-4 accent-[var(--ink)]"
@@ -548,7 +529,7 @@ function MacAppSection() {
   )
 }
 
-/** Everything you've added, as one file. The Telegram bot token stays in Supabase Vault. */
+/** Everything you've added, as one file. */
 function DataSection() {
   const [busy, setBusy] = useState(false)
 

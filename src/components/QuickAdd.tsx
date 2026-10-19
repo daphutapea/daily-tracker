@@ -14,7 +14,7 @@ import { Segmented } from './ui'
 
 // ---------------------------------------------------------------- opening it from anywhere
 
-/** Mounted once in the app shell. Cmd+K (Ctrl+K elsewhere) opens it from any page. */
+/** Tracky, mounted once in the app shell. Cmd+K (Ctrl+K elsewhere) opens it from any page. */
 export function QuickAddProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<{ open: boolean; instant: boolean; session: number }>({
     open: false,
@@ -175,7 +175,7 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
   const footer =
     phase.name === 'review' ? (
       <>
-        <span className="text-[12px] text-ink-3">Read by {phase.model}</span>
+        <span className="text-[12px] text-ink-3">Read by Tracky, running on {phase.model}</span>
         <div className="ml-auto flex gap-2">
           <button ref={editNoteRef} type="button" className="btn btn-quiet" onClick={editNote}>
             Edit note
@@ -206,7 +206,7 @@ function QuickAddDialog({ open, instant, onClose }: { open: boolean; instant: bo
     )
 
   return (
-    <Dialog open={open} onRequestClose={onClose} title="Quick add" footer={footer} instant={instant} placement="top">
+    <Dialog open={open} onRequestClose={onClose} title="Tracky" footer={footer} instant={instant} placement="top">
       <p className="sr-only" aria-live="polite">
         {reading
           ? 'Reading your note.'
@@ -461,6 +461,22 @@ function DraftCard({
         )}
       </div>
 
+      {d.kind === 'event' && (
+        <div className="mt-2">
+          <label htmlFor={`${id}-location`} className="label">
+            Where <span className="font-normal text-ink-3">(optional)</span>
+          </label>
+          <input
+            id={`${id}-location`}
+            className="field"
+            maxLength={200}
+            placeholder="Room, address or meeting link"
+            value={d.location ?? ''}
+            onChange={(e) => onChange({ location: e.target.value || null })}
+          />
+        </div>
+      )}
+
       {d.kind === 'task' && d.date && !d.time && (
         <p className="mt-2 text-[13px] text-ink-3">No time given, so it’s due at 17:00.</p>
       )}
@@ -488,6 +504,7 @@ function draftProblem(d: Draft): string | null {
   if (!d.title.trim()) return 'Give it a title.'
   if (d.kind === 'event' && !d.date) return 'Pick a day for this event.'
   if (d.kind === 'event' && !d.all_day && !d.time) return 'Pick a start time, or mark it all day.'
+  if (d.kind === 'event' && !d.all_day && d.time && d.end_time && d.end_time <= d.time) return 'The end is before the start.'
   return null
 }
 
@@ -513,7 +530,7 @@ function toEventRow(d: Draft) {
     all_day: d.all_day,
     starts_at: start.toISOString(),
     ends_at: end?.toISOString() ?? null,
-    location: d.location,
+    location: d.location?.trim() || null,
     remind_at: d.remind_minutes_before !== null ? subMinutes(start, d.remind_minutes_before).toISOString() : null,
   }
 }

@@ -9,6 +9,13 @@
 :root {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --toast-bottom: 24px;
+}
+/* Toasts sit above the phone tab bar (56px plus the home-indicator inset) instead of covering it. */
+@media (max-width: 767.98px) {
+  :root {
+    --toast-bottom: calc(56px + env(safe-area-inset-bottom) + 12px);
+  }
 }
 
 :root,
@@ -249,6 +256,28 @@
     .row-hover:hover {
       background: var(--surface-2);
     }
+    .row-hover-surface:hover {
+      background: var(--surface);
+    }
+  }
+
+  /*
+   * A 44px touch area around a small text button or link, without changing how big it looks or
+   * the height of the row it sits in.
+   */
+  @media (pointer: coarse) {
+    .hit {
+      position: relative;
+    }
+    .hit::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      translate: -50% -50%;
+    }
   }
   .btn-quiet {
     color: var(--ink);
@@ -282,6 +311,17 @@
     color: var(--ink-2);
     background: var(--surface);
   }
+  @media (pointer: coarse) {
+    .chip {
+      min-width: 44px;
+      min-height: 44px;
+      justify-content: center;
+      padding: 0 12px;
+    }
+    .field {
+      min-height: 44px;
+    }
+  }
   .chip[aria-pressed="true"],
   .chip[aria-selected="true"] {
     border-color: var(--ink);
@@ -310,6 +350,17 @@
     transition: opacity 200ms var(--ease-out);
     @starting-style {
       opacity: 0;
+    }
+  }
+
+  /* A small list that opens from a trigger grows out of the corner nearest to it. */
+  .pop-in {
+    transition:
+      opacity 150ms var(--ease-out),
+      scale 150ms var(--ease-out);
+    @starting-style {
+      opacity: 0;
+      scale: 0.97;
     }
   }
 
@@ -506,6 +557,11 @@ dialog.sheet.sheet-instant::backdrop {
   }
   .working-line {
     display: none;
+  }
+  .pop-in {
+    @starting-style {
+      scale: none;
+    }
   }
 }
 

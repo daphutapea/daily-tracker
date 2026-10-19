@@ -133,6 +133,12 @@ test('the prompt asks for typos to be read through and kept out of titles', () =
   assert.match(SYSTEM_PROMPT, /Never copy a typo into a title/)
 })
 
+test('the prompt names the assistant Tracky and says what it runs on', () => {
+  assert.match(SYSTEM_PROMPT, /You are Tracky/)
+  assert.match(SYSTEM_PROMPT, /Gemini/)
+  assert.match(SYSTEM_PROMPT, /Never say you are Claude, ChatGPT/)
+})
+
 test('every item field is required and written in an order that settles the time before all_day', () => {
   const item = RESPONSE_SCHEMA.properties.items.items
   assert.deepEqual([...item.required].sort(), Object.keys(item.properties).sort())

@@ -46,7 +46,7 @@ export function TaskRow({
       <button
         type="button"
         onClick={() => onOpen(task.id)}
-        className="min-w-0 flex-1 text-left focus-visible:outline-offset-4"
+        className="min-w-0 flex-1 text-left focus-visible:outline-offset-4 pointer-coarse:min-h-11"
       >
         <span
           className={`block break-words transition-colors duration-150 ${done ? 'text-ink-3 line-through' : 'text-ink'}`}
@@ -76,7 +76,7 @@ export function TaskRow({
       {overdue && (
         <button
           type="button"
-          className="press -my-0.5 shrink-0 rounded-[6px] px-2 py-1 text-[13px] font-medium text-ink-2 hover:bg-surface-2 hover:text-ink"
+          className="press hit row-hover -my-0.5 shrink-0 rounded-[6px] px-2 py-1 text-[13px] font-medium text-ink-2"
           aria-label={`Move “${task.title}” to tomorrow`}
           onClick={() => moveTasks([task], addDays(startOfDay(now), 1), now)}
         >
@@ -94,7 +94,7 @@ export function MoveAllToTomorrow({ tasks, now }: { tasks: TaskSummary[]; now: D
   return (
     <button
       type="button"
-      className="press -my-1 shrink-0 rounded-[6px] px-2 py-1 text-[13px] font-medium text-ink-2 hover:bg-surface hover:text-ink"
+      className="press hit row-hover-surface -my-1 shrink-0 rounded-[6px] px-2 py-1 text-[13px] font-medium text-ink-2"
       onClick={() => moveTasks(tasks, addDays(startOfDay(now), 1), now)}
     >
       Move all to tomorrow

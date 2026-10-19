@@ -1,7 +1,7 @@
 import { ArrowLeftIcon, MagnifyingGlassIcon, PlusIcon, PushPinIcon, TrashIcon } from '@phosphor-icons/react'
 import type { JSONContent } from '@tiptap/react'
 import { format, isToday } from 'date-fns'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { RichEditor } from '@/components/LazyRichEditor'
 import { Loading, QueryError, StateMessage } from '@/components/ui'
@@ -142,6 +142,10 @@ function NoteLoader({ id }: { id: string }) {
 
 type SaveState = 'saved' | 'pending' | 'saving' | 'error'
 
+// Empty notes waiting to be removed, by id. The wait lets a note that is opened again straight away
+// (React mounts twice in development) cancel its own removal.
+const pendingDiscards = new Map<string, number>()
+
 function NoteEditor({ note }: { note: Note }) {
   const navigate = useNavigate()
   const update = useUpdateNote()
@@ -155,6 +159,8 @@ function NoteEditor({ note }: { note: Note }) {
   const [savedAt, setSavedAt] = useState(toDate(note.updated_at))
 
   const pending = useRef<{ title?: string; content?: JSONContent; content_text?: string }>({})
+  const words = useRef({ title: note.title, text: note.content_text })
+  const deleted = useRef(false)
   const timer = useRef<number | undefined>(undefined)
   const mutate = update.mutateAsync
 
@@ -181,19 +187,37 @@ function NoteEditor({ note }: { note: Note }) {
     timer.current = window.setTimeout(flush, 800)
   }
 
-  // Save whatever is left when leaving the note or closing the tab.
+  const leave = useEffectEvent(() => {
+    if (deleted.current) return
+    if (words.current.title.trim() || words.current.text.trim()) return void flush()
+    window.clearTimeout(timer.current)
+    pending.current = {}
+    pendingDiscards.set(
+      note.id,
+      window.setTimeout(() => {
+        pendingDiscards.delete(note.id)
+        del.mutate(note.id)
+      }, 0),
+    )
+  })
+
+  // Save whatever is left when leaving the note or closing the tab. A note left with no title and no
+  // text is removed instead, so New note opened by mistake leaves nothing behind.
   useEffect(() => {
+    window.clearTimeout(pendingDiscards.get(note.id))
+    pendingDiscards.delete(note.id)
     const onUnload = (e: BeforeUnloadEvent) => {
       if (Object.keys(pending.current).length) e.preventDefault()
     }
     window.addEventListener('beforeunload', onUnload)
     return () => {
       window.removeEventListener('beforeunload', onUnload)
-      flush()
+      leave()
     }
-  }, [flush])
+  }, [note.id])
 
   async function remove() {
+    deleted.current = true
     pending.current = {}
     window.clearTimeout(timer.current)
     await del.mutateAsync(note.id)
@@ -279,6 +303,7 @@ function NoteEditor({ note }: { note: Note }) {
           autoFocus={!note.title && !note.content_text}
           onChange={(e) => {
             setTitle(e.target.value)
+            words.current.title = e.target.value
             queue({ title: e.target.value })
           }}
         />
@@ -287,7 +312,10 @@ function NoteEditor({ note }: { note: Note }) {
           initial={note.content}
           minHeight={360}
           placeholder="Start writing…"
-          onChange={({ json, text }) => queue({ content: json, content_text: text })}
+          onChange={({ json, text }) => {
+            words.current.text = text
+            queue({ content: json, content_text: text })
+          }}
         />
       </div>
     </article>

@@ -21,7 +21,7 @@ export function FinishedPerDay({
     <div>
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="font-medium">Tasks finished per day</h3>
-        <button type="button" className="text-[13px] text-ink-3 underline-offset-2 hover:underline" onClick={() => setAsTable((v) => !v)}>
+        <button type="button" className="hit text-[13px] text-ink-3 underline-offset-2 hover:underline" onClick={() => setAsTable((v) => !v)}>
           {asTable ? 'Show chart' : 'Show table'}
         </button>
       </div>
@@ -75,7 +75,10 @@ export function FinishedPerDay({
                     </div>
                     <span
                       role="tooltip"
-                      className="pointer-events-none absolute bottom-full z-10 mb-1 rounded-[6px] border border-line bg-surface px-2 py-1 text-[12px] whitespace-nowrap opacity-0 shadow-float transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100"
+                      className={`pointer-events-none absolute bottom-full z-10 mb-1 rounded-[6px] border border-line bg-surface px-2 py-1 text-[12px] whitespace-nowrap opacity-0 shadow-float transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 ${
+                        // Kept inside the chart at both ends; a tooltip past the edge widens the page on a phone.
+                        i < 2 ? 'left-0' : i > days.length - 3 ? 'right-0' : 'left-1/2 -translate-x-1/2'
+                      }`}
                     >
                       {label}
                     </span>

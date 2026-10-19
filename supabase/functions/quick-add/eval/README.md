@@ -1,4 +1,4 @@
-# Quick add evaluation
+# Tracky evaluation
 
 How often the AI reads a note correctly, measured against notes whose right answer was worked out by
 hand first.
@@ -9,7 +9,7 @@ to run. Read the [Limitations](#limitations) before quoting either.
 
 ## Why
 
-Quick add shows every draft for you to check before anything is saved, so a misread date can't land
+Tracky shows every draft for you to check before anything is saved, so a misread date can't land
 in your calendar silently. That doesn't tell you how often you'll have to fix one. A model that gets
 Friday wrong one time in five would still feel broken. This set answers how often it's right, and
 which kinds of note it gets wrong.

@@ -65,9 +65,9 @@ Reminders and summaries come from the Mac app, so install it first (above).
    allow Calendar notifications and keep that calendar ticked in the Calendar app.
 4. Tick Open at Login in the menu bar menu, so all of this keeps working after a restart.
 
-## Turn on Quick add (free Gemini key)
+## Turn on Tracky (free Gemini key)
 
-Quick add sends what you type to Google’s Gemini API through a small server function in your Supabase
+Tracky sends what you type to Google’s Gemini API through a small server function in your Supabase
 project (`supabase/functions/quick-add`), so the key never reaches the browser or the Mac app.
 
 1. Open [Google AI Studio](https://aistudio.google.com/apikey), sign in with your Google account, and
@@ -76,7 +76,7 @@ project (`supabase/functions/quick-add`), so the key never reaches the browser o
    for `daily-tracker`, go to Edge Functions, then Secrets, and add a secret named `GEMINI_API_KEY` with
    that key as its value.
 
-That’s all. Open Quick add and try a sentence.
+That’s all. Open Tracky and try a sentence.
 
 **Which model it uses.** It asks `gemini-3.6-flash` first, the best Flash model on the free tier,
 which allows 20 requests a day. If that allowance is used up, the model is busy, or your key can’t use
@@ -86,7 +86,7 @@ secret named `GEMINI_MODELS` with model names separated by commas, best first. Y
 listed in AI Studio under rate limits.
 
 **Privacy.** On the free tier, Google’s terms allow it to use what you send to improve its products.
-Quick add only sends the sentence you typed, today’s date and time, your time zone and your project
+Tracky only sends the sentence you typed, today’s date and time, your time zone and your project
 names, never your existing tasks or notes. Leave out anything you wouldn’t want shared.
 
 ## 4. Put it online
@@ -147,7 +147,7 @@ against anything but the local stack.
 Schema changes go in `supabase/migrations/`. After changing the schema, regenerate the TypeScript types
 with `npm run db:types`, and apply the same migration to the hosted project.
 
-To use Quick add against the local stack, run its function in a second terminal. Without a key it
+To use Tracky against the local stack, run its function in a second terminal. Without a key it
 answers that the AI isn’t set up, which is enough to test the screens. To call Gemini locally, put
 `GEMINI_API_KEY=...` in `supabase/functions/.env` (Git ignores it) first.
 
@@ -229,11 +229,11 @@ client or office work here, check your company’s rules on where that informati
 | `src/pages/` | Home, Tasks, Notes, Calendar, Links, Weekly review and Settings |
 | `macos/` | The Mac app window and its icon |
 | `scripts/build-mac-app.sh` | Builds, checks and installs the Mac app (`npm run app`) |
-| `src/components/` | The task and event dialogs, Quick add, the day ruler, charts, the notes editor |
+| `src/components/` | The task and event dialogs, Tracky (`QuickAdd.tsx`), the day ruler, charts, the notes editor |
 | `src/lib/queries.ts` | Every read and write to the database |
 | `supabase/migrations/` | Tables, access rules and the summary settings; the last one removes Telegram |
 | `src/lib/reminders.ts`, `src/components/MacAppBridge.tsx` | What the Mac app schedules: reminders, summaries, the Today list |
-| `supabase/functions/quick-add/` | The server function that sends Quick add notes to Gemini, and its tests |
+| `supabase/functions/quick-add/` | The server function that sends Tracky’s notes to Gemini, and its tests |
 | `supabase/functions/quick-add/eval/` | The 34-note gold set, its grader and `npm run eval:quick-add` |
 | `e2e/`, `playwright.config.ts` | Browser tests (`npm run test:e2e`) |
 | `.github/workflows/checks.yml` | The checks GitHub runs on every push |

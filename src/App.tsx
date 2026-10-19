@@ -47,6 +47,8 @@ export function App() {
       )}
       <Toaster
         position="bottom-right"
+        offset={{ bottom: 'var(--toast-bottom)', right: 24 }}
+        mobileOffset={{ bottom: 'var(--toast-bottom)', left: 16, right: 16 }}
         theme={theme.scheme}
         closeButton
         toastOptions={{

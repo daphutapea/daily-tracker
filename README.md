@@ -10,7 +10,7 @@ month calendar and the sites you open every day in one place. The Mac app sends 
 and weekly summary as notifications, and can pass them to your iPhone through Apple Calendar.
 
 Setting it up for the first time? Follow [docs/SETUP.md](docs/SETUP.md) to create your account,
-install the Mac app and turn on Quick add. What changed in each version is in [CHANGELOG.md](CHANGELOG.md); the
+install the Mac app and turn on Tracky. What changed in each version is in [CHANGELOG.md](CHANGELOG.md); the
 version you are running is shown at the bottom of Settings.
 
 ## Opening it
@@ -24,16 +24,16 @@ Links you click inside the app, such as your quick links, open in your normal br
 
 Closing the window doesn’t quit the app. It stays in the menu bar (the checklist icon at the top of the
 screen), so reminders keep arriving and stay up to date. That menu lists what’s left today and how
-many tasks are overdue; click any line to open it. It also opens the app or Quick add, shows your next
+many tasks are overdue; click any line to open it. It also opens the app or Tracky, shows your next
 reminder, and turns on Open at Login. To quit for real, press Cmd+Q; reminders already handed to macOS
 still arrive after that.
 
 | Shortcut | What it does |
 |---|---|
-| ⌥⌘T, in any app | Brings Daily Tracker forward with Quick add open |
-| ⌘K, inside the app | Opens Quick add |
+| ⌥⌘T, in any app | Brings Daily Tracker forward with Tracky open |
+| ⌘K, inside the app | Opens Tracky |
 | ⌘, | Opens Settings |
-| ⌘Enter | Saves the task or event you’re editing, or reads a Quick add note |
+| ⌘Enter | Saves the task or event you’re editing, or sends your note to Tracky |
 
 ⌥⌘T only works while Daily Tracker is running, because the app is what listens for it. If you quit
 with Cmd+Q, open the app again before using it. Tick Open at Login in the menu bar menu and it’s always
@@ -50,10 +50,11 @@ The header shows the date, the time and three buttons. Add task opens a new task
 Add event opens a new event today, starting at the next full hour. New note opens an empty note. The
 greeting uses the name you set in Settings.
 
-Below the buttons is the quick-add field (see [Quick add](#quick-add)). Under it is a ruler for today,
-from midnight to midnight. Diamonds are deadlines, short bars
+Below the buttons is the field where you ask Tracky (see [Tracky](#tracky)). Under it is a ruler for
+today, from midnight to midnight. Diamonds are deadlines, short bars
 are events, and the teal line is the current time. A filled red diamond is a deadline you have already
-missed. Click any mark to open it.
+missed. Click any mark to open it. When several fall at almost the same time, such as three tasks due
+at 17:00, they share one mark with a number above it; click it to list them and open the one you want.
 
 | Panel | What it shows |
 |---|---|
@@ -65,10 +66,12 @@ missed. Click any mark to open it.
 
 On a phone, your quick links sit at the bottom of Home.
 
-## Quick add
+## Tracky
 
-Write what’s coming up the way you’d say it, and the AI drafts the tasks and events for you. Open it
-from the field on Home, the Quick add button in the sidebar, or Cmd+K (Ctrl+K on Windows) from any page.
+Tracky is the assistant built into Daily Tracker. Write what’s coming up the way you’d say it, and
+Tracky drafts the tasks and events for you. Open it from the field on Home, the Ask Tracky button in
+the sidebar, or Cmd+K (Ctrl+K on Windows) from any page. Ask it who it is and it tells you: Tracky,
+running on Google’s Gemini.
 
 For example: “Sync with Dennis Tuesday 10 to 11am, remind me 15 min before. Finish the labelling sheet
 by Friday, high priority.” English, Bahasa Indonesia or a mix all work, and one note can hold several
@@ -78,16 +81,16 @@ Mr. Dennis” today from 15:00 to 16:00 and “Work on ATLAS improvements again�
 
 Press Read it (or Cmd+Enter). While it reads, a thin line moves along the bottom of your note; it
 usually takes a second or two. Each item comes back as a card you can change before anything is saved:
-switch it between task and event, fix the title, day, time, reminder, priority or project, or remove
-it. A task with a day but no time is due at 17:00. An event that overlaps one already in your calendar
+switch it between task and event, fix the title, day, time, place, reminder, priority or project, or
+remove it. A task with a day but no time is due at 17:00. An event that overlaps one already in your calendar
 gets a warning. Press Add to save them all, or Edit note to go back and rewrite. The whole flow works
 from the keyboard: after reading, Tab moves through the cards, and removing one moves you to the next.
 
-The AI only drafts. It can’t save, change or delete anything; you do that with the Add button. It runs
-on Google’s Gemini free tier. The best model allows 20 notes a day; after that Quick add switches by
+Tracky only drafts. It can’t save, change or delete anything; you do that with the Add button. It runs
+on Google’s Gemini free tier. The best model allows 20 notes a day; after that Tracky switches by
 itself to lighter models with larger allowances, and the footer of each answer says which model read
 it. Only when all of them are used up does the app say so, and then you add items by hand until the
-next day. Quick add needs a one-time setup, described in
+next day. Tracky needs a one-time setup, described in
 [docs/SETUP.md](docs/SETUP.md).
 
 How often the AI reads notes correctly is measured with a set of 34 test notes, ten of them full of typos. How to run it, and

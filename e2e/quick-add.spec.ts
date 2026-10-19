@@ -7,7 +7,7 @@ test.afterEach(async ({ page }) => {
 
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' }
 
-test('Quick add turns a note into drafts and saves only the ones you keep', async ({ page }) => {
+test('Tracky turns a note into drafts and saves only the ones you keep', async ({ page }) => {
   const day = jakartaDay(5)
   const draft = (patch: object) => ({
     kind: 'task',
@@ -36,7 +36,7 @@ test('Quick add turns a note into drafts and saves only the ones you keep', asyn
 
   await page.goto('/')
   await page.keyboard.press('ControlOrMeta+k')
-  const dialog = page.getByRole('dialog', { name: 'Quick add' })
+  const dialog = page.getByRole('dialog', { name: 'Tracky' })
   await dialog.getByLabel('What’s coming up?').fill('Sync with Dennis 10 to 11, remind me 15 min before. Labelling sheet, high priority.')
   await dialog.getByRole('button', { name: 'Read it' }).click()
 

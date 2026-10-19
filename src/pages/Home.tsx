@@ -95,11 +95,11 @@ export function HomePage() {
         <button
           type="button"
           onClick={() => openQuickAdd()}
-          aria-label="Quick add: describe tasks or events in a sentence"
+          aria-label="Ask Tracky: describe tasks or events in a sentence"
           className="field mt-3 flex items-center gap-2 text-left text-ink-3"
         >
           <ChatTextIcon size={16} weight="bold" aria-hidden className="shrink-0" />
-          <span className="truncate">Tell me what’s coming up, like “sync with Dennis Tuesday 10am”</span>
+          <span className="truncate">Tell Tracky what’s coming up, like “sync with Dennis Tuesday 10am”</span>
           <kbd className="ml-auto shrink-0 font-sans text-[12px] max-sm:hidden">{shortcutLabel()}</kbd>
         </button>
         <div className="mt-5">
@@ -164,7 +164,7 @@ export function HomePage() {
               )}
             </Panel>
 
-            <Panel className="lg:col-span-5" title="Next 7 days" action={<Link to="/calendar" className="text-[13px] text-ink-2 hover:text-ink">Calendar</Link>}>
+            <Panel className="lg:col-span-5" title="Next 7 days" action={<Link to="/calendar" className="hit text-[13px] text-ink-2 hover:text-ink">Calendar</Link>}>
               {d.upcoming.length === 0 ? (
                 <StateMessage title="A clear week ahead." body="Nothing is due and no events are planned for the next 7 days." />
               ) : (
@@ -197,7 +197,7 @@ export function HomePage() {
             <Panel
               className="lg:col-span-7"
               title="In progress and waiting"
-              action={<Link to="/tasks?view=board" className="text-[13px] text-ink-2 hover:text-ink">Board</Link>}
+              action={<Link to="/tasks?view=board" className="hit text-[13px] text-ink-2 hover:text-ink">Board</Link>}
             >
               {d.active.length === 0 ? (
                 <StateMessage
@@ -224,7 +224,7 @@ export function HomePage() {
               <h2 id="numbers-heading" className="text-base font-semibold">
                 Numbers
               </h2>
-              <Link to="/review" className="text-[13px] text-ink-2 hover:text-ink">
+              <Link to="/review" className="hit text-[13px] text-ink-2 hover:text-ink">
                 Weekly review
               </Link>
             </div>
@@ -366,7 +366,7 @@ function MobileQuickLinks() {
         <h2 id="mobile-links" className="text-base font-semibold">
           Quick links
         </h2>
-        <Link to="/links" className="text-[13px] text-ink-2">
+        <Link to="/links" className="hit text-[13px] text-ink-2">
           Edit
         </Link>
       </div>

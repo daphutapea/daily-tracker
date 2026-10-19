@@ -10,15 +10,15 @@ import {
   SignOutIcon,
   type Icon,
 } from '@phosphor-icons/react'
-import { useEffect, useEffectEvent, useRef } from 'react'
+import { useEffect, useEffectEvent } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import { toast } from 'sonner'
 import { useUserEmail } from '@/auth/sessionContext'
-import { deviceTimeZone, toDate } from '@/lib/dates'
+import { toDate } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
 import { inMacApp } from '@/lib/native'
 import { shortcutLabel } from '@/lib/platform'
-import { useEvents, useProfile, useQuickLinks, useReorderQuickLinks, useTasks, useUpdateProfile } from '@/lib/queries'
+import { useEvents, useQuickLinks, useReorderQuickLinks, useTasks } from '@/lib/queries'
 import { supabase } from '@/lib/supabase'
 import { EventDialogHost } from './EventDialog'
 import { LogoMark } from './Logo'
@@ -40,7 +40,6 @@ const NAV: { to: string; label: string; icon: Icon; mobile: boolean }[] = [
 ]
 
 export function AppShell() {
-  useTimeZoneSync()
   useInAppReminders()
 
   return (
@@ -108,7 +107,7 @@ function Sidebar() {
           className="press row-hover mt-2 flex min-h-9 w-full items-center gap-2.5 rounded-[6px] border border-line px-2.5 font-medium text-ink-2"
         >
           <ChatTextIcon size={18} weight="bold" />
-          Quick add
+          Ask Tracky
           <kbd className="ml-auto font-sans text-[12px] font-normal text-ink-3">{shortcutLabel()}</kbd>
         </button>
       </nav>
@@ -202,19 +201,6 @@ function TabBar() {
       </ul>
     </nav>
   )
-}
-
-/** Reminders and the morning digest are computed in the profile's time zone; keep it in step with this device. */
-function useTimeZoneSync() {
-  const profile = useProfile()
-  const update = useUpdateProfile()
-  const tried = useRef(false)
-  useEffect(() => {
-    const tz = deviceTimeZone()
-    if (!profile.data || tried.current || profile.data.timezone === tz) return
-    tried.current = true
-    update.mutate({ timezone: tz })
-  }, [profile.data, update])
 }
 
 /**

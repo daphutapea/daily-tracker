@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.6 (2026-10-19)
+
+### Added
+- Tracky: Quick add has a name. The dialog, the sidebar's Ask Tracky button and the Mac menu use it, and asked who it is, it says it’s Tracky, Daily Tracker’s assistant, running on Google’s Gemini.
+- Event drafts from Tracky show where the event is, so you can check or change the place before adding it. It was saved before without being shown.
+
+### Changed
+- On the day ruler, deadlines and events at almost the same time share one mark with a count. Click it to see them all and open one. Before, three tasks due at 17:00 drew one diamond and only one of them could be opened.
+- Moving an event’s start moves its end with it, keeping the length.
+- Moving a task’s deadline moves its reminder with it, keeping the gap.
+- On a phone, buttons and links are at least 44 pixels tall to tap: the Tasks filters, the reminder shortcuts, Tomorrow, Move all to tomorrow, Show table, the links at the top of the Home panels, the List and Board switch, and the note editor’s toolbar.
+- A note left with no title and no text is removed when you leave it, so New note opened by mistake leaves nothing behind.
+
+### Removed
+- The time zone line in Settings. Nothing has used it since reminders moved to the Mac app, and it still mentioned Telegram.
+
+### Fixed
+- On a phone, messages such as “Moved 2 tasks to tomorrow” covered the tab bar and ran off the bottom of the screen. They now sit above it.
+- On a phone, Home and Review were 12 pixels wider than the screen, so the browser zoomed out slightly and cut off the tab bar’s labels. The hidden label over the last bar of “Tasks finished per day” stuck out past the edge; it now stays inside the chart.
+- Tracky accepted an event that ends before it starts if you changed the times on its card.
+
 ## v1.5 (2026-10-16)
 
 ### Added

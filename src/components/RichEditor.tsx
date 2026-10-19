@@ -160,7 +160,7 @@ function Tool({
       disabled={disabled}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className={`press grid size-8 place-items-center rounded-[5px] disabled:opacity-40 pointer-coarse:size-10 ${
+      className={`press grid size-8 place-items-center rounded-[5px] disabled:opacity-40 pointer-coarse:size-11 ${
         active ? 'bg-surface text-ink shadow-[inset_0_0_0_1px_var(--line-strong)]' : 'text-ink-2'
       }`}
     >
@@ -175,7 +175,7 @@ function TextTool({ children, onClick, danger }: { children: string; onClick: ()
       type="button"
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className={`press min-h-7 rounded-[5px] px-2 font-medium pointer-coarse:min-h-10 ${danger ? 'text-danger' : 'text-ink-2'}`}
+      className={`press min-h-7 rounded-[5px] px-2 font-medium pointer-coarse:min-h-11 ${danger ? 'text-danger' : 'text-ink-2'}`}
     >
       {children}
     </button>

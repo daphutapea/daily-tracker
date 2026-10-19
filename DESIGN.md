@@ -16,7 +16,8 @@ instrument-panel style, dial ENERGY 1 / RHYTHM 2 / MOTION 2.
 - **Identity motif: the day ruler.** A 24-hour strip with hour ticks, a teal "now" line, and marks
   for today's deadlines and events. It sits in the header and is the one thing that makes this board
   read as a time instrument rather than a generic dashboard. The same tick language appears on the
-  chart axis and the calendar's busy-day marks.
+  chart axis and the calendar's busy-day marks. Marks closer together than one hit area (20px with
+  a mouse, 44px with a finger) share one mark with a count above it, which opens a short list.
 - **Mood:** calm, dense, exact. Like a well-kept logbook, not a marketing page.
 
 ## Logo
@@ -98,11 +99,13 @@ the teal spread thin and the "now" line stop standing out.
 
 - Desktop: left sidebar (navigation plus quick links), content max 1200px.
 - Phone: a bottom tab bar replaces the sidebar; quick links move into Settings > Links.
-- Home order: header (greeting, clock, quick buttons, the Quick add field, day ruler); then Today (the focal point) beside
+- Home order: header (greeting, clock, quick buttons, the Ask Tracky field, day ruler); then Today (the focal point) beside
   Next 7 days; then In progress and waiting beside the month; then Numbers (counts, tasks finished per
   day, deadlines met, open tasks by status and priority). The numbers sit last on purpose: they are
   the review, the agenda is the work.
-- Quick add looks like a text field on Home, because that is what it asks for: a sentence. It opens
+- Tracky is the assistant's name, used wherever the feature is named (the dialog title, the sidebar's
+  Ask Tracky button, the Mac menu). It answers in the first person and, asked, says it runs on Gemini.
+  Its field looks like a text field on Home, because that is what it asks for: a sentence. It opens
   a dialog where the AI's drafts come back as editable cards, one per item, and nothing is saved until
   you press Add. Cmd+K (Ctrl+K) opens it from anywhere; the shortcut is shown beside the field and the
   sidebar button.
@@ -131,21 +134,23 @@ the teal spread thin and the "now" line stop standing out.
 - Ticking a task done: the check fills, the row fades to its done state over 150ms.
 - Content that replaces a loading message fades in once (opacity only, 200ms) so the swap isn't a
   hard cut. Refetches don't repeat it.
+- The day ruler's list of shared marks grows out of the corner nearest its mark: 150ms, opacity and
+  scale from 0.97, ease-out.
 - Board drag: the card lifts into a floating copy (shadow, scale 1.02) while the original dims in
   place; on drop the copy settles into its new column in 200ms with ease-out.
 - Switching palettes never animates; colors change in one frame.
-- Nothing loops, with one exception: while the AI reads a Quick add note, a short `--ink-2` line
+- Nothing loops, with one exception: while Tracky reads a note, a short `--ink-2` line
   sweeps along the bottom of the note (1.2s, linear). A wait of one to several seconds with nothing
   moving looks frozen; a database load of a tenth of a second doesn't, which is why other loading
   states stay as text. The line appears only after 300ms, so a quick answer never flashes it, and it
   disappears the moment the answer arrives.
 - The AI's answer rises into place (4px and opacity, 200ms ease-out): its one-line reply first, then
   each draft 40ms apart, capped at 160ms, so they read as separate things to check. On a computer the
-  Quick add dialog sits near the top of the window rather than in the middle, so when the drafts make
+  Tracky dialog sits near the top of the window rather than in the middle, so when the drafts make
   it taller it grows downward instead of jumping up to re-center. The busy line hides the note's
   resize handle while it runs. Removing a draft is instant: a fade would still leave the
   cards below jumping up.
-- Keyboard shortcuts open things instantly with no animation: Quick add opened with Cmd+K skips the
+- Keyboard shortcuts open things instantly with no animation: Tracky opened with Cmd+K skips the
   dialog's scale and fade, while the same dialog opened by a click still animates.
 - `prefers-reduced-motion`: keep fades, drop movement. The drafts only fade, and the busy line is
   hidden; the button still says Reading….
