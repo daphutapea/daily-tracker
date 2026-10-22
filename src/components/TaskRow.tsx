@@ -1,12 +1,13 @@
 import { BellIcon } from '@phosphor-icons/react'
 import { addDays, startOfDay } from 'date-fns'
+import { repeatLabel } from '@/lib/repeatRules'
 import { formatWhen, toDate } from '@/lib/dates'
 import { useSetTaskStatus } from '@/lib/queries'
 import { rowIn } from '@/lib/motion'
 import { useMoveTasks } from '@/lib/reschedule'
 import { useNow } from '@/lib/useNow'
 import { statusLabel, type Project, type TaskSummary } from '@/lib/types'
-import { PriorityTag, StatusLamp, TaskCheck } from './ui'
+import { PriorityTag, RepeatMark, StatusLamp, TaskCheck } from './ui'
 
 export function TaskRow({
   task,
@@ -75,6 +76,7 @@ export function TaskRow({
               <span className="sr-only">Reminder set</span>
             </span>
           )}
+          {task.repeat && !done && <RepeatMark label={`Repeats ${repeatLabel(task.repeat).toLowerCase()}`} />}
           {project && <span className="text-ink-3">{project.name}</span>}
           {showStatus && !done && task.status !== 'todo' && (
             <span className="inline-flex items-center gap-1.5 text-ink-2">

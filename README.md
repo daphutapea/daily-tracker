@@ -29,6 +29,13 @@ can turn it off in Settings → Appearance.
 
 Links you click inside the app, such as your quick links, open in your normal browser.
 
+On your iPhone, open Daily Tracker from the Home Screen. It's a real app, not a website: the pages
+come from inside it, so nothing has to be put online, and it talks to the same Supabase project as the
+Mac, so everything you add on one shows up on the other. It needs an internet connection to load and
+save. `npm run iphone` installs it from this Mac over a cable; [docs/SETUP.md](docs/SETUP.md#install-the-iphone-app)
+has the one-time steps. With a free Apple ID, Apple lets an app you install this way open for 7 days;
+plug the phone in and run `npm run iphone` again to renew it.
+
 Closing the window doesn’t quit the app. It stays in the menu bar (the checklist icon at the top of the
 screen), so reminders keep arriving and stay up to date. That menu lists what’s left today and how
 many tasks are overdue; click any line to open it. It also opens the app or Tracky, shows your next
@@ -101,6 +108,8 @@ by Friday, high priority.” English, Bahasa Indonesia or a mix all work, and on
 things. Type as fast as you like: typos, shorthand and loose times are read for what you meant, so
 “Sync me with mr. dennis at 1500 till 1600, then work on ATLAS imrpovementsd again” becomes “Sync with
 Mr. Dennis” today from 15:00 to 16:00 and “Work on ATLAS improvements again”, filed under ATLAS.
+Things that recur come back as repeating drafts: “standup every weekday at 10” or “pay rent on the
+1st of every month”.
 
 Tracky works like a chat, the way Claude or ChatGPT do. Type in the box at the bottom and press
 Enter to send; Shift+Enter starts a new line. On a phone, Return starts a new line and the round
@@ -130,8 +139,17 @@ saved tasks and events: a recommendation first, then the reason and the trade-of
 adds nothing; ask it to plan or schedule something and it drafts it for you to check. What Tracky
 sees of your schedule, and how to turn that off, is under Settings → Tracky.
 
-Tracky only drafts and advises. It can’t save, change or delete anything; you do that with the Add
-button, or in the app. It runs on Google’s Gemini free tier. The best model allows 20 messages a day;
+Tracky can change what you’ve already saved, too. “Move the ATLAS report to Friday”, “the invoice is
+paid”, “cancel the dentist” or “push everything overdue to tomorrow” each come back as a card that
+shows the old and new values, such as “Deadline Wed 21 Oct, 17:00 → Fri 23 Oct, 17:00”. A moved
+deadline takes its reminder along, and a moved event keeps its length. If more than one saved item
+fits what you wrote, it asks which one. Press Make 2 changes to apply them (or Add 1, change 2 when
+there are new drafts as well), or the cross on a card to drop it. Undo sits on the message that says
+what changed, until your next message. Tracky can only change what it can see, so Settings → Tracky
+has to let it see your schedule.
+
+Tracky never saves, changes or deletes anything by itself; you confirm every draft and every change.
+It runs on Google’s Gemini free tier. The best model allows 20 messages a day;
 after that Tracky switches by itself to lighter models with larger allowances, and each answer says
 which model wrote it. Only when all of them are used up does the app say so, and then you add items by hand until the
 next day. Tracky needs a one-time setup, described in
@@ -156,6 +174,7 @@ How to run it, and what it does and doesn't prove, is in
 | Deadline | A date and time. |
 | Show on calendar | Untick it to keep this deadline off the Calendar page. |
 | Remind me | Pick a time, or press a shortcut: At deadline, 15 min before, 1 hour before or 1 day before. The shortcuts need a deadline first. Lists show a small bell on tasks with a reminder. |
+| Repeat | Every day, weekday, week, month or year, counted from the deadline, so it needs one. Lists show a small repeat mark. |
 | Links | A label and an address. If you leave out `https://`, the app adds it. |
 | Notes | Bold, italic, headings, bulleted and numbered lists, checklists, tables and text alignment. Click inside a table to get controls for adding and removing rows and columns. |
 
@@ -167,6 +186,11 @@ for 8 seconds, which brings it back exactly as it was. Events and notes work the
 
 Tick its box wherever it appears: on Home, in the list or on the calendar. The app records when you
 finished it, which feeds the chart on Home. Unticking a task moves it back to To do.
+
+Finishing a repeating task adds the next one straight away, and a message says when it’s due: the
+next day its rule allows that is still ahead, at the same time, with the reminder the same time
+before it. Finishing a daily task three days late doesn’t leave three more behind it. Unticking the
+finished one takes the next one back.
 
 ### Moving overdue tasks
 
@@ -203,10 +227,16 @@ The month starts on Monday. Each day lists its events with their start times and
 diamond. Click a day to see everything on it in the side panel, which moves below the month on narrow
 screens.
 
-With a day selected, the Task button adds a task due that day at 17:00, and Add event adds an event on
+With a day selected, the Task button adds a task due that day at 17:00, and Event adds an event on
 that day. An event has a title, a start, an optional end, an All day switch, a place (a room, an address
 or a meeting link), a reminder with its own shortcuts (At start, 10 min before, 1 hour before and 1 day
-before) and room for details.
+before), a Repeat setting and room for details.
+
+A repeating event (every day, weekday, week, month or year) is written into the calendar about three
+months ahead as ordinary events, each with its own reminder, and more are added as time passes. A
+small repeat mark shows beside them. When you open one, pick This event or This and later ones before
+you save or delete. Changing the later ones starts the repeat again from that event, so earlier ones
+keep their old time; Delete these comes with Undo.
 
 ## Links
 
@@ -224,7 +254,8 @@ once and shows on every device.
 The Mac app hands every reminder in the next two weeks to macOS, so it arrives as a normal Mac
 notification even when the window is closed or the app has quit. A task’s notification has Mark done
 and Snooze 10 minutes; an event’s has Snooze 10 minutes; clicking either opens it. Finished tasks
-don’t send one. The first time a reminder is coming up, macOS asks whether Daily Tracker may show
+don’t send one, and finishing a task cancels a reminder you snoozed and clears it from Notification
+Center. The first time a reminder is coming up, macOS asks whether Daily Tracker may show
 notifications. Settings → Mac app can turn them off or send a test.
 
 While you’re looking at the app, a reminder appears in the corner of the window instead, with an Open
@@ -242,7 +273,13 @@ was closed when something changed, the summary shows things as they were when it
 
 ### On your iPhone
 
-Notifications can’t jump from a Mac to an iPhone, but calendar alerts can. Turn on **Also alert me on
+The Daily Tracker iPhone app hands your reminders and summaries to iOS the same way, so they arrive as
+iPhone notifications, with Mark done and Snooze 10 minutes, even when the app is closed. Its icon shows
+how many tasks are overdue. iOS keeps the next 56 at a time, and they're brought up to date each time
+you open the app, so a change made on your Mac reaches the phone's reminders the next time you open it
+there. Settings → iPhone app has the switches and a test notification.
+
+Without the iPhone app, calendar alerts can carry reminders over instead. Turn on **Also alert me on
 my iPhone** in Settings → Mac app and the app keeps a “Daily Tracker” calendar in your iCloud: each
 reminder and summary becomes a five-minute entry with an alert, and iCloud brings the alert to your
 iPhone (and an Apple Watch). macOS asks once whether Daily Tracker may use Calendar.
@@ -267,7 +304,7 @@ Sunday, and the arrows step back and forward through earlier weeks.
 | Tasks finished per day | One column per day of that week. Show table swaps it for the numbers. |
 | Finished | Every task you marked done that week, with when. |
 | Slipped | Deadlines that fell in that week and passed before the task was done, whether it’s still open or was finished late. |
-| The week after | Deadlines and events planned for the following week. |
+| Week of (next Monday’s date) | Deadlines and events planned for the following week. |
 
 When deadlines slipped and the tasks are still open, the Slipped panel offers to move them all to next
 Monday, keeping each one’s time. Undo works here too.
@@ -282,7 +319,7 @@ Monday, keeping each one’s time. Undo works here too.
 | Tracky | Choose whether Tracky sees your schedule. When it does, each message sends Google the titles, times, priority, status and project of your open tasks from the last 30 days to two weeks ahead, and your events for the next two weeks. Never notes or links. Turned off, Tracky still drafts but can’t advise on your plans. |
 | Projects | Add, rename, archive or delete projects. Deleting a project keeps its tasks and notes; they just lose the label. |
 | Appearance | Match your system, or always use Light or Dark. Each mode has two colour sets: Sage or White for light, Navy or Charcoal for dark. Each card shows a small preview. Turn the intro that plays when the app opens on or off, or play it again. These choices are saved on each device separately. |
-| Your data | Download a copy of everything you’ve added as one JSON file. Keep one somewhere safe now and then. |
+| Your data | Download a copy of everything you’ve added as one JSON file, or restore from one. Restoring shows what the file holds and what isn’t in the tracker now, then adds only that back; nothing you have is changed or removed. In the Mac app, a copy also goes to iCloud Drive › Daily Tracker Backups (or Documents) every week, keeping the eight newest, with Back up now and Show backups. |
 | Account | See which account is signed in, sign out, and see which version of the tracker is running. |
 
 ## Small things worth knowing

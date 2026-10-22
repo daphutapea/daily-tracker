@@ -2,6 +2,7 @@
 //   public/favicon.svg          the mark, for browser tabs
 //   public/apple-touch-icon.png the mark, full bleed, for a phone's home screen
 //   macos/AppIcon.png           the mark on the macOS icon grid, for the Mac app (npm run app)
+//   ios/…/AppIcon.png           the touch icon at 1024 pixels, for the iPhone app (npm run iphone)
 //   docs/brand/mark.svg         the mark on its own
 //   docs/brand/lockup-light.svg mark and wordmark, for light backgrounds
 //   docs/brand/lockup-dark.svg  mark and wordmark, for dark backgrounds
@@ -237,6 +238,7 @@ try lockup(ink: Color.inkLight).write(to: brand.appending(path: "lockup-light.sv
 try lockup(ink: Color.inkDark).write(to: brand.appending(path: "lockup-dark.svg"), atomically: true, encoding: .utf8)
 try touchIcon(pixels: 180).write(to: root.appending(path: "public/apple-touch-icon.png"))
 try macIcon().write(to: root.appending(path: "macos/AppIcon.png"))
+try touchIcon(pixels: 1024).write(to: root.appending(path: "ios/DailyTracker/Assets.xcassets/AppIcon.appiconset/AppIcon.png"))
 
 func dataURI(_ svg: String) -> String { "data:image/svg+xml;base64," + Data(svg.utf8).base64EncodedString() }
 let light = dataURI(lockup(ink: Color.inkLight))

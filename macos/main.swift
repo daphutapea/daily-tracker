@@ -119,6 +119,8 @@ private struct Reminder: Sendable {
 
 /// Reminders scheduled from the page carry this prefix, so a refresh replaces them and nothing else.
 private let reminderPrefix = "reminder:"
+/// A snoozed reminder is a new request with this prefix, so a refresh keeps it unless its task is done.
+private let snoozePrefix = "snooze:"
 
 /// One line of the menu bar's Today list (src/lib/reminders.ts, todaySummary).
 private struct TodayItem {
@@ -363,6 +365,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     _ = await alert.beginSheetModal(for: window)
   }
 
+  /// A file field (Restore from a backup) opens the Mac's Open panel, starting in the backups folder.
+  /// Without this a web view's file field does nothing.
+  func webView(
+    _ webView: WKWebView,
+    runOpenPanelWith parameters: WKOpenPanelParameters,
+    initiatedByFrame frame: WKFrameInfo
+  ) async -> [URL]? {
+    let panel = NSOpenPanel()
+    panel.canChooseFiles = true
+    panel.canChooseDirectories = false
+    panel.allowsMultipleSelection = parameters.allowsMultipleSelection
+    panel.allowedContentTypes = [.json]
+    let folder = backupFolder().url
+    if FileManager.default.fileExists(atPath: folder.path) { panel.directoryURL = folder }
+    return await panel.beginSheetModal(for: window) == .OK ? panel.urls : nil
+  }
+
   // MARK: Messages from and to the page (src/lib/native.ts)
 
   func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -377,7 +396,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     case "reminders":
       let reminders = (body["reminders"] as? [Any] ?? []).compactMap(Reminder.init)
       let calendar = body["calendar"] as? Bool ?? false
-      Task { await schedule(reminders, calendar: calendar) }
+      // Pages from before v1.11 don't send it; then snoozes are left as they are.
+      let openTasks = (body["openTasks"] as? [String]).map(Set.init)
+      Task {
+        await schedule(reminders, calendar: calendar)
+        if let openTasks { await clearFinished(keeping: openTasks) }
+      }
     case "today":
       overdueCount = body["overdue"] as? Int ?? 0
       todayItems = (body["items"] as? [[String: Any]] ?? []).compactMap { d in
@@ -403,6 +427,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
       Task { await sendTestNotification() }
     case "save":
       save(filename: body["filename"] as? String ?? "daily-tracker.json", content: body["content"] as? String ?? "")
+    case "backup":
+      backUp(filename: body["filename"] as? String ?? "", content: body["content"] as? String ?? "")
+    case "showBackups":
+      let folder = backupFolder().url
+      try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+      NSWorkspace.shared.open(folder)
     default:
       break
     }
@@ -499,6 +529,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
     nextReminder = upcoming.first
     rebuildStatusMenu()
+  }
+
+  /// A task finished or deleted since its reminder went off takes that reminder with it: a snoozed copy
+  /// won't come back, and the one still in Notification Center goes, as in Reminders.
+  private func clearFinished(keeping openTasks: Set<String>) async {
+    let center = UNUserNotificationCenter.current()
+    let isFinished: @Sendable (UNNotificationRequest) -> Bool = { request in
+      guard let taskId = request.content.userInfo["taskId"] as? String, !taskId.isEmpty else { return false }
+      return !openTasks.contains(taskId)
+    }
+    let snoozed: [String] = await withCheckedContinuation { continuation in
+      center.getPendingNotificationRequests { requests in
+        continuation.resume(
+          returning: requests.filter { $0.identifier.hasPrefix(snoozePrefix) && isFinished($0) }.map(\.identifier))
+      }
+    }
+    center.removePendingNotificationRequests(withIdentifiers: snoozed)
+    let shown: [String] = await withCheckedContinuation { continuation in
+      center.getDeliveredNotifications { notifications in
+        continuation.resume(returning: notifications.map(\.request).filter(isFinished).map(\.identifier))
+      }
+    }
+    center.removeDeliveredNotifications(withIdentifiers: shown)
+    if !snoozed.isEmpty || !shown.isEmpty { note("Cleared \(snoozed.count) snoozed and \(shown.count) shown reminders of finished tasks") }
   }
 
   // MARK: iPhone alerts, through a calendar in iCloud
@@ -618,7 +672,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     case "snooze":
       guard let content = request.content.mutableCopy() as? UNMutableNotificationContent else { return }
       let snoozed = UNNotificationRequest(
-        identifier: "snooze:\(request.identifier):\(Date().timeIntervalSince1970)",
+        identifier: "\(snoozePrefix)\(request.identifier):\(Date().timeIntervalSince1970)",
         content: content,
         trigger: UNTimeIntervalNotificationTrigger(timeInterval: 600, repeats: false)
       )
@@ -771,6 +825,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         alert.informativeText = error.localizedDescription
         _ = await alert.beginSheetModal(for: window)
       }
+    }
+  }
+
+  // MARK: Weekly backups
+
+  /// iCloud Drive › Daily Tracker Backups when iCloud Drive is on, so the copies reach your other
+  /// Apple devices; otherwise Documents › Daily Tracker Backups.
+  private func backupFolder() -> (url: URL, label: String) {
+    let home = FileManager.default.homeDirectoryForCurrentUser
+    let iCloudDrive = home.appending(path: "Library/Mobile Documents/com~apple~CloudDocs", directoryHint: .isDirectory)
+    if FileManager.default.fileExists(atPath: iCloudDrive.path) {
+      return (iCloudDrive.appending(path: "Daily Tracker Backups", directoryHint: .isDirectory), "iCloud Drive › Daily Tracker Backups")
+    }
+    let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    return (documents.appending(path: "Daily Tracker Backups", directoryHint: .isDirectory), "Documents › Daily Tracker Backups")
+  }
+
+  /// Writes a backup the page made, without asking, and moves all but the eight newest to the Trash.
+  /// Only files named the way the page names them are touched.
+  private func backUp(filename: String, content: String) {
+    let pattern = #"^daily-tracker-\d{4}-\d{2}-\d{2}\.json$"#
+    let isBackup = { (name: String) in name.range(of: pattern, options: .regularExpression) != nil }
+    let (folder, label) = backupFolder()
+    do {
+      guard isBackup(filename), !content.isEmpty else { throw CocoaError(.fileWriteInvalidFileName) }
+      try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+      try content.write(to: folder.appending(path: filename), atomically: true, encoding: .utf8)
+      let older = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+        .filter { isBackup($0.lastPathComponent) }
+        .sorted { $0.lastPathComponent > $1.lastPathComponent }
+        .dropFirst(8)
+      for url in older { try? FileManager.default.trashItem(at: url, resultingItemURL: nil) }
+      note("Backed up to \(label) › \(filename)")
+      sendToPage(["type": "backedUp", "at": ISO8601DateFormatter().string(from: Date()), "folder": label])
+    } catch {
+      note("Backup failed: \(error.localizedDescription)")
+      sendToPage(["type": "backupFailed", "message": error.localizedDescription])
     }
   }
 

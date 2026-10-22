@@ -52,6 +52,38 @@ The icon is the Daily Tracker logo, drawn by `scripts/make-logo.swift` into `mac
 changing the logo, run `npm run logo` and then `npm run app`. To use a different icon, replace
 `macos/AppIcon.png` with any 1024 by 1024 PNG and run `npm run app`.
 
+## Install the iPhone app
+
+The iPhone app is the same tracker in a native screen (`ios/DailyTracker/DailyTracker.swift`), like the
+Mac app: its pages come from inside it, so nothing has to be put online, and it uses the same Supabase
+project. You install it from this Mac. Xcode (from the Mac App Store) has to be installed; the iPhone
+itself needs nothing extra.
+
+Once:
+
+1. In Xcode, open Settings → Accounts, press +, choose Apple Account and sign in. A free Apple ID works.
+2. Plug the iPhone into the Mac with a cable, unlock it, and tap Trust when it asks.
+3. On the iPhone, turn on Settings → Privacy & Security → Developer Mode. It restarts and asks you to
+   confirm.
+
+Then, from the project folder:
+
+```bash
+npm run iphone
+```
+
+It builds the pages, signs the app with your Apple ID, and installs it on the phone. The first time,
+the iPhone won't open it until you trust your profile: Settings → General → VPN & Device Management →
+your Apple ID → Trust. Open Daily Tracker, sign in with your tracker account, and allow notifications
+when it asks (or later, under Settings → iPhone app).
+
+With a free Apple ID the app stops opening after 7 days. Plug the phone in and run `npm run iphone`
+again to renew it; your sign-in and settings stay. A paid Apple Developer membership makes it last a
+year. Run it again after any code change, too.
+
+`npm run iphone -- --simulator` runs it in the iOS Simulator instead, which needs Xcode's iOS
+simulator (Xcode → Settings → Components).
+
 ## 3. Reminders, summaries and your iPhone
 
 Reminders and summaries come from the Mac app, so install it first (above).
@@ -60,7 +92,8 @@ Reminders and summaries come from the Mac app, so install it first (above).
    Allow it. Settings → Mac app → Send a test notification checks it works.
 2. Under Settings → Summaries, turn on the morning summary or the weekly review if you want them,
    and pick when they arrive.
-3. For alerts on your iPhone, turn on Also alert me on my iPhone in Settings → Mac app and allow
+3. For alerts on your iPhone, install the iPhone app (above): it shows them as its own
+   notifications. Without it, turn on Also alert me on my iPhone in Settings → Mac app and allow
    Calendar access when macOS asks. The app makes a “Daily Tracker” calendar in iCloud; on the iPhone,
    allow Calendar notifications and keep that calendar ticked in the Calendar app.
 4. Tick Open at Login in the menu bar menu, so all of this keeps working after a restart.
@@ -251,10 +284,11 @@ client or office work here, check your company’s rules on where that informati
 |---|---|
 | `src/pages/` | Home, Tasks, Notes, Calendar, Links, Weekly review and Settings |
 | `macos/` | The Mac app window and its icon |
+| `ios/` | The iPhone app: its Xcode project, the native screen and its icon. `npm run iphone` builds and installs it |
 | `scripts/build-mac-app.sh` | Builds, checks and installs the Mac app (`npm run app`) |
 | `src/components/` | The task and event dialogs, Tracky (`Tracky.tsx`), the day ruler, charts, the notes editor |
 | `src/lib/queries.ts` | Every read and write to the database |
-| `supabase/migrations/` | Tables, access rules and the summary settings; the last one removes Telegram |
+| `supabase/migrations/` | Tables, access rules and the summary settings; later ones remove Telegram and add repeating tasks and events |
 | `src/lib/reminders.ts`, `src/components/MacAppBridge.tsx` | What the Mac app schedules: reminders, summaries, the Today list |
 | `supabase/functions/tracky/` | The server function that sends Tracky’s notes to Gemini, and its tests |
 | `supabase/functions/tracky/eval/` | The 34-note gold set, its grader and `npm run eval:tracky` |

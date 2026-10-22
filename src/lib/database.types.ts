@@ -23,19 +23,39 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "events": {
+            "event_series": {
                   Row: {
-                    "all_day": boolean,"created_at": string,"details": string | null,"ends_at": string | null,"id": string,"location": string | null,"remind_at": string | null,"reminded_at": string | null,"starts_at": string,"title": string,"updated_at": string,"user_id": string
+                    "anchor": string,"created_at": string,"ends_before": string | null,"id": string,"repeat": Database["public"]['Enums']["repeat_rule"],"user_id": string,"written_until": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "all_day"?: boolean,"created_at"?: string,"details"?: string | null,"ends_at"?: string | null,"id"?: string,"location"?: string | null,"remind_at"?: string | null,"reminded_at"?: string | null,"starts_at": string,"title": string,"updated_at"?: string,"user_id"?: string
+                    "anchor": string,"created_at"?: string,"ends_before"?: string | null,"id"?: string,"repeat": Database["public"]['Enums']["repeat_rule"],"user_id"?: string,"written_until": string
                   }
                   Update: {
-                    "all_day"?: boolean,"created_at"?: string,"details"?: string | null,"ends_at"?: string | null,"id"?: string,"location"?: string | null,"remind_at"?: string | null,"reminded_at"?: string | null,"starts_at"?: string,"title"?: string,"updated_at"?: string,"user_id"?: string
+                    "anchor"?: string,"created_at"?: string,"ends_before"?: string | null,"id"?: string,"repeat"?: Database["public"]['Enums']["repeat_rule"],"user_id"?: string,"written_until"?: string
                   }
                   Relationships: [
                     
+                  ]
+                },"events": {
+                  Row: {
+                    "all_day": boolean,"created_at": string,"details": string | null,"ends_at": string | null,"id": string,"location": string | null,"remind_at": string | null,"reminded_at": string | null,"series_id": string | null,"starts_at": string,"title": string,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "all_day"?: boolean,"created_at"?: string,"details"?: string | null,"ends_at"?: string | null,"id"?: string,"location"?: string | null,"remind_at"?: string | null,"reminded_at"?: string | null,"series_id"?: string | null,"starts_at": string,"title": string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Update: {
+                    "all_day"?: boolean,"created_at"?: string,"details"?: string | null,"ends_at"?: string | null,"id"?: string,"location"?: string | null,"remind_at"?: string | null,"reminded_at"?: string | null,"series_id"?: string | null,"starts_at"?: string,"title"?: string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "events_series_id_user_id_fkey"
+      columns: ["series_id","user_id"]
+isOneToOne: false
+      referencedRelation: "event_series"
+      referencedColumns: ["id","user_id"]
+    }
                   ]
                 },"notes": {
                   Row: {
@@ -101,14 +121,14 @@ isOneToOne: false
                   ]
                 },"tasks": {
                   Row: {
-                    "completed_at": string | null,"created_at": string,"due_at": string | null,"id": string,"links": NonNullable<Json>,"notes": Json | null,"notes_text": string,"priority": Database["public"]['Enums']["task_priority"],"project_id": string | null,"remind_at": string | null,"reminded_at": string | null,"show_on_calendar": boolean,"status": Database["public"]['Enums']["task_status"],"title": string,"updated_at": string,"user_id": string
+                    "completed_at": string | null,"created_at": string,"due_at": string | null,"id": string,"links": NonNullable<Json>,"notes": Json | null,"notes_text": string,"priority": Database["public"]['Enums']["task_priority"],"project_id": string | null,"remind_at": string | null,"reminded_at": string | null,"repeat": Database["public"]['Enums']["repeat_rule"] | null,"repeat_next": string | null,"show_on_calendar": boolean,"status": Database["public"]['Enums']["task_status"],"title": string,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "completed_at"?: string | null,"created_at"?: string,"due_at"?: string | null,"id"?: string,"links"?: NonNullable<Json>,"notes"?: Json | null,"notes_text"?: string,"priority"?: Database["public"]['Enums']["task_priority"],"project_id"?: string | null,"remind_at"?: string | null,"reminded_at"?: string | null,"show_on_calendar"?: boolean,"status"?: Database["public"]['Enums']["task_status"],"title": string,"updated_at"?: string,"user_id"?: string
+                    "completed_at"?: string | null,"created_at"?: string,"due_at"?: string | null,"id"?: string,"links"?: NonNullable<Json>,"notes"?: Json | null,"notes_text"?: string,"priority"?: Database["public"]['Enums']["task_priority"],"project_id"?: string | null,"remind_at"?: string | null,"reminded_at"?: string | null,"repeat"?: Database["public"]['Enums']["repeat_rule"] | null,"repeat_next"?: string | null,"show_on_calendar"?: boolean,"status"?: Database["public"]['Enums']["task_status"],"title": string,"updated_at"?: string,"user_id"?: string
                   }
                   Update: {
-                    "completed_at"?: string | null,"created_at"?: string,"due_at"?: string | null,"id"?: string,"links"?: NonNullable<Json>,"notes"?: Json | null,"notes_text"?: string,"priority"?: Database["public"]['Enums']["task_priority"],"project_id"?: string | null,"remind_at"?: string | null,"reminded_at"?: string | null,"show_on_calendar"?: boolean,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"updated_at"?: string,"user_id"?: string
+                    "completed_at"?: string | null,"created_at"?: string,"due_at"?: string | null,"id"?: string,"links"?: NonNullable<Json>,"notes"?: Json | null,"notes_text"?: string,"priority"?: Database["public"]['Enums']["task_priority"],"project_id"?: string | null,"remind_at"?: string | null,"reminded_at"?: string | null,"repeat"?: Database["public"]['Enums']["repeat_rule"] | null,"repeat_next"?: string | null,"show_on_calendar"?: boolean,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -128,7 +148,7 @@ isOneToOne: false
             [_ in never]: never
           }
           Enums: {
-            "task_priority": "urgent"|"high"|"medium"|"low","task_status": "todo"|"in_progress"|"waiting"|"done"
+            "repeat_rule": "daily"|"weekdays"|"weekly"|"monthly"|"yearly","task_priority": "urgent"|"high"|"medium"|"low","task_status": "todo"|"in_progress"|"waiting"|"done"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -248,7 +268,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "task_priority": ["urgent", "high", "medium", "low"],"task_status": ["todo", "in_progress", "waiting", "done"]
+            "repeat_rule": ["daily", "weekdays", "weekly", "monthly", "yearly"],"task_priority": ["urgent", "high", "medium", "low"],"task_status": ["todo", "in_progress", "waiting", "done"]
           }
         }
 } as const

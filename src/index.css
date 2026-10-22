@@ -401,8 +401,12 @@
     .btn-primary:hover:not(:disabled) {
       background: color-mix(in srgb, var(--accent) 88%, var(--ink));
     }
-    .btn-quiet:hover:not(:disabled) {
+    .btn-quiet:hover:not(:disabled),
+    .btn-ghost:hover:not(:disabled) {
       background: var(--surface-2);
+    }
+    .btn-ghost:hover:not(:disabled) {
+      color: var(--ink);
     }
     .btn-danger:hover:not(:disabled) {
       background: color-mix(in srgb, var(--danger) 10%, transparent);
@@ -764,7 +768,7 @@
   }
 }
 
-/* ---------- Dialog: centered on desktop, bottom sheet on phones ---------- */
+/* Dialog: centered on desktop, a bottom sheet on phones. */
 
 dialog.sheet {
   margin: auto;
@@ -864,6 +868,24 @@ dialog.sheet.sheet-instant::backdrop {
   transition: none;
 }
 
+/* With reduced motion the phone sheet doesn't slide; it fades instead of appearing at once. */
+@media (prefers-reduced-motion: reduce) and (max-width: 639px) {
+  dialog.sheet:not(.sheet-instant) {
+    transition:
+      opacity 200ms var(--ease-out),
+      overlay 200ms allow-discrete,
+      display 200ms allow-discrete;
+  }
+  dialog.sheet:not([open]) {
+    opacity: 0;
+  }
+  @starting-style {
+    dialog.sheet[open] {
+      opacity: 0;
+    }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   dialog.sheet,
   dialog.sheet.sheet-sm {
@@ -913,7 +935,7 @@ dialog.sheet.sheet-instant::backdrop {
   }
 }
 
-/* ---------- Rich text (TipTap) ---------- */
+/* Rich text (TipTap) */
 
 .prose-editor {
   outline: none;

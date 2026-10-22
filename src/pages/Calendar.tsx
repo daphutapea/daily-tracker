@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { monthGrid, WEEKDAYS } from '@/lib/month'
 import { TaskRow } from '@/components/TaskRow'
-import { Loading, QueryError, StateMessage } from '@/components/ui'
+import { Loading, QueryError, RepeatMark, StateMessage } from '@/components/ui'
 import { sameDay, toDate } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
 import { rowIn } from '@/lib/motion'
@@ -53,13 +53,13 @@ export function CalendarPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Calendar</h1>
         <div className="flex gap-2">
-          <button type="button" className="btn btn-quiet" onClick={() => openTask('new', { due: selectedKey })}>
+          <button type="button" className="btn btn-quiet" aria-label="Add task" onClick={() => openTask('new', { due: selectedKey })}>
             <PlusIcon size={16} weight="bold" />
             Task
           </button>
-          <button type="button" className="btn btn-primary" onClick={() => openEvent('new', { date: selectedKey })}>
+          <button type="button" className="btn btn-primary" aria-label="Add event" onClick={() => openEvent('new', { date: selectedKey })}>
             <PlusIcon size={16} weight="bold" />
-            Add event
+            Event
           </button>
         </div>
       </div>
@@ -212,6 +212,12 @@ function DayEvents({ events, onOpen }: { events: CalEvent[]; onOpen: (id: string
                     ? 'All day'
                     : `${format(toDate(e.starts_at), 'HH:mm')}${e.ends_at ? `–${format(toDate(e.ends_at), 'HH:mm')}` : ''}`}
                   {e.location && <span className="text-ink-3"> · {e.location}</span>}
+                  {e.series_id && (
+                    <>
+                      {' '}
+                      <RepeatMark label="Repeats" />
+                    </>
+                  )}
                 </span>
               </span>
             </button>

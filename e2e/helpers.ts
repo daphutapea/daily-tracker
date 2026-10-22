@@ -69,11 +69,20 @@ export async function asOwner(page: Page) {
       call<{ id: string; title: string; starts_at: string; ends_at: string | null; remind_at: string | null; location: string | null }[]>(
         `events?title=eq.${encodeURIComponent(title)}`,
       ),
+    tasksTitledFull: (title: string) =>
+      call<(TaskRow & { repeat: string | null; repeat_next: string | null })[]>(`tasks?title=eq.${encodeURIComponent(title)}&order=due_at`),
+    seriesEvents: (title: string) =>
+      call<{ id: string; starts_at: string; series_id: string | null }[]>(`events?title=eq.${encodeURIComponent(title)}&order=starts_at`),
+    series: (id: string) => call<{ id: string; repeat: string; ends_before: string | null }[]>(`event_series?id=eq.${id}`),
     /** Removes every task and event a test made. */
     cleanUp: async () => {
       const like = encodeURIComponent(`${PREFIX}*`)
+      const series = (await call<{ series_id: string | null }[]>(`events?title=like.${like}&select=series_id`))
+        .map((e) => e.series_id)
+        .filter(Boolean)
       await call(`tasks?title=like.${like}`, { method: 'DELETE' })
       await call(`events?title=like.${like}`, { method: 'DELETE' })
+      if (series.length) await call(`event_series?id=in.(${[...new Set(series)].join(',')})`, { method: 'DELETE' })
     },
   }
 }

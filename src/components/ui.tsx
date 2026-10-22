@@ -1,4 +1,4 @@
-import { CheckIcon, WarningIcon } from '@phosphor-icons/react'
+import { CheckIcon, RepeatIcon, WarningIcon } from '@phosphor-icons/react'
 import { useState, type ReactNode } from 'react'
 import { STATUS_COLOR } from '@/lib/hues'
 import type { TaskPriority, TaskStatus } from '@/lib/types'
@@ -172,5 +172,15 @@ export function Segmented<T extends string>({
         </button>
       ))}
     </div>
+  )
+}
+
+/** The small mark beside a task or event that repeats. */
+export function RepeatMark({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center align-[-1px] text-ink-3" title={label}>
+      <RepeatIcon size={12} weight="bold" aria-hidden />
+      <span className="sr-only">{label}</span>
+    </span>
   )
 }

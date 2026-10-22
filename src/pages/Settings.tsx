@@ -1,20 +1,38 @@
 import {
+  ArrowCounterClockwiseIcon,
   BellIcon,
   CaretRightIcon,
   CheckIcon,
   DownloadSimpleIcon,
   SignOutIcon,
 } from '@phosphor-icons/react'
+import { useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
 import { toast } from 'sonner'
 import { useUserEmail } from '@/auth/sessionContext'
 import { Loading, QueryError, Segmented } from '@/components/ui'
 import {
+  backupFilename,
+  countsInWords,
+  makeBackup,
+  missingFrom,
+  readBackup,
+  restoreMissing,
+  totalOf,
+  type CheckedBackup,
+  type Counts,
+} from '@/lib/backup'
+import {
+  deviceName,
+  inIphoneApp,
   inMacApp,
+  inNativeApp,
+  onMacMessage,
   postToMac,
   saveFile,
+  setMacBackupsEnabled,
   setMacBadgeEnabled,
   setMacIphoneEnabled,
   setMacRemindersEnabled,
@@ -22,12 +40,14 @@ import {
   useMacCalendarStatus,
   useMacIphoneEnabled,
   useMacPermission,
+  useLastBackup,
+  useMacBackupsEnabled,
   useMacRemindersEnabled,
 } from '@/lib/native'
 import { playIntro, setIntroEnabled, useIntroEnabled } from '@/lib/intro'
 import { setTrackySeesSchedule, useTrackySeesSchedule } from '@/lib/trackySchedule'
 import { quietly, useDeleteProject, useProfile, useProjects, useSaveProject, useUpdateProfile } from '@/lib/queries'
-import { must, supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { updateTheme, useTheme, type DarkPalette, type LightPalette, type Palette, type ThemeMode } from '@/lib/theme'
 import type { Profile } from '@/lib/types'
 
@@ -49,7 +69,7 @@ export function SettingsPage() {
       ) : (
         <div className="fade-in space-y-6">
           <ProfileSection profile={profile.data} />
-          {inMacApp && <MacAppSection />}
+          {inNativeApp && <MacAppSection />}
           <SummariesSection profile={profile.data} />
           <TrackySection />
           <ProjectsSection />
@@ -112,8 +132,6 @@ function ProfileSection({ profile }: { profile: Profile }) {
   )
 }
 
-// ---------------------------------------------------------------- summaries
-
 const ISO_WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 /**
@@ -130,9 +148,9 @@ function SummariesSection({ profile }: { profile: Profile }) {
       id="summaries"
       title="Summaries"
       intro={
-        inMacApp
-          ? 'They arrive as notifications from this Mac app, at the times you pick.'
-          : 'They arrive as notifications from the Daily Tracker app on your Mac, at the times you pick.'
+        inNativeApp
+          ? `They arrive as notifications from this ${deviceName} app, at the times you pick.`
+          : 'They arrive as notifications from the Daily Tracker app on your Mac or iPhone, at the times you pick.'
       }
     >
     <div className="space-y-5">
@@ -239,8 +257,6 @@ function TrackySection() {
     </Section>
   )
 }
-
-// ---------------------------------------------------------------- projects
 
 function ProjectsSection() {
   const projects = useProjects()
@@ -483,23 +499,32 @@ function PalettePreview({ palette }: { palette: Palette }) {
   )
 }
 
+/** The Mac app's or the iPhone app's own settings: notifications, the icon badge, and on a Mac the iPhone alerts. */
 function MacAppSection() {
   const permission = useMacPermission()
   const enabled = useMacRemindersEnabled()
   const badge = useMacBadgeEnabled()
   const iphone = useMacIphoneEnabled()
   const calendar = useMacCalendarStatus()
+  const system = inIphoneApp ? 'iOS' : 'macOS'
+  const settingsApp = inIphoneApp ? 'Settings' : 'System Settings'
   return (
     <Section
-      id="mac"
-      title="Mac app"
-      intro="Reminders and summaries for the next two weeks are handed to macOS, so they arrive even when the window is closed or the app has quit. Each reminder can be marked done or snoozed for 10 minutes from the notification."
+      id={inIphoneApp ? 'iphone' : 'mac'}
+      title={`${deviceName} app`}
+      intro={
+        inIphoneApp
+          ? 'Reminders and summaries for the next two weeks are handed to iOS, so they arrive even when the app is closed. Each reminder can be marked done or snoozed for 10 minutes from the notification.'
+          : 'Reminders and summaries for the next two weeks are handed to macOS, so they arrive even when the window is closed or the app has quit. Each reminder can be marked done or snoozed for 10 minutes from the notification.'
+      }
     >
       <div className="space-y-3">
-        <p className="text-ink-2">
-          Press <kbd className="font-sans font-medium text-ink">⌥⌘T</kbd> in any app to ask Tracky. The menu bar icon
-          lists what’s left today.
-        </p>
+        {inMacApp && (
+          <p className="text-ink-2">
+            Press <kbd className="font-sans font-medium text-ink">⌥⌘T</kbd> in any app to ask Tracky. The menu bar icon
+            lists what’s left today.
+          </p>
+        )}
         <label className="flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 font-medium">
           <input
             type="checkbox"
@@ -507,7 +532,7 @@ function MacAppSection() {
             checked={enabled}
             onChange={(e) => setMacRemindersEnabled(e.target.checked)}
           />
-          Show reminders as Mac notifications
+          Show reminders as {deviceName} notifications
         </label>
         <label className="flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 font-medium">
           <input
@@ -516,60 +541,63 @@ function MacAppSection() {
             checked={badge}
             onChange={(e) => setMacBadgeEnabled(e.target.checked)}
           />
-          Show how many tasks are overdue on the Dock icon
+          Show how many tasks are overdue on the {inIphoneApp ? 'app icon' : 'Dock icon'}
         </label>
-        <div className="space-y-1">
-          <label className="flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 font-medium">
-            <input
-              type="checkbox"
-              className="size-4 accent-[var(--ink)]"
-              checked={iphone}
-              disabled={!enabled}
-              onChange={(e) => setMacIphoneEnabled(e.target.checked)}
-            />
-            Also alert me on my iPhone
-          </label>
-          <p className="pl-6 text-[13px] text-ink-2">
-            Puts each reminder and summary in a “Daily Tracker” calendar in your iCloud, and iCloud brings its alerts to
-            your iPhone. Your Mac then gets the calendar’s alert instead of its own, so you never get two.
-          </p>
-          {iphone && calendar === 'granted' && (
-            <p className="pl-6 text-[13px] text-ok">On. Check that Calendar alerts are allowed on your iPhone.</p>
-          )}
-          {iphone && calendar === 'undetermined' && (
-            <p className="pl-6 text-[13px] text-ink-2">macOS will ask once whether Daily Tracker may use Calendar.</p>
-          )}
-          {iphone && calendar === 'denied' && (
-            <div className="space-y-2 pl-6">
-              <p className="text-[13px] text-warn">
-                Calendar access is off for Daily Tracker, so nothing reaches your iPhone. Reminders still show on this Mac.
-              </p>
-              <button type="button" className="btn btn-quiet" onClick={() => postToMac({ type: 'openCalendarSettings' })}>
-                Open System Settings
-              </button>
-            </div>
-          )}
-          {iphone && calendar === 'local' && (
-            <p className="pl-6 text-[13px] text-warn">
-              This Mac has no iCloud calendar account, so the calendar stays on this Mac. Turn on Calendars in System
-              Settings → your name → iCloud.
+        {inMacApp && (
+          <div className="space-y-1">
+            <label className="flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 font-medium">
+              <input
+                type="checkbox"
+                className="size-4 accent-[var(--ink)]"
+                checked={iphone}
+                disabled={!enabled}
+                onChange={(e) => setMacIphoneEnabled(e.target.checked)}
+              />
+              Also alert me on my iPhone
+            </label>
+            <p className="pl-6 text-[13px] text-ink-2">
+              Puts each reminder and summary in a “Daily Tracker” calendar in your iCloud, and iCloud brings its alerts to
+              your iPhone. Your Mac then gets the calendar’s alert instead of its own, so you never get two. With the
+              Daily Tracker iPhone app installed, you don’t need this.
             </p>
-          )}
-          {iphone && calendar === 'error' && (
-            <p className="pl-6 text-[13px] text-warn">The calendar couldn’t be updated. Reminders still show on this Mac.</p>
-          )}
-        </div>
+            {iphone && calendar === 'granted' && (
+              <p className="pl-6 text-[13px] text-ok">On. Check that Calendar alerts are allowed on your iPhone.</p>
+            )}
+            {iphone && calendar === 'undetermined' && (
+              <p className="pl-6 text-[13px] text-ink-2">macOS will ask once whether Daily Tracker may use Calendar.</p>
+            )}
+            {iphone && calendar === 'denied' && (
+              <div className="space-y-2 pl-6">
+                <p className="text-[13px] text-warn">
+                  Calendar access is off for Daily Tracker, so nothing reaches your iPhone. Reminders still show on this Mac.
+                </p>
+                <button type="button" className="btn btn-quiet" onClick={() => postToMac({ type: 'openCalendarSettings' })}>
+                  Open System Settings
+                </button>
+              </div>
+            )}
+            {iphone && calendar === 'local' && (
+              <p className="pl-6 text-[13px] text-warn">
+                This Mac has no iCloud calendar account, so the calendar stays on this Mac. Turn on Calendars in System
+                Settings → your name → iCloud.
+              </p>
+            )}
+            {iphone && calendar === 'error' && (
+              <p className="pl-6 text-[13px] text-warn">The calendar couldn’t be updated. Reminders still show on this Mac.</p>
+            )}
+          </div>
+        )}
         {permission === 'denied' && (
           <div className="space-y-2">
-            <p className="text-warn">Notifications are turned off for Daily Tracker in System Settings, so none will show.</p>
+            <p className="text-warn">Notifications are turned off for Daily Tracker in {settingsApp}, so none will show.</p>
             <button type="button" className="btn btn-quiet" onClick={() => postToMac({ type: 'openNotificationSettings' })}>
-              Open System Settings
+              Open {settingsApp}
             </button>
           </div>
         )}
         {permission === 'undetermined' && enabled && (
           <div className="space-y-2">
-            <p className="text-ink-2">macOS hasn’t been asked yet. It asks once, when the first reminder is coming up, or now:</p>
+            <p className="text-ink-2">{system} hasn’t been asked yet. It asks once, when the first reminder is coming up, or now:</p>
             <button type="button" className="btn btn-quiet" onClick={() => postToMac({ type: 'requestPermission' })}>
               Allow notifications
             </button>
@@ -582,8 +610,9 @@ function MacAppSection() {
           </button>
         )}
         <p className="text-[13px] text-ink-3">
-          Closing the window keeps Daily Tracker in the menu bar, so reminders stay up to date. Changes made on another
-          device reach this Mac the next time the app is running.
+          {inIphoneApp
+            ? 'The reminders on this iPhone are brought up to date each time you open the app, so a change made on your Mac reaches them the next time you do.'
+            : 'Closing the window keeps Daily Tracker in the menu bar, so reminders stay up to date. Changes made on another device reach this Mac the next time the app is running.'}
         </p>
       </div>
     </Section>
@@ -597,30 +626,8 @@ function DataSection() {
   async function download() {
     setBusy(true)
     try {
-      const [tasks, events, notes, projects, quickLinks, settings] = await Promise.all([
-        supabase.from('tasks').select('*').order('created_at'),
-        supabase.from('events').select('*').order('starts_at'),
-        supabase.from('notes').select('*').order('created_at'),
-        supabase.from('projects').select('*').order('created_at'),
-        supabase.from('quick_links').select('*').order('position'),
-        supabase
-          .from('profiles')
-          .select('display_name,timezone,digest_enabled,digest_time,weekly_enabled,weekly_day,weekly_time,created_at')
-          .single(),
-      ])
-      const data = {
-        app: 'Daily Tracker',
-        version: __APP_VERSION__,
-        exported_at: new Date().toISOString(),
-        tasks: must(tasks),
-        events: must(events),
-        notes: must(notes),
-        projects: must(projects),
-        quick_links: must(quickLinks),
-        settings: must(settings),
-      }
-      saveFile(`daily-tracker-${format(new Date(), 'yyyy-MM-dd')}.json`, JSON.stringify(data, null, 2), 'application/json')
-      if (!inMacApp) toast.success('Downloaded a copy of your data')
+      saveFile(backupFilename(), JSON.stringify(await makeBackup(), null, 2), 'application/json')
+      if (!inNativeApp) toast.success('Downloaded a copy of your data')
     } catch (e) {
       toast.error(`Couldn’t make the copy: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
@@ -630,14 +637,186 @@ function DataSection() {
 
   return (
     <Section
+      id="data"
       title="Your data"
-      intro="A copy of everything you’ve added: tasks, notes, events, projects, quick links and your settings, as one JSON file. Keep one somewhere safe now and then; Supabase holds the only other copy."
+      intro="A copy of everything you’ve added: tasks, notes, events, projects, quick links and your settings, as one JSON file. Supabase holds the only other copy, so keep one somewhere safe."
     >
-      <button type="button" className="btn btn-quiet" disabled={busy} onClick={download}>
-        <DownloadSimpleIcon size={16} weight="bold" />
-        {busy ? 'Preparing…' : 'Download a copy'}
-      </button>
+      {inMacApp && <WeeklyBackups />}
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="btn btn-quiet" disabled={busy} onClick={download}>
+          <DownloadSimpleIcon size={16} weight="bold" />
+          {busy ? 'Preparing…' : 'Download a copy'}
+        </button>
+        <RestoreBackup />
+      </div>
     </Section>
+  )
+}
+
+/** In the Mac app: a copy of everything to iCloud Drive once a week, without asking. */
+function WeeklyBackups() {
+  const on = useMacBackupsEnabled()
+  const last = useLastBackup()
+  const [working, setWorking] = useState(false)
+  useEffect(() => {
+    const off = onMacMessage((m) => {
+      if (m.type === 'backedUp' || m.type === 'backupFailed') setWorking(false)
+    })
+    return () => {
+      off()
+    }
+  }, [])
+
+  async function backUpNow() {
+    setWorking(true)
+    try {
+      postToMac({ type: 'backup', filename: backupFilename(), content: JSON.stringify(await makeBackup(), null, 2) })
+    } catch (e) {
+      setWorking(false)
+      toast.error(`Couldn’t make the backup: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  return (
+    <div className="mb-4 space-y-1">
+      <label className="flex min-h-9 cursor-pointer pointer-coarse:min-h-11 items-center gap-2 font-medium">
+        <input
+          type="checkbox"
+          className="size-4 accent-[var(--ink)]"
+          checked={on}
+          onChange={(e) => setMacBackupsEnabled(e.target.checked)}
+        />
+        Back up every week
+      </label>
+      <p className="pl-6 text-[13px] text-ink-2">
+        {last
+          ? `Last backup ${format(new Date(last.at), 'EEE d MMM, HH:mm')}, in ${last.folder}.`
+          : 'Backups go to iCloud Drive, in a folder called Daily Tracker Backups, or to Documents when iCloud Drive is off.'}{' '}
+        The eight newest are kept, and older ones go to the Trash.
+      </p>
+      <div className="flex flex-wrap gap-2 pt-1 pl-6">
+        <button type="button" className="btn btn-quiet" disabled={working} onClick={backUpNow}>
+          {working ? 'Backing up…' : 'Back up now'}
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={() => postToMac({ type: 'showBackups' })}>
+          Show backups
+        </button>
+      </div>
+    </div>
+  )
+}
+
+type Checked = { name: string; backup: CheckedBackup } & Awaited<ReturnType<typeof missingFrom>>
+
+/**
+ * Restore from a backup file: it shows what the file holds and what isn't in the tracker now, and adds
+ * only that back. Nothing already there is changed or removed.
+ */
+function RestoreBackup() {
+  const qc = useQueryClient()
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [checking, setChecking] = useState(false)
+  const [restoring, setRestoring] = useState(false)
+  const [checked, setChecked] = useState<Checked | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function pick(file: File | undefined) {
+    if (!file) return
+    setError(null)
+    setChecked(null)
+    setChecking(true)
+    try {
+      const backup = readBackup(await file.text())
+      setChecked({ name: file.name, backup, ...(await missingFrom(backup)) })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setChecking(false)
+      // Picking the same file again still counts as a change.
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  async function restore() {
+    if (!checked) return
+    setRestoring(true)
+    setError(null)
+    try {
+      await restoreMissing(checked.missing)
+      await qc.invalidateQueries()
+      toast.success(`Restored ${countsInWords(checked.counts)}`)
+      setChecked(null)
+    } catch (e) {
+      setError(`Couldn’t restore: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setRestoring(false)
+    }
+  }
+
+  const held: Counts | null = checked
+    ? {
+        tasks: checked.backup.rows.tasks.length,
+        events: checked.backup.rows.events.length,
+        notes: checked.backup.rows.notes.length,
+        projects: checked.backup.rows.projects.length,
+        quick_links: checked.backup.rows.quick_links.length,
+      }
+    : null
+  const toAdd = checked ? totalOf(checked.counts) : 0
+
+  return (
+    <>
+      <label htmlFor="backup-file" className="sr-only">
+        Backup file
+      </label>
+      <input
+        ref={fileRef}
+        id="backup-file"
+        type="file"
+        accept="application/json,.json"
+        className="sr-only"
+        tabIndex={-1}
+        onChange={(e) => pick(e.target.files?.[0])}
+      />
+      <button type="button" className="btn btn-quiet" disabled={checking || restoring} onClick={() => fileRef.current?.click()}>
+        <ArrowCounterClockwiseIcon size={16} weight="bold" />
+        {checking ? 'Reading the backup…' : 'Restore from a backup'}
+      </button>
+      {error && (
+        <p role="alert" className="basis-full text-danger">
+          {error}
+        </p>
+      )}
+      {checked && held && (
+        <div role="region" aria-label="Restore from a backup" className="basis-full space-y-2 rounded-[10px] border border-line p-3">
+          <p className="font-medium break-words">{checked.name}</p>
+          <p className="text-[13px] text-ink-2">
+            {checked.backup.exportedAt ? `Made ${format(checked.backup.exportedAt, 'EEE d MMM yyyy, HH:mm')}. ` : ''}
+            It holds {countsInWords(held)}.
+          </p>
+          <p>
+            {toAdd > 0
+              ? `${countsInWords(checked.counts)} ${toAdd === 1 ? 'isn’t' : 'aren’t'} in your tracker now. Restoring adds ${toAdd === 1 ? 'it' : 'them'} back. Nothing you have now is changed or removed, and your settings stay as they are.`
+              : 'Everything in it is already in your tracker, so there’s nothing to restore.'}
+          </p>
+          {checked.backup.unreadable > 0 && (
+            <p className="text-[13px] text-ink-3">
+              {checked.backup.unreadable === 1 ? '1 entry couldn’t be read and is' : `${checked.backup.unreadable} entries couldn’t be read and are`} left out.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2 pt-1">
+            {toAdd > 0 && (
+              <button type="button" className="btn btn-primary" disabled={restoring} onClick={restore}>
+                {restoring ? 'Restoring…' : toAdd === 1 ? 'Restore 1 item' : `Restore ${toAdd} items`}
+              </button>
+            )}
+            <button type="button" className="btn btn-quiet" disabled={restoring} onClick={() => setChecked(null)}>
+              {toAdd > 0 ? 'Cancel' : 'Close'}
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

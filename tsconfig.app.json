@@ -23,5 +23,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Unit tests run in Node (npm run test:app), not in the browser.
+  "exclude": ["src/**/*.test.ts"]
 }

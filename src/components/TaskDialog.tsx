@@ -1,6 +1,7 @@
 import { PlusIcon, TrashIcon, XIcon } from '@phosphor-icons/react'
 import type { JSONContent } from '@tiptap/react'
 import { format, set, subDays, subHours, subMinutes } from 'date-fns'
+import { REPEAT_OPTIONS, type RepeatRule } from '@/lib/repeatRules'
 import type { Json } from '@/lib/database.types'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
@@ -59,6 +60,7 @@ interface FormState {
   due: string
   remind: string
   showOnCalendar: boolean
+  repeat: RepeatRule | ''
   links: TaskLink[]
   notes: JSONContent | null
   notesText: string
@@ -85,6 +87,7 @@ function initialState(task: Task | null, defaultDue: string | null): FormState {
     due,
     remind: toLocalInput(task?.remind_at),
     showOnCalendar: task?.show_on_calendar ?? true,
+    repeat: task?.repeat ?? '',
     links: task?.links ?? [],
     notes: task?.notes ?? null,
     notesText: task?.notes_text ?? '',
@@ -169,6 +172,8 @@ function TaskForm({
       due_at: fromLocalInput(f.due),
       remind_at: fromLocalInput(f.remind),
       show_on_calendar: f.showOnCalendar,
+      // Repeating counts from the deadline, so without one there is nothing to repeat.
+      repeat: f.due ? f.repeat || null : null,
       links: links as unknown as NonNullable<Json>,
       notes: f.notes as Json,
       notes_text: f.notesText,
@@ -282,6 +287,30 @@ function TaskForm({
             />
             Show on calendar
           </label>
+          <label htmlFor="task-repeat" className="label mt-2">
+            Repeat
+          </label>
+          <select
+            id="task-repeat"
+            className="field"
+            value={f.due ? f.repeat : ''}
+            disabled={!f.due}
+            aria-describedby="task-repeat-hint"
+            onChange={(e) => up('repeat', e.target.value as RepeatRule | '')}
+          >
+            {REPEAT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <p id="task-repeat-hint" className="mt-1 text-[13px] text-ink-3">
+            {!f.due
+              ? 'Give it a deadline to make it repeat.'
+              : f.repeat
+                ? 'When you finish it, the next one is added with its deadline.'
+                : ''}
+          </p>
         </div>
         <div>
           <label htmlFor="task-remind" className="label">

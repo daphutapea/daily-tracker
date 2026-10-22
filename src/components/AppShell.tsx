@@ -16,9 +16,10 @@ import { flushSync } from 'react-dom'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { toast } from 'sonner'
 import { useUserEmail } from '@/auth/sessionContext'
+import { useKeepSeriesAhead } from '@/lib/repeat'
 import { toDate } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
-import { inMacApp } from '@/lib/native'
+import { inNativeApp } from '@/lib/native'
 import { shortcutLabel } from '@/lib/platform'
 import { getSidebar, saveSidebar, setSidebar, SIDEBAR, useSidebar } from '@/lib/sidebar'
 import { useEvents, useQuickLinks, useReorderQuickLinks, useTasks } from '@/lib/queries'
@@ -44,6 +45,7 @@ const NAV: { to: string; label: string; icon: Icon; mobile: boolean }[] = [
 
 export function AppShell() {
   useInAppReminders()
+  useKeepSeriesAhead()
   // Keyed by the first part of the path, so moving between notes or task filters doesn't count as a page change.
   const section = useLocation().pathname.split('/')[1]
   const sidebar = useSidebar()
@@ -112,7 +114,7 @@ export function AppShell() {
         <TabBar />
         <TaskDialogHost />
         <EventDialogHost />
-        {inMacApp && <MacAppBridge />}
+        {inNativeApp && <MacAppBridge />}
       </div>
     </TrackyProvider>
   )

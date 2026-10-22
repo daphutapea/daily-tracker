@@ -1,37 +1,74 @@
 {
   "model": "gemini-3.6-flash",
-  "updated_at": "2026-10-19T07:15:46.913Z",
+  "prompt": "02016f971da4",
+  "updated_at": "2026-10-22T12:18:56.100Z",
   "runs": 1,
-  "passed": 34,
-  "attempted": 34,
+  "passed": 17,
+  "attempted": 17,
   "by_kind": {
     "task": {
-      "passed": 8,
-      "attempted": 8
+      "passed": 6,
+      "attempted": 6
     },
     "event": {
       "passed": 8,
       "attempted": 8
     },
     "multi": {
-      "passed": 3,
-      "attempted": 3
-    },
-    "either": {
       "passed": 2,
       "attempted": 2
     },
-    "refusal": {
-      "passed": 3,
-      "attempted": 3
-    },
-    "typo": {
-      "passed": 10,
-      "attempted": 10
+    "either": {
+      "passed": 1,
+      "attempted": 1
     }
   },
   "flaky": [],
-  "not_run": [],
+  "not_run": [
+    "project_match",
+    "project_none",
+    "single_item_only",
+    "four_items_today",
+    "nothing_to_add_thanks",
+    "nothing_to_add_question",
+    "nothing_to_add_past_tense",
+    "typo_user_example",
+    "typo_weekday_and_words",
+    "typo_compact_time",
+    "typo_indonesian_slang",
+    "typo_project_name",
+    "typo_reminder_phrase",
+    "typo_next_week_abbrev",
+    "typo_joined_words",
+    "typo_dotted_time",
+    "typo_indonesian_word",
+    "followup_change_time",
+    "followup_drop_second",
+    "followup_add_reminder",
+    "followup_indonesian_priority",
+    "change_move_task_day",
+    "change_done",
+    "change_delete_event",
+    "change_event_time",
+    "change_all_overdue",
+    "change_priority_typo",
+    "change_status",
+    "change_ambiguous",
+    "change_and_add",
+    "change_indonesian_done",
+    "change_pending_followup",
+    "change_without_schedule",
+    "advice_what_first",
+    "advice_fits_clash",
+    "advice_reschedule_saved",
+    "compact_summary",
+    "identity",
+    "repeat_weekday_standup",
+    "repeat_rent_monthly",
+    "repeat_gym_weekly",
+    "repeat_indonesian_daily",
+    "once_not_repeating"
+  ],
   "cases": [
     {
       "id": "task_by_weekday",
@@ -39,21 +76,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "task",
-          "title": "Finish the labelling sheet",
-          "date": "2026-10-16",
-          "time": null,
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-16T07:17:53.020Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "task",
+            "title": "Finish the labelling sheet",
+            "date": "2026-10-16",
+            "time": null,
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I have drafted a task to finish the labelling sheet by tomorrow, Friday, October 16."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "event_with_time",
@@ -61,21 +103,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Sync with Dennis",
-          "date": "2026-10-20",
-          "time": "10:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-16T07:17:53.020Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "event",
+            "title": "Sync with Dennis",
+            "date": "2026-10-20",
+            "time": "10:00",
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I drafted a sync with Dennis for Tuesday, October 20 at 10:00."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "event_range_and_reminder",
@@ -83,21 +130,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Sync with Dennis",
-          "date": "2026-10-20",
-          "time": "10:00",
-          "end_time": "11:00",
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": 15,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-16T07:17:53.020Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "event",
+            "title": "Sync with Dennis",
+            "date": "2026-10-20",
+            "time": "10:00",
+            "end_time": "11:00",
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": 15,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I have added a sync with Dennis for Tuesday, October 20, from 10:00 to 11:00, with a reminder 15 minutes before."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "task_high_priority_project",
@@ -105,21 +157,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "task",
-          "title": "Submit the ATLAS weekly report",
-          "date": "2026-10-16",
-          "time": "17:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "high",
-          "project": "ATLAS",
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-16T07:17:53.020Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "task",
+            "title": "Submit the ATLAS weekly report",
+            "date": "2026-10-16",
+            "time": "17:00",
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "high",
+            "project": "ATLAS",
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I have created a high priority task to submit the ATLAS weekly report tomorrow at 17:00."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "task_urgent",
@@ -127,21 +184,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "task",
-          "title": "Renew the passport photo",
-          "date": "2026-10-19",
-          "time": null,
-          "end_time": null,
-          "all_day": false,
-          "priority": "urgent",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-16T07:17:53.020Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "task",
+            "title": "Renew passport photo",
+            "date": "2026-10-19",
+            "time": null,
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "urgent",
+            "project": "Personal",
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I have drafted an urgent task to renew your passport photo by Monday, October 19."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "two_items_example",
@@ -149,33 +211,39 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Sync with Dennis",
-          "date": "2026-10-20",
-          "time": "10:00",
-          "end_time": "11:00",
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": 15,
-          "location": null
-        },
-        {
-          "kind": "task",
-          "title": "Finish the labelling sheet",
-          "date": "2026-10-16",
-          "time": null,
-          "end_time": null,
-          "all_day": false,
-          "priority": "high",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-16T07:17:53.020Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "event",
+            "title": "Sync with Dennis",
+            "date": "2026-10-20",
+            "time": "10:00",
+            "end_time": "11:00",
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": 15,
+            "location": null
+          },
+          {
+            "kind": "task",
+            "title": "Finish the labelling sheet",
+            "date": "2026-10-16",
+            "time": null,
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "high",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I drafted two new items for you:\n- Event: Sync with Dennis on Tuesday, Oct 20 from 10:00 to 11:00 (15-min reminder)\n- Task: Finish the labelling sheet by Friday, Oct 16 (high priority)"
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "three_items_mixed",
@@ -183,45 +251,52 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Dentist",
-          "date": "2026-10-17",
-          "time": "09:30",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": "Personal",
-          "remind_minutes_before": null,
-          "location": null
-        },
-        {
-          "kind": "event",
-          "title": "Call Mom",
-          "date": "2026-10-18",
-          "time": "19:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": "Personal",
-          "remind_minutes_before": null,
-          "location": null
-        },
-        {
-          "kind": "task",
-          "title": "Pay the internet bill",
-          "date": "2026-10-20",
-          "time": null,
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": "Personal",
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-18T13:01:00.916Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "event",
+            "title": "Dentist",
+            "date": "2026-10-17",
+            "time": "09:30",
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          },
+          {
+            "kind": "event",
+            "title": "Call Mom",
+            "date": "2026-10-18",
+            "time": "19:00",
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          },
+          {
+            "kind": "task",
+            "title": "Pay the internet bill",
+            "date": "2026-10-20",
+            "time": null,
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I have drafted the dentist appointment for Saturday, a call to Mom for Sunday evening, and a task to pay the internet bill by October 20."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "all_day_event",
@@ -229,21 +304,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Company offsite",
-          "date": "2026-10-21",
-          "time": null,
-          "end_time": null,
-          "all_day": true,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-16T07:17:53.020Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "event",
+            "title": "Company Offsite",
+            "date": "2026-10-21",
+            "time": null,
+            "end_time": null,
+            "all_day": true,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I drafted the Company Offsite event for Wednesday, October 21, 2026."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "next_friday",
@@ -251,21 +331,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Quarterly review meeting",
-          "date": "2026-10-23",
-          "time": "14:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-16T07:17:53.020Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "event",
+            "title": "Quarterly Review Meeting",
+            "date": "2026-10-23",
+            "time": "14:00",
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I have added a draft for the Quarterly Review Meeting on Friday, October 23, 2026, at 14:00."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "indonesian_besok",
@@ -273,21 +358,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Rapat dengan tim ATLAS",
-          "date": "2026-10-16",
-          "time": "15:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": "ATLAS",
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-16T07:17:53.020Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "event",
+            "title": "Rapat dengan tim ATLAS",
+            "date": "2026-10-16",
+            "time": "15:00",
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": "ATLAS",
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "Saya telah menjadwalkan rapat dengan tim ATLAS untuk besok pukul 15:00."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "indonesian_lusa_penting",
@@ -295,21 +385,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "task",
-          "title": "Kirim laporan ke Pak Budi",
-          "date": "2026-10-17",
-          "time": null,
-          "end_time": null,
-          "all_day": false,
-          "priority": "high",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-16T07:17:53.020Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "task",
+            "title": "Kirim laporan ke Pak Budi",
+            "date": "2026-10-17",
+            "time": null,
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "high",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "Saya sudah menyiapkan draf tugas Kirim laporan ke Pak Budi untuk tanggal 17 Oktober 2026 dengan prioritas tinggi."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "indonesian_kamis_depan",
@@ -317,21 +412,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Meeting dengan vendor",
-          "date": "2026-10-22",
-          "time": "10:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-16T07:17:53.020Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "event",
+            "title": "Meeting dengan vendor",
+            "date": "2026-10-22",
+            "time": "10:00",
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "Saya telah menyiapkan draf acara Meeting dengan vendor untuk Kamis, 22 Oktober 2026 jam 10:00."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "reminder_one_hour",
@@ -339,21 +439,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Flight to Singapore",
-          "date": "2026-10-18",
-          "time": "06:40",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": 60,
-          "location": "Singapore"
-        }
-      ],
-      "ran_at": "2026-10-18T13:01:00.916Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "event",
+            "title": "Flight to Singapore",
+            "date": "2026-10-18",
+            "time": "06:40",
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": 60,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I drafted your flight to Singapore for Sunday, October 18, 2026 at 06:40 with a 60-minute reminder."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "reminder_day_before_next_month",
@@ -361,21 +466,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "task",
-          "title": "Pay rent",
-          "date": "2026-11-01",
-          "time": null,
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": "Personal",
-          "remind_minutes_before": 1440,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-18T13:01:00.916Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "task",
+            "title": "Pay rent",
+            "date": "2026-11-01",
+            "time": null,
+            "end_time": null,
+            "all_day": false,
+            "repeat": "monthly",
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": 1440,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I have added a recurring task to pay rent on the 1st of every month, starting November 1, with a reminder set for 1 day before."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "tonight_24h_range",
@@ -383,21 +493,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Deploy window",
-          "date": "2026-10-15",
-          "time": "22:00",
-          "end_time": "23:30",
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-18T13:01:00.916Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "event",
+            "title": "Deploy window",
+            "date": "2026-10-15",
+            "time": "22:00",
+            "end_time": "23:30",
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I have drafted an event for the deploy window tonight from 22:00 to 23:30."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "relative_hours",
@@ -405,21 +520,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Call back the bank",
-          "date": "2026-10-15",
-          "time": "11:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-18T13:01:00.916Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "event",
+            "title": "Call back the bank",
+            "date": "2026-10-15",
+            "time": "11:00",
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I have drafted an event to call back the bank today at 11:00."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     },
     {
       "id": "task_no_date",
@@ -427,404 +547,26 @@
       "passes": 1,
       "attempts": 1,
       "problems": [],
-      "last_items": [
-        {
-          "kind": "task",
-          "title": "Buy a new HDMI cable",
-          "date": null,
-          "time": null,
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-18T13:01:00.916Z"
-    },
-    {
-      "id": "project_match",
-      "kind": "task",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "task",
-          "title": "Write the eval summary",
-          "date": "2026-10-19",
-          "time": "09:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": "FinChat",
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-18T13:01:00.916Z"
-    },
-    {
-      "id": "project_none",
-      "kind": "task",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "task",
-          "title": "Plan the team lunch",
-          "date": "2026-10-16",
-          "time": null,
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-18T13:01:00.916Z"
-    },
-    {
-      "id": "single_item_only",
-      "kind": "either",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "task",
-          "title": "Stretch",
-          "date": "2026-10-15",
-          "time": "15:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-18T13:01:00.916Z"
-    },
-    {
-      "id": "four_items_today",
-      "kind": "multi",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Standup",
-          "date": "2026-10-15",
-          "time": "09:30",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        },
-        {
-          "kind": "task",
-          "title": "Review PR #42",
-          "date": "2026-10-15",
-          "time": "12:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        },
-        {
-          "kind": "event",
-          "title": "Gym",
-          "date": "2026-10-15",
-          "time": "18:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        },
-        {
-          "kind": "task",
-          "title": "Order groceries",
-          "date": "2026-10-15",
-          "time": null,
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-18T13:01:00.916Z"
-    },
-    {
-      "id": "nothing_to_add_thanks",
-      "kind": "refusal",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [],
-      "ran_at": "2026-10-18T13:01:00.916Z"
-    },
-    {
-      "id": "nothing_to_add_question",
-      "kind": "refusal",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [],
-      "ran_at": "2026-10-18T13:01:00.916Z"
-    },
-    {
-      "id": "nothing_to_add_past_tense",
-      "kind": "refusal",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [],
-      "ran_at": "2026-10-18T13:01:00.916Z"
-    },
-    {
-      "id": "typo_user_example",
-      "kind": "typo",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Sync with Mr. Dennis",
-          "date": "2026-10-15",
-          "time": "15:00",
-          "end_time": "16:00",
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        },
-        {
-          "kind": "task",
-          "title": "Work on ATLAS improvements",
-          "date": "2026-10-15",
-          "time": null,
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": "ATLAS",
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-18T13:01:00.916Z"
-    },
-    {
-      "id": "typo_weekday_and_words",
-      "kind": "typo",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "task",
-          "title": "Submit the report",
-          "date": "2026-10-16",
-          "time": "17:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-19T07:15:46.913Z"
-    },
-    {
-      "id": "typo_compact_time",
-      "kind": "typo",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Dentist",
-          "date": "2026-10-16",
-          "time": "09:30",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-19T07:15:46.913Z"
-    },
-    {
-      "id": "typo_indonesian_slang",
-      "kind": "typo",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Rapat dengan tim",
-          "date": "2026-10-16",
-          "time": "14:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-19T07:15:46.913Z"
-    },
-    {
-      "id": "typo_project_name",
-      "kind": "typo",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "task",
-          "title": "ATLAS handover notes",
-          "date": "2026-10-16",
-          "time": null,
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": "ATLAS",
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-19T07:15:46.913Z"
-    },
-    {
-      "id": "typo_reminder_phrase",
-      "kind": "typo",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Standup",
-          "date": "2026-10-16",
-          "time": "09:30",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": 15,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-19T07:15:46.913Z"
-    },
-    {
-      "id": "typo_next_week_abbrev",
-      "kind": "typo",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Quarterly review",
-          "date": "2026-10-23",
-          "time": "14:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-19T07:15:46.913Z"
-    },
-    {
-      "id": "typo_joined_words",
-      "kind": "typo",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Call Mom",
-          "date": "2026-10-18",
-          "time": "19:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-19T07:15:46.913Z"
-    },
-    {
-      "id": "typo_dotted_time",
-      "kind": "typo",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "event",
-          "title": "Gym",
-          "date": "2026-10-15",
-          "time": "17:30",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-19T07:15:46.913Z"
-    },
-    {
-      "id": "typo_indonesian_word",
-      "kind": "typo",
-      "passes": 1,
-      "attempts": 1,
-      "problems": [],
-      "last_items": [
-        {
-          "kind": "task",
-          "title": "Kirim laporan ke Pak Budi",
-          "date": "2026-10-16",
-          "time": "09:00",
-          "end_time": null,
-          "all_day": false,
-          "priority": "medium",
-          "project": null,
-          "remind_minutes_before": null,
-          "location": null
-        }
-      ],
-      "ran_at": "2026-10-19T07:15:46.913Z"
+      "last_answer": {
+        "items": [
+          {
+            "kind": "task",
+            "title": "Buy a new HDMI cable",
+            "date": null,
+            "time": null,
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I have added a draft task to buy a new HDMI cable."
+      },
+      "ran_at": "2026-10-22T12:18:56.100Z"
     }
   ]
 }

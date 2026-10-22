@@ -1,5 +1,35 @@
 # Changelog
 
+## v1.11 (2026-10-22)
+
+### Added
+- An iPhone app. It's the same tracker as on the Mac, with the pages inside the app, so nothing has to be put online, and the same data. Reminders and summaries arrive as iPhone notifications with Mark done and Snooze, the icon shows how many tasks are overdue, and the strip behind the status bar takes the page's colour. `npm run iphone` installs it from the Mac over a cable; with a free Apple ID it needs renewing every 7 days the same way.
+- Tracky changes what you've already saved. Ask it to move the ATLAS report to Friday, mark the invoice done, cancel the dentist or push everything overdue to tomorrow, and each change shows as a card with the old and new values: "Deadline Wed 21 Oct, 17:00 → Fri 23 Oct, 17:00". Nothing changes until you press Make 2 changes (or Add 1, change 2 when there are drafts too). Undo sits on the message that says what changed. Follow-ups build on changes still on screen, and the cross on a card drops it.
+- Repeating tasks. Set Repeat on a task with a deadline: every day, weekday, week, month or year. When you finish it, the next one is added, due on the next day the rule allows that is still ahead, with its reminder the same time before it. Unticking takes the next one back. A small repeat mark shows in lists.
+- Repeating events. Set Repeat on an event and its next three months are written into the calendar as ordinary events, with more added as time passes. Open one later and pick This event or This and later ones before you save or delete; Delete these comes with Undo.
+- Tracky drafts repeating tasks and events: "standup every weekday at 10", "pay rent on the 1st of every month".
+- Weekly backups in the Mac app. A copy of everything goes to iCloud Drive, in a folder called Daily Tracker Backups (Documents when iCloud Drive is off), once a week. The eight newest are kept; older ones go to the Trash. Settings → Your data shows the last one, with Back up now and Show backups.
+- Restore from a backup, in Settings → Your data. Pick a backup file and it shows what it holds and what isn't in the tracker now, then adds only that back. Nothing you have is changed or removed, and finished tasks keep the day they were finished.
+
+### Changed
+- The Tracky test set has 60 notes, up from 34. New ones check replies such as "make it 4pm", changes to saved items, a vague request where Tracky should ask which one, advice, /compact, who Tracky is, and repeating items. Each results file now records which prompt it measured, so results from two prompts are never added up as one score.
+- Calendar's add buttons read Task and Event, like Home's. Review's last panel is "Week of 27 Oct". The board's hint says to press and hold a card on a phone. The meter under Numbers reads "Due today, including done", since the count above it leaves finished tasks out.
+
+### Fixed
+- A snoozed reminder came back after you'd finished the task. Finishing or deleting a task now cancels its snoozed reminder and clears its notification from Notification Center.
+- With Reduce motion on, a dialog on a phone appeared and vanished with no transition. It now fades.
+- The dialog close button, the month arrows and other plain icon buttons showed nothing when you pointed at them.
+- Screen readers skipped the label on Home's clock.
+
+### Known limitations
+- Repeating events are written while the app is open. If it stays closed for about three months, the calendar runs out of them until it's opened again.
+- Changing a series with This and later ones rewrites the later events, so changes made to one of them on its own are replaced.
+- A monthly task due on the 29th to 31st moves to the last day of a shorter month and stays on that day after. Monthly events don't.
+- Tracky can't change how something repeats; do that in the event or task.
+- Undo for Tracky's changes lasts until the next message in the chat.
+- Weekly backups need the Mac app. In a browser or the iPhone app, use Download a copy, which opens the share sheet on the phone.
+- The iPhone app's reminders are brought up to date when you open it, so a change made on the Mac reaches them the next time you open the app on the phone.
+
 ## v1.10 (2026-10-19)
 
 ### Added

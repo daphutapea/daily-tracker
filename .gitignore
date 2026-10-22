@@ -36,3 +36,6 @@ build/
 test-results/
 playwright-report/
 e2e/.auth/
+
+# Xcode's per-user state for the iPhone project
+ios/**/xcuserdata/

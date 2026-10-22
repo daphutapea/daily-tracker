@@ -18,7 +18,7 @@ import { DayRuler } from '@/components/DayRuler'
 import { MiniMonth } from '@/components/MiniMonth'
 import { useOpenTracky } from '@/components/trackyContext'
 import { MoveAllToTomorrow, TaskRow } from '@/components/TaskRow'
-import { Loading, QueryError, Segmented, SiteIcon, StateMessage } from '@/components/ui'
+import { Loading, QueryError, RepeatMark, Segmented, SiteIcon, StateMessage } from '@/components/ui'
 import { formatDay, greeting, lastNDays, sameDay, toDate, weekRange } from '@/lib/dates'
 import { useDialogs } from '@/lib/dialogs'
 import { PRIORITY_COLOR, STATUS_COLOR } from '@/lib/hues'
@@ -229,7 +229,7 @@ export function HomePage() {
 function Clock() {
   const now = useNow(1000)
   return (
-    <p className="leading-none" aria-label={`Time ${format(now, 'HH:mm')}`}>
+    <p className="leading-none">
       {/* Tabular digits so the clock doesn't shift width every second. */}
       <time dateTime={now.toISOString()} className="tnum text-[40px] font-semibold tracking-tight md:text-[56px]">
         {format(now, 'HH:mm')}
@@ -435,7 +435,7 @@ function NumbersPanel({ d }: { d: Derived }) {
         ) : view === 'deadlines' ? (
           <div className="space-y-4">
             <h3 className="font-medium">Deadlines met</h3>
-            <Meter label="Due today" done={d.todayDone} total={d.dueToday.length} />
+            <Meter label="Due today, including done" done={d.todayDone} total={d.dueToday.length} />
             <Meter label="Due this week" done={d.weekDone} total={d.weekTotal} />
           </div>
         ) : (
@@ -540,6 +540,12 @@ function EventRow({ event, onOpen, extra = false }: { event: CalEvent; onOpen: (
           <span className="mt-0.5 block text-[13px] text-ink-2 tnum">
             {event.all_day ? 'All day' : `${format(start, 'HH:mm')}${end && isSameDay(start, end) ? `–${format(end, 'HH:mm')}` : ''}`}
             {event.location && <span className="text-ink-3"> · {event.location}</span>}
+            {event.series_id && (
+              <>
+                {' '}
+                <RepeatMark label="Repeats" />
+              </>
+            )}
           </span>
         </span>
       </button>

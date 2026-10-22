@@ -116,6 +116,79 @@ test('a follow-up sends the chat so far and the drafts as you left them, and Tra
   expect(saved.location).toBe('Room 4')
 })
 
+test('Tracky changes saved tasks only after you confirm, and Undo puts them back', async ({ page }) => {
+  await page.goto('/')
+  const db = await asOwner(page)
+  const yesterday = jakartaDay(-1)
+  const tomorrow = jakartaDay(1)
+  const report = await db.addTask({
+    title: `${PREFIX}send the report`,
+    due_at: jakarta(yesterday, '17:00'),
+    remind_at: jakarta(yesterday, '16:00'),
+    priority: 'high',
+  })
+  const invoice = await db.addTask({ title: `${PREFIX}pay the invoice`, due_at: jakarta(jakartaDay(0), '23:00') })
+
+  type Entry = { ref: string; title: string }
+  const bodies: { schedule: Entry[]; changes: { ref: string; action: string; set: { at?: string } }[] }[] = []
+  await page.route('**/functions/v1/tracky', async (route) => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS })
+    const body = route.request().postDataJSON()
+    bodies.push(body)
+    // The server's answer, already checked: changes name entries by the refs this request sent.
+    const ref = (title: string) => body.schedule.find((e: Entry) => e.title === title).ref
+    const changes =
+      bodies.length === 1
+        ? [
+            { ref: ref(report.title), action: 'update', kind: 'task', title: report.title, set: { at: `${tomorrow}T17:00` } },
+            { ref: ref(invoice.title), action: 'done', kind: 'task', title: invoice.title, set: {} },
+          ]
+        : [{ ref: ref(report.title), action: 'update', kind: 'task', title: report.title, set: { priority: 'urgent' } }]
+    await route.fulfill({ headers: CORS, json: { model: 'fake-model', reply: null, items: [], changes } })
+  })
+
+  await page.reload()
+  await expect(page.getByText(report.title).first()).toBeVisible()
+  await page.keyboard.press('ControlOrMeta+k')
+  const dialog = page.getByRole('dialog', { name: 'Tracky' })
+  const box = dialog.getByLabel('Message Tracky')
+  await box.fill('move the report to tomorrow, and the invoice is paid')
+  await box.press('Enter')
+
+  const reportCard = dialog.getByRole('region', { name: `Change to ${report.title}` })
+  await expect(reportCard).toContainText('Deadline')
+  await expect(reportCard).toContainText('→')
+  await expect(dialog.getByRole('region', { name: `Change to ${invoice.title}` })).toContainText('Mark done')
+  // Nothing has changed yet.
+  expect((await db.task(report.id)).due_at).toBe(report.due_at)
+
+  // A follow-up builds on the change on screen: the server is told about it by this request's ref.
+  await box.fill('and make it urgent')
+  await box.press('Enter')
+  await expect(reportCard).toContainText('Priority High → Urgent')
+  expect(bodies[1].changes).toContainEqual(expect.objectContaining({ action: 'update', set: { at: `${tomorrow}T17:00` } }))
+  await expect(reportCard).toContainText('Deadline')
+
+  await dialog.getByRole('button', { name: 'Make 2 changes' }).click()
+  await expect(dialog.getByText(/^Moved “e2e send the report” to .+ with a new priority and marked “e2e pay the invoice” done\.$/)).toBeVisible()
+  const moved = await db.task(report.id)
+  expect(Date.parse(moved.due_at!)).toBe(Date.parse(jakarta(tomorrow, '17:00')))
+  // The reminder moved with the deadline, still an hour before it.
+  expect(Date.parse(moved.remind_at!)).toBe(Date.parse(jakarta(tomorrow, '16:00')))
+  expect(moved.priority).toBe('urgent')
+  expect((await db.task(invoice.id)).status).toBe('done')
+
+  // Undo sits in the chat, where it can be reached while Tracky is open.
+  await dialog.getByRole('button', { name: 'Undo' }).click()
+  await expect(dialog.getByText('Undone. They’re back as they were.', { exact: true })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Undo' })).toHaveCount(0)
+  const back = await db.task(report.id)
+  expect(Date.parse(back.due_at!)).toBe(Date.parse(report.due_at!))
+  expect(Date.parse(back.remind_at!)).toBe(Date.parse(report.remind_at!))
+  expect(back.priority).toBe('high')
+  expect((await db.task(invoice.id)).status).toBe('todo')
+})
+
 test('Tracky answers a planning question from your schedule, and the schedule stays home when turned off', async ({ page }) => {
   await page.goto('/')
   const db = await asOwner(page)

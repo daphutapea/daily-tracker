@@ -653,6 +653,1935 @@
         }
       ],
       "note": "lapran is laporan. besok pagi jam 9 is tomorrow at 09:00. The title stays in Indonesian."
+    },
+    {
+      "id": "followup_change_time",
+      "kind": "followup",
+      "text": "make it 4pm instead",
+      "history": [
+        {
+          "role": "you",
+          "text": "Sync with Dennis tomorrow at 10"
+        },
+        {
+          "role": "tracky",
+          "text": "I found one item. Check it, then add it."
+        }
+      ],
+      "drafts": [
+        {
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "date": "2026-10-16",
+          "time": "10:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "expected": [
+        {
+          "title_has": [
+            "dennis"
+          ],
+          "kind": "event",
+          "date": "2026-10-16",
+          "time": "16:00",
+          "remind_minutes_before": null
+        }
+      ],
+      "note": "Only the time changes, to 16:00; the day stays Friday 16 Oct."
+    },
+    {
+      "id": "followup_drop_second",
+      "kind": "followup",
+      "text": "drop the second one",
+      "history": [
+        {
+          "role": "you",
+          "text": "send the invoice tomorrow and call Budi tomorrow at 2"
+        },
+        {
+          "role": "tracky",
+          "text": "I found 2 items. Check them, then add them."
+        }
+      ],
+      "drafts": [
+        {
+          "kind": "task",
+          "title": "Send the invoice",
+          "date": "2026-10-16",
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        },
+        {
+          "kind": "event",
+          "title": "Call Budi",
+          "date": "2026-10-16",
+          "time": "14:00",
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "expected": [
+        {
+          "title_has": [
+            "invoice"
+          ],
+          "kind": "task",
+          "date": "2026-10-16"
+        }
+      ],
+      "note": "The second draft is the call. Only the invoice stays, unchanged."
+    },
+    {
+      "id": "followup_add_reminder",
+      "kind": "followup",
+      "text": "also remind me an hour before",
+      "history": [
+        {
+          "role": "you",
+          "text": "dentist check-up next friday 9:30 to 10"
+        },
+        {
+          "role": "tracky",
+          "text": "I found one item. Check it, then add it."
+        }
+      ],
+      "drafts": [
+        {
+          "kind": "event",
+          "title": "Dentist check-up",
+          "date": "2026-10-23",
+          "time": "09:30",
+          "end_time": "10:00",
+          "all_day": false,
+          "priority": "medium",
+          "project": null,
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "expected": [
+        {
+          "title_has": [
+            "dentist"
+          ],
+          "kind": "event",
+          "date": "2026-10-23",
+          "time": "09:30",
+          "end_time": "10:00",
+          "remind_minutes_before": 60
+        }
+      ],
+      "note": "The reminder is 60 minutes; the rest of the draft stays as it is."
+    },
+    {
+      "id": "followup_indonesian_priority",
+      "kind": "followup",
+      "text": "yang ini penting ya",
+      "history": [
+        {
+          "role": "you",
+          "text": "besok kirim laporan ATLAS"
+        },
+        {
+          "role": "tracky",
+          "text": "Saya menemukan satu tugas. Periksa dulu, lalu tambahkan."
+        }
+      ],
+      "drafts": [
+        {
+          "kind": "task",
+          "title": "Kirim laporan ATLAS",
+          "date": "2026-10-16",
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": "ATLAS",
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "expected": [
+        {
+          "title_has": [
+            "laporan"
+          ],
+          "kind": "task",
+          "date": "2026-10-16",
+          "priority": [
+            "high",
+            "urgent"
+          ],
+          "project": "ATLAS"
+        }
+      ],
+      "note": "\"Penting\" means important, so High (Urgent also accepted). Nothing else changes."
+    },
+    {
+      "id": "change_move_task_day",
+      "kind": "change",
+      "text": "move the ATLAS report to Friday",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [],
+      "changes": [
+        {
+          "ref": "T2",
+          "action": "update",
+          "set": {
+            "at": "2026-10-16T17:00",
+            "priority": null,
+            "status": null
+          }
+        }
+      ],
+      "note": "T2 is due Wed 14 Oct 17:00. Friday is 16 Oct, and the time stays 17:00. No draft."
+    },
+    {
+      "id": "change_done",
+      "kind": "change",
+      "text": "I paid the electricity bill",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [],
+      "changes": [
+        {
+          "ref": "T3",
+          "action": "done"
+        }
+      ],
+      "note": "Paying the bill finishes T3."
+    },
+    {
+      "id": "change_delete_event",
+      "kind": "change",
+      "text": "cancel the dentist appointment",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [],
+      "changes": [
+        {
+          "ref": "E2",
+          "action": "delete"
+        }
+      ],
+      "note": "Cancel means delete E2."
+    },
+    {
+      "id": "change_event_time",
+      "kind": "change",
+      "text": "push the Dennis sync to 4pm",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [],
+      "changes": [
+        {
+          "ref": "E1",
+          "action": "update",
+          "set": {
+            "at": "2026-10-15T16:00",
+            "end": "2026-10-15T17:00"
+          }
+        }
+      ],
+      "note": "E1 runs 15:00 to 16:00 today. Moved to 16:00 it keeps its hour, so it ends at 17:00."
+    },
+    {
+      "id": "change_all_overdue",
+      "kind": "change",
+      "text": "move everything overdue to tomorrow",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [],
+      "changes": [
+        {
+          "ref": "T1",
+          "action": "update",
+          "set": {
+            "at": "2026-10-16T10:00"
+          }
+        },
+        {
+          "ref": "T2",
+          "action": "update",
+          "set": {
+            "at": "2026-10-16T17:00"
+          }
+        }
+      ],
+      "note": "At 09:00 on 15 Oct, T1 (13 Oct) and T2 (14 Oct) are overdue; T3 is due tonight, so not yet. Each keeps its time."
+    },
+    {
+      "id": "change_priority_typo",
+      "kind": "change",
+      "text": "the finchat PR is urgnt",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [],
+      "changes": [
+        {
+          "ref": "T4",
+          "action": "update",
+          "set": {
+            "priority": "urgent",
+            "at": null
+          }
+        }
+      ],
+      "note": "\"urgnt\" is urgent, and the PR is T4. Its deadline stays."
+    },
+    {
+      "id": "change_status",
+      "kind": "change",
+      "text": "I've started on the ATLAS report",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [],
+      "changes": [
+        {
+          "ref": "T2",
+          "action": "update",
+          "set": {
+            "status": "in_progress",
+            "at": null
+          }
+        }
+      ],
+      "note": "Started means In progress, not done."
+    },
+    {
+      "id": "change_ambiguous",
+      "kind": "change",
+      "text": "move the report to Monday",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [],
+      "reply_has": [
+        [
+          "which",
+          "atlas",
+          "finchat"
+        ]
+      ],
+      "note": "Two saved tasks are reports (T2 ATLAS, T5 FinChat). It must change nothing and ask which one."
+    },
+    {
+      "id": "change_and_add",
+      "kind": "change",
+      "text": "Move the Dennis sync to tomorrow, same time, and add a call with Sari on Monday at 11",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [
+        {
+          "title_has": [
+            "sari"
+          ],
+          "kind": "event",
+          "date": "2026-10-19",
+          "time": "11:00"
+        }
+      ],
+      "changes": [
+        {
+          "ref": "E1",
+          "action": "update",
+          "set": {
+            "at": "2026-10-16T15:00",
+            "end": "2026-10-16T16:00"
+          }
+        }
+      ],
+      "note": "One change (E1 to Friday, 15:00 to 16:00) and one new draft (the call on Monday 19 Oct at 11:00)."
+    },
+    {
+      "id": "change_indonesian_done",
+      "kind": "change",
+      "text": "tagihan listrik udah dibayar",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [],
+      "changes": [
+        {
+          "ref": "T3",
+          "action": "done"
+        }
+      ],
+      "note": "\"The electricity bill is paid\", in casual Indonesian. T3 is done."
+    },
+    {
+      "id": "change_pending_followup",
+      "kind": "change",
+      "text": "actually make it 10am",
+      "history": [
+        {
+          "role": "you",
+          "text": "move the ATLAS report to Friday"
+        },
+        {
+          "role": "tracky",
+          "text": "Here’s the change. Check it, then confirm."
+        }
+      ],
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "pending": [
+        {
+          "ref": "T2",
+          "action": "update",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "set": {
+            "at": "2026-10-16T17:00"
+          }
+        }
+      ],
+      "expected": [],
+      "changes": [
+        {
+          "ref": "T2",
+          "action": "update",
+          "set": {
+            "at": "2026-10-16T10:00"
+          }
+        }
+      ],
+      "note": "The pending move to Friday stays; only the time becomes 10:00."
+    },
+    {
+      "id": "change_without_schedule",
+      "kind": "change",
+      "text": "move the ATLAS report to Friday",
+      "expected": [],
+      "reply_has": [
+        [
+          "settings",
+          "schedule",
+          "in the app"
+        ]
+      ],
+      "note": "With the schedule turned off it can see no saved items: no change, no stand-in draft, and it says how to fix that."
+    },
+    {
+      "id": "advice_what_first",
+      "kind": "advice",
+      "text": "The Dennis sync is at 3 and the electricity bill is due tonight. What should I do first?",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [],
+      "reply_has": [
+        [
+          "bill",
+          "electricity",
+          "sync",
+          "dennis"
+        ]
+      ],
+      "note": "A recommendation in reply. No drafts and no changes for advice alone."
+    },
+    {
+      "id": "advice_fits_clash",
+      "kind": "advice",
+      "text": "Can I fit a two-hour workshop on Monday morning?",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [],
+      "reply_has": [
+        [
+          "dentist",
+          "9:30",
+          "09:30"
+        ]
+      ],
+      "note": "Monday 19 Oct has the dentist 09:30 to 10:30, which a good answer works around."
+    },
+    {
+      "id": "advice_reschedule_saved",
+      "kind": "advice",
+      "text": "When should I renew my passport? Put it in for whenever you suggest.",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [],
+      "changes": [
+        {
+          "ref": "T6",
+          "action": "update"
+        }
+      ],
+      "note": "Renew passport is saved (T6, no deadline). Planning it means giving T6 a deadline, not a duplicate draft."
+    },
+    {
+      "id": "compact_summary",
+      "kind": "compact",
+      "text": "Summarise our chat so far so it can replace the conversation. In at most six short lines starting with \"- \", say what I asked for, what you advised, what was added, and what is still open. Keep the current drafts exactly as they are.",
+      "history": [
+        {
+          "role": "you",
+          "text": "I need to book flights to Bali for the 20th"
+        },
+        {
+          "role": "tracky",
+          "text": "I found one item. Check it, then add it."
+        },
+        {
+          "role": "you",
+          "text": "what should I pack first, the passport or the visa?"
+        },
+        {
+          "role": "tracky",
+          "text": "Check the passport first: it has to be valid for six months, and the visa needs it."
+        },
+        {
+          "role": "you",
+          "text": "ok and remind me about the hotel later"
+        },
+        {
+          "role": "tracky",
+          "text": "Tell me when the hotel is due and I will draft it."
+        }
+      ],
+      "drafts": [
+        {
+          "kind": "task",
+          "title": "Book flights to Bali",
+          "date": "2026-10-20",
+          "time": null,
+          "end_time": null,
+          "all_day": false,
+          "priority": "medium",
+          "project": "Personal",
+          "remind_minutes_before": null,
+          "location": null
+        }
+      ],
+      "compact": true,
+      "expected": [
+        {
+          "title_has": [
+            "flights"
+          ],
+          "kind": "task",
+          "date": "2026-10-20"
+        }
+      ],
+      "reply_lines_max": 6,
+      "note": "A summary of at most six \"- \" lines, with the draft kept as it is."
+    },
+    {
+      "id": "identity",
+      "kind": "identity",
+      "text": "who are you, and are you ChatGPT?",
+      "expected": [],
+      "reply_has": [
+        [
+          "tracky"
+        ],
+        [
+          "gemini",
+          "google"
+        ]
+      ],
+      "reply_lacks": [
+        "claude",
+        "openai"
+      ],
+      "note": "Tracky, running on Gemini from Google. No items."
+    },
+    {
+      "id": "repeat_weekday_standup",
+      "kind": "repeat",
+      "text": "Standup every weekday at 10",
+      "expected": [
+        {
+          "title_has": [
+            "standup"
+          ],
+          "kind": "event",
+          "date": [
+            "2026-10-15",
+            "2026-10-16"
+          ],
+          "time": "10:00",
+          "repeat": "weekdays"
+        }
+      ],
+      "note": "NOW is Thursday 09:00, so the first standup is today at 10:00 (tomorrow is also fine). Weekdays, not daily."
+    },
+    {
+      "id": "repeat_rent_monthly",
+      "kind": "repeat",
+      "text": "Pay rent on the 1st of every month",
+      "expected": [
+        {
+          "title_has": [
+            "rent"
+          ],
+          "kind": "task",
+          "date": "2026-11-01",
+          "repeat": "monthly"
+        }
+      ],
+      "note": "The next 1st after 15 Oct is 1 Nov. A repeating task needs that first deadline."
+    },
+    {
+      "id": "repeat_gym_weekly",
+      "kind": "repeat",
+      "text": "gym every monday 7am",
+      "expected": [
+        {
+          "title_has": [
+            "gym"
+          ],
+          "kind": "event",
+          "date": "2026-10-19",
+          "time": "07:00",
+          "repeat": "weekly"
+        }
+      ],
+      "note": "The next Monday is 19 Oct. Weekly."
+    },
+    {
+      "id": "repeat_indonesian_daily",
+      "kind": "repeat",
+      "text": "minum vitamin tiap hari jam 8 pagi",
+      "expected": [
+        {
+          "title_has": [
+            "vitamin"
+          ],
+          "kind": [
+            "task",
+            "event"
+          ],
+          "date": [
+            "2026-10-15",
+            "2026-10-16"
+          ],
+          "time": "08:00",
+          "repeat": "daily"
+        }
+      ],
+      "note": "\"Take vitamins every day at 8 in the morning.\" 08:00 today has passed, so tomorrow is the natural first one; today is accepted."
+    },
+    {
+      "id": "once_not_repeating",
+      "kind": "repeat",
+      "text": "Call Mum on Sunday at 7pm",
+      "expected": [
+        {
+          "title_has": [
+            "mum"
+          ],
+          "kind": [
+            "task",
+            "event"
+          ],
+          "date": "2026-10-18",
+          "time": "19:00",
+          "repeat": null
+        }
+      ],
+      "note": "Once, on Sunday 18 Oct. Nothing in the note says it recurs."
+    },
+    {
+      "id": "reminder_for_new_with_schedule",
+      "kind": "change",
+      "text": "remind me 20 min before my haircut tmrw at 4pm",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [
+        {
+          "title_has": [
+            "haircut"
+          ],
+          "kind": "event",
+          "date": "2026-10-16",
+          "time": "16:00",
+          "remind_minutes_before": 20
+        }
+      ],
+      "note": "Nothing saved is a haircut, so it is new: a draft on Friday 16 Oct at 16:00 with a 20-minute reminder, and no change."
+    },
+    {
+      "id": "reminder_for_saved",
+      "kind": "change",
+      "text": "remind me 30 mins before the dennis sync",
+      "schedule": [
+        {
+          "ref": "T1",
+          "kind": "task",
+          "title": "Reply to Pak Budi",
+          "at": "2026-10-13T10:00",
+          "status": "todo",
+          "priority": "low",
+          "project": null
+        },
+        {
+          "ref": "T2",
+          "kind": "task",
+          "title": "Send the ATLAS report",
+          "at": "2026-10-14T17:00",
+          "status": "todo",
+          "priority": "high",
+          "project": "ATLAS"
+        },
+        {
+          "ref": "E1",
+          "kind": "event",
+          "title": "Sync with Dennis",
+          "at": "2026-10-15T15:00",
+          "day": "2026-10-15",
+          "end": "2026-10-15T16:00"
+        },
+        {
+          "ref": "T3",
+          "kind": "task",
+          "title": "Pay the electricity bill",
+          "at": "2026-10-15T23:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": null
+        },
+        {
+          "ref": "T4",
+          "kind": "task",
+          "title": "Review the FinChat pull request",
+          "at": "2026-10-16T12:00",
+          "status": "in_progress",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E2",
+          "kind": "event",
+          "title": "Dentist",
+          "at": "2026-10-19T09:30",
+          "day": "2026-10-19",
+          "end": "2026-10-19T10:30"
+        },
+        {
+          "ref": "T5",
+          "kind": "task",
+          "title": "Write the FinChat report",
+          "at": "2026-10-20T17:00",
+          "status": "todo",
+          "priority": "medium",
+          "project": "FinChat"
+        },
+        {
+          "ref": "E3",
+          "kind": "event",
+          "title": "Team offsite",
+          "at": null,
+          "day": "2026-10-22",
+          "end": null
+        },
+        {
+          "ref": "T6",
+          "kind": "task",
+          "title": "Renew passport",
+          "at": null,
+          "status": "waiting",
+          "priority": "high",
+          "project": "Personal"
+        }
+      ],
+      "expected": [],
+      "changes": [
+        {
+          "ref": "E1",
+          "action": "update",
+          "set": {
+            "remind_minutes_before": 30,
+            "at": null
+          }
+        }
+      ],
+      "note": "The sync is saved (E1), so the reminder goes on it: a change, not a second sync."
     }
   ]
 }

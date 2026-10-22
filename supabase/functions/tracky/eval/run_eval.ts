@@ -9,14 +9,28 @@
  * can be measured in parts. --part, --only and --remaining merge into that model's results file
  * instead of replacing it, so the parts add up to one score.
  *
- * It calls the same proposeItems() the server function uses, against one model with no fallback, so
- * the score belongs to that model. The key comes from GEMINI_API_KEY in the environment or in
- * supabase/functions/.env. Each case is one request, so a full run uses about 34 of the day's free
- * requests, more when Google is busy, because retries count too.
+ * Each results file records which prompt it measured. Parts only merge with results from the same
+ * prompt; after the prompt changes, the first run starts the file over.
+ *
+ * It sends each case through the same parseRequest() and proposeItems() the server function uses,
+ * against one model with no fallback, so the score belongs to that model. The key comes from
+ * GEMINI_API_KEY in the environment or in supabase/functions/.env. Each case is one request, so a full
+ * run uses as many of the day's free requests as there are cases, more when Google is busy, because
+ * retries count too.
  */
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
-import { DEFAULT_MODELS, proposeItems, TrackyError, type ProposedItem } from '../logic.ts'
+import {
+  DEFAULT_MODELS,
+  parseRequest,
+  proposeItems,
+  RESPONSE_SCHEMA,
+  SYSTEM_PROMPT,
+  TrackyError,
+  type ProposedChange,
+  type ProposedItem,
+} from '../logic.ts'
 import { gradeCase, type GoldCase } from './grade.ts'
 
 const here = (file: string) => new URL(file, import.meta.url)
@@ -53,11 +67,18 @@ const gold = JSON.parse(readFileSync(here('./gold_set.json'), 'utf8')) as {
   projects: string[]
   cases: GoldCase[]
 }
-function graded(): Set<string> {
+/** Which prompt a result measured: the instructions and the answer format the model was given. */
+const promptId = createHash('sha256').update(SYSTEM_PROMPT).update(JSON.stringify(RESPONSE_SCHEMA)).digest('hex').slice(0, 12)
+
+/** The model's earlier results, when they measured this same prompt. */
+function earlierResults(): { id: string; attempts: number }[] {
   const path = here(`./results-${args.model}.json`)
-  if (!existsSync(path)) return new Set()
-  const cases = (JSON.parse(readFileSync(path, 'utf8')).cases ?? []) as { id: string; attempts: number }[]
-  return new Set(cases.filter((c) => c.attempts > 0).map((c) => c.id))
+  if (!existsSync(path)) return []
+  const saved = JSON.parse(readFileSync(path, 'utf8')) as { prompt?: string; cases?: { id: string; attempts: number }[] }
+  return saved.prompt === promptId ? (saved.cases ?? []) : []
+}
+function graded(): Set<string> {
+  return new Set(earlierResults().filter((c) => c.attempts > 0).map((c) => c.id))
 }
 function pick(): GoldCase[] {
   if (args.remaining) {
@@ -77,11 +98,16 @@ const cases = pick()
 const partial = cases.length < gold.cases.length
 const key = apiKey()
 
+interface Answer {
+  items: ProposedItem[]
+  changes: ProposedChange[]
+  reply: string | null
+}
 interface Tally {
   attempts: number
   passes: number
   problems: string[]
-  last: ProposedItem[] | null
+  last: Answer | null
 }
 const tally = new Map<string, Tally>(cases.map((c) => [c.id, { attempts: 0, passes: 0, problems: [], last: null }]))
 
@@ -93,10 +119,20 @@ const resultsFile = `results-${args.model}.json`
 async function askWithRetry(c: GoldCase) {
   for (let attempt = 1; ; attempt++) {
     try {
-      return await proposeItems(
-        { text: c.text, now: gold.now, timezone: gold.timezone, projects: gold.projects },
-        { apiKey: key, models: [args.model!], fetch },
-      )
+      // Through parseRequest, as in the server function, so history, drafts and pending changes are
+      // checked and trimmed the same way.
+      const body = parseRequest({
+        text: c.text,
+        now: gold.now,
+        timezone: gold.timezone,
+        projects: gold.projects,
+        history: c.history,
+        drafts: c.drafts,
+        schedule: c.schedule,
+        changes: c.pending,
+        compact: c.compact,
+      })
+      return await proposeItems(body, { apiKey: key, models: [args.model!], fetch })
     } catch (e) {
       if (!(e instanceof TrackyError && e.code === 'busy') || attempt === 3) throw e
       console.log(`busy  ${c.id}, retrying in 20s`)
@@ -113,9 +149,9 @@ outer: for (let run = 1; run <= runs; run++) {
     const t = tally.get(c.id)!
     try {
       const result = await askWithRetry(c)
-      const graded = gradeCase(c, result.items)
+      const graded = gradeCase(c, result.items, result)
       t.attempts++
-      t.last = result.items
+      t.last = { items: result.items, changes: result.changes, reply: result.reply }
       if (graded.passed) t.passes++
       else t.problems.push(...graded.problems.map((p) => `run ${run}: ${p}`))
       console.log(`${graded.passed ? 'pass' : 'FAIL'}  ${c.id}${graded.passed ? '' : `\n      ${graded.problems.join('\n      ')}`}`)
@@ -141,20 +177,23 @@ interface CaseResult {
   passes: number
   attempts: number
   problems: string[]
-  last_items: ProposedItem[] | null
+  last_answer: Answer | null
   ran_at: string
 }
 
 const ranAt = new Date().toISOString()
 const fresh: CaseResult[] = cases.map((c) => {
   const t = tally.get(c.id)!
-  return { id: c.id, kind: c.kind, passes: t.passes, attempts: t.attempts, problems: t.problems, last_items: t.last, ran_at: ranAt }
+  return { id: c.id, kind: c.kind, passes: t.passes, attempts: t.attempts, problems: t.problems, last_answer: t.last, ran_at: ranAt }
 })
 
-// A part, or a rerun of some cases, replaces only those cases in the model's earlier results.
+// A part, or a rerun of some cases, replaces only those cases in the model's earlier results, as long
+// as they measured the same prompt.
 const resultsPath = here(`./${resultsFile}`)
-const earlier: CaseResult[] =
-  partial && existsSync(resultsPath) ? (JSON.parse(readFileSync(resultsPath, 'utf8')).cases ?? []) : []
+const earlier = (partial ? earlierResults() : []) as CaseResult[]
+if (partial && existsSync(resultsPath) && earlier.length === 0) {
+  console.log('The earlier results measured a different prompt, so this run starts the results over.')
+}
 const byId = new Map(earlier.map((c) => [c.id, c]))
 for (const c of fresh) if (c.attempts > 0 || !byId.has(c.id)) byId.set(c.id, c)
 const rows = gold.cases.map((c) => byId.get(c.id)).filter((c): c is CaseResult => !!c && c.attempts > 0)
@@ -181,7 +220,7 @@ if (missing.length) console.log(`Not run yet: ${missing.length} of ${gold.cases.
 
 writeFileSync(
   resultsPath,
-  JSON.stringify({ model: args.model, updated_at: ranAt, runs, passed, attempted, by_kind: byKind, flaky, not_run: missing, cases: rows }, null, 2) +
+  JSON.stringify({ model: args.model, prompt: promptId, updated_at: ranAt, runs, passed, attempted, by_kind: byKind, flaky, not_run: missing, cases: rows }, null, 2) +
     '\n',
 )
 console.log(`Details written to supabase/functions/tracky/eval/${resultsFile}`)

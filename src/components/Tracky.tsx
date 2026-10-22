@@ -2,14 +2,24 @@ import { ArrowsInSimpleIcon, ArrowUpIcon, CaretUpIcon, NotePencilIcon, PencilSim
 import { useQueryClient } from '@tanstack/react-query'
 import { addHours, format, isValid, subMinutes } from 'date-fns'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { SUMMARY_PREFIX, type ChatTurn, type ProposedItem, type ScheduleEntry, type TrackyResult } from '../../supabase/functions/tracky/logic.ts'
+import {
+  SUMMARY_PREFIX,
+  type ChatTurn,
+  type ProposedChange,
+  type ProposedItem,
+  type ScheduleEntry,
+  type TrackyResult,
+} from '../../supabase/functions/tracky/logic.ts'
 import { deviceTimeZone, toDate } from '@/lib/dates'
 import { markNew } from '@/lib/motion'
 import { keys, useEvents, useProjects, useTasks } from '@/lib/queries'
 import { opensTracky } from '@/lib/platform'
 import { must, supabase } from '@/lib/supabase'
 import { TRACKY_CHAT_KEY } from '@/lib/trackyChat'
-import { scheduleForTracky, useTrackySeesSchedule } from '@/lib/trackySchedule'
+import { createSeries } from '@/lib/repeat'
+import { REPEAT_OPTIONS, repeatLabel, type RepeatRule } from '@/lib/repeatRules'
+import { describeChange, fromProposed, mergeChanges, toProposed, useApplyChanges, type Applied, type PendingChange } from '@/lib/trackyChanges'
+import { scheduleForTracky, useTrackySeesSchedule, type ScheduleSource } from '@/lib/trackySchedule'
 import { PRIORITIES, type CalEvent } from '@/lib/types'
 import { Dialog } from './Dialog'
 import { LogoMark } from './Logo'
@@ -56,10 +66,19 @@ interface Draft extends ProposedItem {
 type Message =
   | { id: number; role: 'you'; text: string }
   /**
-   * What Tracky proposed: its reply and a copy of the drafts as they were at that point. `summary`
-   * marks the one message a compacted chat is reduced to.
+   * What Tracky proposed: its reply and a copy of the drafts and changes as they were at that point.
+   * `summary` marks the one message a compacted chat is reduced to.
    */
-  | { id: number; role: 'tracky'; kind: 'proposal'; text: string; model: string; items: Draft[]; summary?: boolean }
+  | {
+      id: number
+      role: 'tracky'
+      kind: 'proposal'
+      text: string
+      model: string
+      items: Draft[]
+      changes?: PendingChange[]
+      summary?: boolean
+    }
   | { id: number; role: 'tracky'; kind: 'added' | 'note'; text: string }
   | { id: number; role: 'tracky'; kind: 'error'; text: string; retry: string }
 /** A message before it gets its id. */
@@ -79,6 +98,7 @@ const EXAMPLES = [
   'Sync with Dennis Tuesday 10 to 11am, remind me 15 min before',
   'Besok jam 9 standup, ingatkan 10 menit sebelumnya',
   'I have a client meeting at 3 and a report due at 5. What should I do first?',
+  'Move everything overdue to tomorrow',
 ]
 
 /** Typed into the message box, these run instead of being sent. */
@@ -97,6 +117,7 @@ async function readNote(
     history: ChatTurn[]
     drafts: ProposedItem[]
     schedule: ScheduleEntry[]
+    changes?: ProposedChange[]
     compact?: boolean
   },
   signal: AbortSignal,
@@ -117,7 +138,8 @@ async function readNote(
 
 const strip = ({ key: _key, ...item }: Draft): ProposedItem => item
 
-function replyFor(found: number, hadDrafts: boolean) {
+function replyFor(found: number, hadDrafts: boolean, changed: number) {
+  if (changed > 0 && found === 0) return changed === 1 ? 'Here’s the change. Check it, then confirm.' : 'Here are the changes. Check them, then confirm.'
   if (found === 0) return hadDrafts ? 'Nothing is left to add.' : 'I couldn’t find a task or event in that. Say what it is and when.'
   if (hadDrafts) return 'Here’s the updated list. Check it, then add.'
   return found === 1 ? 'I found one item. Check it, then add it.' : `I found ${found} items. Check them, then add them.`
@@ -144,22 +166,26 @@ const KEEP = 60
 interface SavedChat {
   messages: Message[]
   drafts: Draft[]
+  /** Changes to saved items waiting for Confirm. Chats kept before v1.11 have none. */
+  changes: PendingChange[]
   liveId: number | null
 }
 
 function loadChat(): SavedChat {
   try {
-    const saved = JSON.parse(localStorage.getItem(TRACKY_CHAT_KEY) ?? 'null') as SavedChat | null
-    if (saved && Array.isArray(saved.messages) && Array.isArray(saved.drafts)) return saved
+    const saved = JSON.parse(localStorage.getItem(TRACKY_CHAT_KEY) ?? 'null') as Partial<SavedChat> | null
+    if (saved && Array.isArray(saved.messages) && Array.isArray(saved.drafts)) {
+      return { messages: saved.messages, drafts: saved.drafts, changes: Array.isArray(saved.changes) ? saved.changes : [], liveId: saved.liveId ?? null }
+    }
   } catch {
     // Unreadable or blocked storage: start a fresh chat.
   }
-  return { messages: [], drafts: [], liveId: null }
+  return { messages: [], drafts: [], changes: [], liveId: null }
 }
 
 function saveChat(chat: SavedChat) {
   try {
-    if (chat.messages.length === 0 && chat.drafts.length === 0) localStorage.removeItem(TRACKY_CHAT_KEY)
+    if (chat.messages.length === 0 && chat.drafts.length === 0 && chat.changes.length === 0) localStorage.removeItem(TRACKY_CHAT_KEY)
     else {
       // The message holding the drafts on screen is kept even when it is older than the last 60.
       const kept = chat.messages.slice(-KEEP)
@@ -195,7 +221,14 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
   const [saved] = useState(loadChat)
   const [messages, setMessages] = useState<Message[]>(saved.messages)
   const [drafts, setDrafts] = useState<Draft[]>(saved.drafts)
-  // The proposal whose drafts are still on screen to edit; older proposals show a summary.
+  const [changes, setChanges] = useState<PendingChange[]>(saved.changes)
+  const applyChanges = useApplyChanges()
+  // Undo for the changes just made. It sits on the message that says what changed, inside the chat,
+  // because a toast would be behind this dialog. It goes once anything newer is said, and isn't kept
+  // on the device.
+  const [undo, setUndo] = useState<{ messageId: number; applied: Applied; alsoAdded: boolean } | null>(null)
+  const [undoing, setUndoing] = useState(false)
+  // The proposal whose drafts and changes are still on screen; older proposals show a summary.
   const [liveId, setLiveId] = useState<number | null>(saved.liveId)
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState<Busy>(false)
@@ -205,7 +238,7 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
   // from the device, show at once.
   const [typing, setTyping] = useState<ReadonlySet<number>>(new Set())
   const nextId = useRef(
-    Math.max(0, ...saved.messages.map((m) => m.id), ...saved.drafts.map((d) => d.key)) + 1,
+    Math.max(0, ...saved.messages.map((m) => m.id), ...saved.drafts.map((d) => d.key), ...saved.changes.map((c) => c.key)) + 1,
   )
   const abort = useRef<AbortController | null>(null)
   const composerRef = useRef<HTMLTextAreaElement>(null)
@@ -214,11 +247,12 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
   const focusAfterRemove = useRef<number | null>(null)
 
   const activeProjects = (projects.data ?? []).filter((p) => !p.archived)
-  const ready = drafts.length > 0 && drafts.every((d) => draftProblem(d) === null)
+  const pending = drafts.length + changes.length
+  const ready = pending > 0 && drafts.every((d) => draftProblem(d) === null)
   const reading = busy !== false
   const id = () => nextId.current++
 
-  useEffect(() => saveChat({ messages, drafts, liveId }), [messages, drafts, liveId])
+  useEffect(() => saveChat({ messages, drafts, changes, liveId }), [messages, drafts, changes, liveId])
 
   /** Adds Tracky's message and marks it as just arrived: it types out, and its drafts rise in. */
   function trackySays(message: Message) {
@@ -259,26 +293,38 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
     const controller = new AbortController()
     abort.current = controller
     try {
-      const schedule = seesSchedule
+      const { entries, sources } = seesSchedule
         ? scheduleForTracky(tasks.data ?? [], events.data ?? [], projects.data ?? [], new Date())
-        : []
+        : { entries: [], sources: new Map<string, ScheduleSource>() }
       const result = await readNote(
-        { text, projects: activeProjects.map((p) => p.name), history, drafts: drafts.map(strip), schedule },
+        {
+          text,
+          projects: activeProjects.map((p) => p.name),
+          history,
+          drafts: drafts.map(strip),
+          schedule: entries,
+          changes: toProposed(changes, sources),
+        },
         controller.signal,
       )
       if (controller.signal.aborted) return
       const items = result.items.map((item) => ({ ...item, key: id() }))
+      // A server from before v1.11 sends no changes.
+      const incoming = fromProposed(result.changes ?? [], sources, id)
+      const nextChanges = mergeChanges(changes, incoming)
       const proposalId = id()
       trackySays({
         id: proposalId,
         role: 'tracky',
         kind: 'proposal',
-        text: result.reply ?? replyFor(items.length, hadDrafts),
+        text: result.reply ?? replyFor(items.length, hadDrafts, incoming.length),
         model: result.model,
         items,
+        changes: nextChanges,
       })
       setDrafts(items)
-      setLiveId(items.length ? proposalId : null)
+      setChanges(nextChanges)
+      setLiveId(items.length || nextChanges.length ? proposalId : null)
     } catch (e) {
       if (controller.signal.aborted) {
         // Stop keeps the chat and hands the message back; New chat (which lets go of the request first) says nothing.
@@ -325,9 +371,9 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
       if (controller.signal.aborted) return
       // Without a summary there is nothing to replace the chat with, so it stays as it is.
       if (!result.reply) throw new Error('Tracky didn’t send a summary.')
-      // The summary takes over the live proposal's id, so the drafts under it keep their place and
-      // any fields you had open, instead of being rebuilt.
-      const summaryId = drafts.length && liveId !== null ? liveId : id()
+      // The summary takes over the live proposal's id, so the drafts and changes under it keep their
+      // place and any fields you had open, instead of being rebuilt.
+      const summaryId = pending && liveId !== null ? liveId : id()
       setMessages([])
       trackySays({
         id: summaryId,
@@ -337,8 +383,9 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
         text: result.reply,
         model: result.model,
         items: drafts,
+        changes,
       })
-      setLiveId(drafts.length ? summaryId : null)
+      setLiveId(pending ? summaryId : null)
     } catch (e) {
       if (!controller.signal.aborted) {
         say({ role: 'tracky', kind: 'note', text: `Couldn’t compact the chat, so it’s unchanged. ${e instanceof Error ? e.message : ''}`.trim() })
@@ -351,49 +398,91 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
     }
   }
 
-  async function add() {
+  /** Adds the drafts and applies the changes. Changes come with Undo, as moves and deletes do elsewhere. */
+  async function confirm() {
     if (reading) return
     setSaving(true)
     setError(null)
+    const said: string[] = []
+    let applied: Applied | null = null
     try {
-      const projectId = (name: string | null) => activeProjects.find((p) => p.name === name)?.id ?? null
-      const tasks = drafts.filter((d) => d.kind === 'task').map((d) => toTaskRow(d, projectId(d.project)))
-      const evs = drafts.filter((d) => d.kind === 'event').map(toEventRow)
-      const added = [
-        ...(tasks.length ? must(await supabase.from('tasks').insert(tasks).select('id')) : []),
-        ...(evs.length ? must(await supabase.from('events').insert(evs).select('id')) : []),
-      ]
-      markNew(added.map((row) => row.id))
-      qc.invalidateQueries({ queryKey: keys.tasks })
-      qc.invalidateQueries({ queryKey: keys.events })
-      say({ role: 'tracky', kind: 'added', text: addedText(drafts.map((d) => d.title.trim())) })
+      if (drafts.length) {
+        const projectId = (name: string | null) => activeProjects.find((p) => p.name === name)?.id ?? null
+        const newTasks = drafts.filter((d) => d.kind === 'task').map((d) => toTaskRow(d, projectId(d.project)))
+        const evs = drafts.filter((d) => d.kind === 'event' && !d.repeat).map(toEventRow)
+        const added = [
+          ...(newTasks.length ? must(await supabase.from('tasks').insert(newTasks).select('id')) : []).map((r) => r.id),
+          ...(evs.length ? must(await supabase.from('events').insert(evs).select('id')) : []).map((r) => r.id),
+        ]
+        // A repeating event is a series: the event and the next three months of it.
+        for (const d of drafts.filter((d) => d.kind === 'event' && d.repeat)) {
+          added.push(...(await createSeries(toEventRow(d), d.repeat!)))
+        }
+        markNew(added)
+        qc.invalidateQueries({ queryKey: keys.tasks })
+        qc.invalidateQueries({ queryKey: keys.events })
+        qc.invalidateQueries({ queryKey: keys.series })
+        said.push(addedText(drafts.map((d) => d.title.trim())))
+        // Gone from the screen at once, so a failed change below can't add them a second time.
+        setDrafts([])
+      }
+      if (changes.length) {
+        applied = await applyChanges(changes, tasks.data ?? [], events.data ?? [])
+        said.push(applied.text)
+      }
+      const messageId = id()
+      trackySays({ id: messageId, role: 'tracky', kind: 'added', text: said.join(' ') })
+      setUndo(applied && applied.count > 0 ? { messageId, applied, alsoAdded: said.length > 1 } : null)
       setDrafts([])
+      setChanges([])
       setLiveId(null)
       composerRef.current?.focus()
     } catch (e) {
+      if (said.length) say({ role: 'tracky', kind: 'added', text: said.join(' ') })
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       setSaving(false)
     }
   }
 
+  async function undoChanges() {
+    if (!undo || undoing) return
+    const { applied } = undo
+    setUndoing(true)
+    try {
+      await applied.undo()
+      setUndo(null)
+      say({ role: 'tracky', kind: 'note', text: applied.count === 1 ? 'Undone. It’s back as it was.' : 'Undone. They’re back as they were.' })
+    } catch (e) {
+      say({ role: 'tracky', kind: 'note', text: `Couldn’t undo. ${e instanceof Error ? e.message : ''}`.trim() })
+    } finally {
+      setUndoing(false)
+      composerRef.current?.focus()
+    }
+  }
+
   function discard() {
+    const nothing = drafts.length && changes.length ? 'added or changed' : drafts.length ? 'added' : 'changed'
     setDrafts([])
+    setChanges([])
     setLiveId(null)
-    say({ role: 'tracky', kind: 'note', text: 'Discarded. Nothing was added.' })
+    say({ role: 'tracky', kind: 'note', text: `Discarded. Nothing was ${nothing}.` })
     composerRef.current?.focus()
   }
 
   function newChat() {
     if (saving) return
-    if (drafts.length && !window.confirm('Start a new chat? The drafts you haven’t added will be lost.')) return
-    const pending = abort.current
+    const lost = drafts.length && changes.length ? 'drafts and changes' : drafts.length ? 'drafts' : 'changes'
+    if (pending && !window.confirm(`Start a new chat? The ${lost} you haven’t confirmed will be lost.`)) return
+    const request = abort.current
     abort.current = null
-    pending?.abort()
+    request?.abort()
     setBusy(false)
     setMessages([])
     setDrafts([])
+    setChanges([])
     setLiveId(null)
+    setUndo(null)
     setTyping(new Set())
     setInput('')
     setError(null)
@@ -408,6 +497,11 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
     setDrafts((ds) => ds.filter((d) => d.key !== key))
   }
 
+  function removeChange(key: number) {
+    focusAfterRemove.current = drafts.length + changes.findIndex((c) => c.key === key)
+    setChanges((cs) => cs.filter((c) => c.key !== key))
+  }
+
   // Removing a card removes the button that had focus. Move it to the card that took its place, the
   // one above if it was the last, or the message box when none are left.
   useEffect(() => {
@@ -416,7 +510,16 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
     focusAfterRemove.current = null
     const buttons = threadRef.current?.querySelectorAll<HTMLButtonElement>('[data-remove]') ?? []
     ;(buttons[Math.min(index, buttons.length - 1)] ?? composerRef.current)?.focus()
-  }, [drafts])
+  }, [drafts, changes])
+
+  const sourceOf = (c: PendingChange): ScheduleSource | undefined => {
+    if (c.kind === 'task') {
+      const row = tasks.data?.find((t) => t.id === c.id)
+      return row ? { kind: 'task', row } : undefined
+    }
+    const row = events.data?.find((e) => e.id === c.id)
+    return row ? { kind: 'event', row } : undefined
+  }
 
   // After you send, your message moves to the top of the view with Tracky's answer under it, as in
   // other chat apps; anything else new (Added, Stopped) scrolls to the end. Instant, because most
@@ -543,7 +646,7 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
                       <p className="break-words whitespace-pre-wrap">
                         <TypedText text={m.text} animate={typed} />
                       </p>
-                      {m.id === liveId && drafts.length > 0 ? (
+                      {m.id === liveId && pending > 0 ? (
                         // Frozen while Tracky reads a follow-up, whose answer replaces these drafts.
                         <div
                           className={`space-y-3 transition-opacity duration-150 ${reading ? 'opacity-60' : ''}`}
@@ -562,6 +665,16 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
                               onRemove={() => remove(d.key)}
                             />
                           ))}
+                          {changes.map((c, i) => (
+                            <ChangeCard
+                              key={c.key}
+                              index={drafts.length + i + 1}
+                              arriving={arriving}
+                              change={c}
+                              source={sourceOf(c)}
+                              onRemove={() => removeChange(c.key)}
+                            />
+                          ))}
                           {error && (
                             <p role="alert" className="text-danger">
                               {error}
@@ -569,10 +682,10 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
                           )}
                           <div
                             className={`flex flex-wrap items-center gap-2 ${arriving ? 'draft-in' : ''}`}
-                            style={{ '--i': drafts.length + 1 } as CSSProperties}
+                            style={{ '--i': pending + 1 } as CSSProperties}
                           >
-                            <button type="button" className="btn btn-primary" disabled={!ready || saving} onClick={add}>
-                              {saving ? 'Adding…' : drafts.length === 1 ? 'Add 1 item' : `Add ${drafts.length} items`}
+                            <button type="button" className="btn btn-primary" disabled={!ready || saving} onClick={confirm}>
+                              {saving ? (changes.length ? 'Saving…' : 'Adding…') : confirmLabel(drafts.length, changes.length)}
                             </button>
                             <button type="button" className="btn btn-quiet" disabled={saving} onClick={discard}>
                               Discard
@@ -583,14 +696,31 @@ function TrackyDialog({ open, instant, onClose }: { open: boolean; instant: bool
                       ) : (
                         <div className="space-y-3" style={{ '--after': `${after}ms` } as CSSProperties}>
                           {m.items.length > 0 && <DraftSummary items={m.items} />}
+                          {m.changes && m.changes.length > 0 && <ChangeSummary changes={m.changes} />}
                           <p className={`text-[12px] text-ink-3 ${fresh ? 'draft-in' : ''}`}>Tracky, running on {m.model}</p>
                         </div>
                       )}
                     </>
                   ) : (
-                    <p className={`break-words whitespace-pre-wrap ${m.kind === 'note' ? 'text-ink-2' : ''}`}>
-                      <TypedText text={m.text} animate={typed} />
-                    </p>
+                    <>
+                      <p className={`break-words whitespace-pre-wrap ${m.kind === 'note' ? 'text-ink-2' : ''}`}>
+                        <TypedText text={m.text} animate={typed} />
+                      </p>
+                      {undo?.messageId === m.id && m === messages.at(-1) && (
+                        <div className={fresh ? 'draft-in' : ''} style={{ '--after': `${after}ms`, '--i': 0 } as CSSProperties}>
+                          <button type="button" className="btn btn-quiet" disabled={undoing || reading} onClick={undoChanges}>
+                            {/* Undo reverses the changes only; when drafts were added too, it says so. */}
+                            {undoing
+                              ? 'Undoing…'
+                              : undo.alsoAdded
+                                ? undo.applied.count === 1
+                                  ? 'Undo the change'
+                                  : 'Undo the changes'
+                                : 'Undo'}
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </TrackyMessage>
               )
@@ -674,8 +804,8 @@ function EmptyChat({ onPick }: { onPick: (example: string) => void }) {
       <LogoMark size={36} />
       <h3 className="mt-4 text-xl font-semibold">What’s coming up?</h3>
       <p className="mt-1 max-w-md text-ink-2">
-        Tell Tracky what’s coming up, or ask it to help you plan your day, in English or Bahasa Indonesia. It drafts
-        tasks and events, and nothing is saved until you add them.
+        Tell Tracky what’s coming up, ask it to move or finish something, or ask it to help you plan your day, in
+        English or Bahasa Indonesia. Nothing is saved or changed until you confirm.
       </p>
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         {EXAMPLES.map((example) => (
@@ -698,6 +828,7 @@ function DraftSummary({ items }: { items: Draft[] }) {
           <span className="min-w-0 truncate">
             {d.title}
             {d.date && <span className="text-ink-3 tnum"> · {draftWhen(d)}</span>}
+            {d.repeat && <span className="text-ink-3"> · {repeatLabel(d.repeat).toLowerCase()}</span>}
           </span>
         </li>
       ))}
@@ -856,13 +987,13 @@ function Composer({
       </div>
       <p id="tracky-hint" className="mt-1.5 text-center text-[12px] text-ink-3">
         <span className="pointer-coarse:hidden">Enter sends, Shift+Enter starts a new line. </span>
-        Nothing is saved until you add it.
+        Nothing is saved until you confirm.
       </p>
     </form>
   )
 }
 
-// ---------------------------------------------------------------- one proposed item
+// One proposed item
 
 function DraftCard({
   index,
@@ -1043,6 +1174,23 @@ function DraftCard({
                 All day
               </label>
             )}
+            <div>
+              <label htmlFor={`${id}-repeat`} className="label">
+                Repeat
+              </label>
+              <select
+                id={`${id}-repeat`}
+                className="field"
+                value={d.repeat ?? ''}
+                onChange={(e) => onChange({ repeat: (e.target.value || null) as RepeatRule | null })}
+              >
+                {REPEAT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             {/* Events have no project in this app, so only tasks offer one. */}
             {projects.length > 0 && d.kind === 'task' && (
               <div>
@@ -1106,6 +1254,7 @@ function draftDetails(d: Draft) {
   const time = d.kind === 'task' ? (d.date ? `Task, due ${draftWhen(d)}` : 'Task, no deadline') : `Event · ${d.date ? draftWhen(d) : 'no day'}`
   return [
     d.kind === 'event' && d.time && d.end_time ? `${time} to ${d.end_time}` : time,
+    d.repeat && `Repeats ${repeatLabel(d.repeat).toLowerCase()}`,
     d.kind === 'event' && d.location,
     d.remind_minutes_before !== null && `Reminder ${reminder ? reminder.toLowerCase() : `${d.remind_minutes_before} min before`}`,
     d.kind === 'task' && d.priority !== 'medium' && PRIORITIES.find((p) => p.value === d.priority)?.label,
@@ -1115,7 +1264,80 @@ function draftDetails(d: Draft) {
     .join(' · ')
 }
 
-// ---------------------------------------------------------------- turning drafts into rows
+/** "Add 2 items", "Make 1 change", or "Add 2, change 1" when there are both. */
+function confirmLabel(drafts: number, changes: number) {
+  if (!changes) return drafts === 1 ? 'Add 1 item' : `Add ${drafts} items`
+  if (!drafts) return changes === 1 ? 'Make 1 change' : `Make ${changes} changes`
+  return `Add ${drafts}, change ${changes}`
+}
+
+// A proposed change to something saved
+
+function ChangeCard({
+  index,
+  arriving,
+  change: c,
+  source,
+  onRemove,
+}: {
+  index: number
+  arriving: boolean
+  change: PendingChange
+  /** The saved row as it is now; missing when it was deleted since. */
+  source: ScheduleSource | undefined
+  onRemove: () => void
+}) {
+  const title = source?.row.title ?? c.title
+  return (
+    <section
+      aria-label={`Change to ${title}`}
+      className={`rounded-[10px] border border-line p-3 ${arriving ? 'draft-in' : ''}`}
+      style={{ '--i': index } as CSSProperties}
+    >
+      <div className="flex items-start gap-3">
+        <span aria-hidden className="flex h-6 w-3 shrink-0 items-center justify-center">
+          {c.kind === 'task' ? (
+            <span className="block size-2.5 rotate-45 border-[1.5px] border-ink" />
+          ) : (
+            <span className="block h-4 w-1 rounded-full bg-event" />
+          )}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] text-ink-3">{c.kind === 'task' ? 'Saved task' : 'Saved event'}</p>
+          <p className="font-medium break-words">{title}</p>
+          <p className={`text-[13px] break-words tnum ${c.action === 'delete' ? 'text-danger' : 'text-ink-2'}`}>
+            {source ? describeChange(c, source) : 'It isn’t saved any more, so this change will be skipped.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          data-remove
+          className="btn btn-ghost btn-icon -my-1 -mr-1 shrink-0"
+          aria-label={`Don’t change ${title}`}
+          onClick={onRemove}
+        >
+          <XIcon size={16} weight="bold" />
+        </button>
+      </div>
+    </section>
+  )
+}
+
+/** Changes in an earlier proposal, one line each. */
+function ChangeSummary({ changes }: { changes: PendingChange[] }) {
+  return (
+    <ul className="space-y-1 text-[13px] text-ink-2">
+      {changes.map((c) => (
+        <li key={c.key} className="flex gap-2">
+          <span className="text-ink-3">{c.action === 'done' ? 'Done' : c.action === 'delete' ? 'Delete' : 'Change'}</span>
+          <span className="min-w-0 truncate">{c.title}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+// Turning drafts into rows
 
 /** Keeps a draft consistent after an edit: tasks are never all day; all-day events have no times. */
 function normalise(d: Draft): Draft {
@@ -1126,6 +1348,7 @@ function normalise(d: Draft): Draft {
 
 function draftProblem(d: Draft): string | null {
   if (!d.title.trim()) return 'Give it a title.'
+  if (d.kind === 'task' && d.repeat && !d.date) return 'A repeating task needs a deadline. Pick its first day.'
   if (d.kind === 'event' && !d.date) return 'Pick a day for this event.'
   if (d.kind === 'event' && !d.all_day && !d.time) return 'Pick a start time, or mark it all day.'
   if (d.kind === 'event' && !d.all_day && d.time && d.end_time && d.end_time <= d.time) return 'The end is before the start.'
@@ -1143,6 +1366,7 @@ function toTaskRow(d: Draft, projectId: string | null) {
     project_id: projectId,
     due_at: due?.toISOString() ?? null,
     remind_at: due && d.remind_minutes_before !== null ? subMinutes(due, d.remind_minutes_before).toISOString() : null,
+    repeat: due ? (d.repeat ?? null) : null,
   }
 }
 
@@ -1155,6 +1379,7 @@ function toEventRow(d: Draft) {
     starts_at: start.toISOString(),
     ends_at: end?.toISOString() ?? null,
     location: d.location?.trim() || null,
+    details: null,
     remind_at: d.remind_minutes_before !== null ? subMinutes(start, d.remind_minutes_before).toISOString() : null,
   }
 }

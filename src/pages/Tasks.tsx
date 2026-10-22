@@ -307,7 +307,7 @@ function groupTasks(tasks: TaskSummary[], show: Show, now: Date) {
     .filter((g) => g.tasks.length > 0)
 }
 
-// ---------------------------------------------------------------- board
+// Board view
 
 const DONE_WINDOW_DAYS = 14
 
@@ -366,7 +366,7 @@ function Board({
       onDragCancel={() => setActiveId(null)}
     >
       <p className="text-[13px] text-ink-3">
-        Drag a card to change its status, or open it to edit. Done shows the last {DONE_WINDOW_DAYS} days.
+        Drag a card to change its status (on a phone, press and hold it first), or open it to edit. Done shows the last {DONE_WINDOW_DAYS} days.
       </p>
       <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-0">
         {STATUSES.map((s) => {

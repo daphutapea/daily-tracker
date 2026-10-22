@@ -26,14 +26,20 @@ export interface TodayItem {
 
 type ToMac =
   | { type: 'hello' }
-  /** `calendar`: also put them in the Daily Tracker calendar in iCloud, so an iPhone alerts too. */
-  | { type: 'reminders'; reminders: NativeReminder[]; calendar: boolean }
+  /**
+   * `calendar`: also put them in the Daily Tracker calendar in iCloud, so an iPhone alerts too.
+   * `openTasks`: the tasks not done yet. A snoozed reminder for any other task is cancelled.
+   */
+  | { type: 'reminders'; reminders: NativeReminder[]; calendar: boolean; openTasks: string[] }
   | { type: 'today'; overdue: number; badge: number; items: TodayItem[] }
   | { type: 'requestPermission' }
   | { type: 'openNotificationSettings' }
   | { type: 'openCalendarSettings' }
   | { type: 'testNotification' }
   | { type: 'save'; filename: string; content: string }
+  /** A backup, written without asking to iCloud Drive (or Documents) › Daily Tracker Backups. */
+  | { type: 'backup'; filename: string; content: string }
+  | { type: 'showBackups' }
 
 export type FromMac =
   | { type: 'permission'; status: 'granted' | 'denied' | 'undetermined' }
@@ -42,11 +48,22 @@ export type FromMac =
   | { type: 'tracky' }
   | { type: 'saved'; name: string }
   | { type: 'calendar'; status: CalendarStatus }
+  /** `at` is an ISO time; `folder` reads like "iCloud Drive › Daily Tracker Backups". */
+  | { type: 'backedUp'; at: string; folder: string }
+  | { type: 'backupFailed'; message: string }
 
 const handler = (window as { webkit?: { messageHandlers?: { dailyTracker?: { postMessage(m: unknown): void } } } }).webkit
   ?.messageHandlers?.dailyTracker
 
-export const inMacApp = Boolean(handler)
+/** Set by the iPhone app before the page runs; the Mac app leaves it unset. */
+const platform = (window as { dailyTrackerPlatform?: string }).dailyTrackerPlatform
+
+/** Inside one of the native apps, which keep reminders and summaries as system notifications. */
+export const inNativeApp = Boolean(handler)
+export const inIphoneApp = inNativeApp && platform === 'ios'
+export const inMacApp = inNativeApp && !inIphoneApp
+/** "Mac" or "iPhone", for the words on screen. */
+export const deviceName = inIphoneApp ? 'iPhone' : 'Mac'
 
 export function postToMac(message: ToMac) {
   handler?.postMessage(message)
@@ -126,12 +143,48 @@ const iphone = macSetting('dt-mac-iphone', false)
 export const setMacIphoneEnabled = iphone.write
 export const useMacIphoneEnabled = iphone.use
 
+/** On until you turn it off: a copy of everything goes to iCloud Drive once a week. */
+const backups = macSetting('dt-mac-backups')
+export const readMacBackupsEnabled = backups.read
+export const setMacBackupsEnabled = backups.write
+export const useMacBackupsEnabled = backups.use
+
+/** When and where the Mac app last saved a backup, as it reported it. Kept on this Mac. */
+export interface LastBackup {
+  at: string
+  folder: string
+}
+const LAST_BACKUP = 'dt-mac-last-backup'
+let lastBackup: LastBackup | null = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(LAST_BACKUP) ?? 'null') as LastBackup | null
+  } catch {
+    return null
+  }
+})()
+onMacMessage((m) => {
+  if (m.type !== 'backedUp') return
+  lastBackup = { at: m.at, folder: m.folder }
+  try {
+    localStorage.setItem(LAST_BACKUP, JSON.stringify(lastBackup))
+  } catch {
+    // Without storage the next launch backs up again, which does no harm.
+  }
+})
+export const readLastBackup = () => lastBackup
+export function useLastBackup() {
+  return useSyncExternalStore(
+    (cb) => onMacMessage((m) => m.type === 'backedUp' && cb()),
+    () => lastBackup,
+  )
+}
+
 /**
  * Saves a file: through a Save dialog in the Mac app, where a download link does nothing, and as a
  * download in a browser.
  */
 export function saveFile(filename: string, content: string, type: string) {
-  if (inMacApp) {
+  if (inNativeApp) {
     postToMac({ type: 'save', filename, content })
     return
   }

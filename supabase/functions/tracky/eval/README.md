@@ -17,10 +17,15 @@ which kinds of note it gets wrong.
 
 ## The gold set
 
-[`gold_set.json`](gold_set.json) has 34 notes. Every case is read at the same moment: Thursday
+[`gold_set.json`](gold_set.json) has 60 notes. Every case is read at the same moment: Thursday
 15 October 2026, 09:00, Jakarta time, with the projects ATLAS, FinChat and Personal. That way
 "tomorrow" and "next Friday" each have one right answer. The `note` on each case says how that answer
 was reached, so you can check it instead of trusting it.
+
+The first 34 are single notes. The rest can carry what came before them, as the app sends it: the chat
+so far, the drafts on screen, the saved schedule with its refs (two overdue tasks, a bill due tonight,
+two tasks that are both "reports", a passport task with no deadline, and three events), and changes
+still waiting to be confirmed.
 
 | Kind | What it tests | Cases |
 |---|---|---:|
@@ -30,6 +35,12 @@ was reached, so you can check it instead of trusting it.
 | `either` | Notes that can fairly be a task or an event; the kind isn't graded | 2 |
 | `refusal` | **Notes with nothing to add. It must return no items, not invent one.** | 3 |
 | `typo` | Notes typed fast: misspellings, shorthand (tmrw, nxt, bsk), words run together, times like 1500 or 5.30pm. Titles must come back spelled properly. | 10 |
+| `followup` | Replies to drafts on screen: "make it 4pm", "drop the second one", a reminder, "penting". Only what was asked changes. | 4 |
+| `change` | Changes to saved items: move, finish, delete, a new time that keeps an event's length, everything overdue, a typo, Indonesian, a change and a new draft together, a follow-up to a change on screen. **"Move the report" with two saved reports must change nothing and ask which.** With the schedule turned off, it must change nothing and add no stand-in draft. | 12 |
+| `advice` | Questions answered from the schedule. No drafts and no changes for advice alone; the answer has to mention what matters (the dentist at 09:30 on a Monday). Planning a saved task must change it, not draft a copy. | 3 |
+| `compact` | The /compact request: at most six "- " lines, with the draft kept. | 1 |
+| `identity` | "Who are you, and are you ChatGPT?": Tracky, on Gemini from Google, never Claude or OpenAI. | 1 |
+| `repeat` | "Every weekday at 10", "on the 1st of every month", "every monday 7am", "tiap hari", and a one-off that must not repeat. | 5 |
 
 ## The grader
 
@@ -40,6 +51,11 @@ means any of its values is fine, for example `"priority": ["high", "urgent"]` fo
 
 Titles are checked loosely on purpose (`"title_has": ["dennis"]`), because "Sync with Dennis" and
 "Dennis sync" are both fine. Some cases also check what a title leaves out, such as the day.
+
+Changes pair by ref, and the action and every named field must match; `null` there means the change
+must leave that field alone. A case that lists no changes fails if the answer changes anything. For
+answers in words, `reply_has` lists groups of words, and the reply must contain one from each group;
+`reply_lacks` lists words it must not contain.
 
 ## Results
 

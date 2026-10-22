@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import type { TablesInsert, TablesUpdate } from './database.types'
 import { markNew } from './motion'
+import { formatWhen } from './dates'
 import { must, supabase } from './supabase'
 import type {
   CalEvent,
+  EventSeries,
   Note,
   NoteSummary,
   Profile,
@@ -15,7 +18,7 @@ import type {
 } from './types'
 
 const TASK_SUMMARY_COLUMNS =
-  'id,title,status,priority,due_at,remind_at,show_on_calendar,links,project_id,completed_at,created_at,updated_at,notes_text'
+  'id,title,status,priority,due_at,remind_at,show_on_calendar,links,project_id,completed_at,created_at,updated_at,notes_text,repeat,repeat_next'
 const NOTE_SUMMARY_COLUMNS = 'id,title,content_text,pinned,project_id,created_at,updated_at'
 
 /**
@@ -34,6 +37,8 @@ export const keys = {
   tasks: ['tasks'] as const,
   task: (id: string) => ['task', id] as const,
   events: ['events'] as const,
+  /** Keyed by table name, like the others, so a restore's refresh reaches it. */
+  series: ['event_series'] as const,
   notes: ['notes'] as const,
   note: (id: string) => ['note', id] as const,
   projects: ['projects'] as const,
@@ -41,7 +46,7 @@ export const keys = {
   profile: ['profile'] as const,
 }
 
-// ---------------------------------------------------------------- tasks
+// Tasks
 
 // Tasks and events also refresh every minute, so edits from your phone show up on an open laptop
 // (and their in-app reminders fire) without a reload.
@@ -92,7 +97,13 @@ export function useSetTaskStatus() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: TaskStatus }) => {
-      must(await supabase.from('tasks').update({ status }).eq('id', id).select('id').single())
+      const saved = must(await supabase.from('tasks').update({ status }).eq('id', id).select('repeat_next').single())
+      // Finishing a repeating task adds the next one (in the database); say when it's due.
+      if (status !== 'done' || !saved.repeat_next) return null
+      return must(await supabase.from('tasks').select('due_at').eq('id', saved.repeat_next).maybeSingle())?.due_at ?? null
+    },
+    onSuccess: (nextDue) => {
+      if (nextDue) toast.success(`Done. The next one is due ${formatWhen(nextDue)}.`)
     },
     onMutate: async ({ id, status }) => {
       await qc.cancelQueries({ queryKey: keys.tasks })
@@ -185,7 +196,15 @@ export function useDeleteTask() {
   })
 }
 
-// ---------------------------------------------------------------- events
+// Events
+
+/** The rules behind repeating events; the events themselves are ordinary rows (lib/repeat.ts). */
+export function useEventSeries() {
+  return useQuery({
+    queryKey: keys.series,
+    queryFn: async () => must(await supabase.from('event_series').select('*')) as EventSeries[],
+  })
+}
 
 export function useEvents() {
   return useQuery({
@@ -222,7 +241,7 @@ export function useDeleteEvent() {
   })
 }
 
-// ---------------------------------------------------------------- notes
+// Notes
 
 export function useNotes() {
   return useQuery({
@@ -281,7 +300,7 @@ export function useDeleteNote() {
   })
 }
 
-// ---------------------------------------------------------------- projects
+// Projects
 
 export function useProjects() {
   return useQuery({
@@ -316,7 +335,7 @@ export function useDeleteProject() {
   })
 }
 
-// ---------------------------------------------------------------- quick links
+// Quick links
 
 export function useQuickLinks() {
   return useQuery({
@@ -368,7 +387,7 @@ export function useDeleteQuickLink() {
   })
 }
 
-// ---------------------------------------------------------------- profile
+// Profile
 
 export function useProfile() {
   return useQuery({

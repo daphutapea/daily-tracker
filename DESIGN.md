@@ -187,6 +187,14 @@ tint (it fails in the dark palettes), and on `--accent-soft` only ink text or te
 - Deleting doesn't ask "Are you sure?"; it deletes and offers Undo for 8 seconds. A question before
   every delete trains you to click OK without reading, and an Undo is there for the one time it
   matters. Discarding unsaved edits still asks, because those can't be brought back.
+- Undo goes where you can reach it. A toast sits under an open dialog and can't be clicked, so
+  Tracky's Undo for the changes it made is a button on the message that says what changed, and it
+  goes once anything newer is said. When drafts were added in the same step, it reads "Undo the
+  changes", since it doesn't remove what was added.
+- Tracky proposes changes to saved items as cards beside its drafts, labelled Saved task or Saved
+  event and written as old → new, so a change never looks like something new being added.
+- An occurrence of a repeating event asks This event or This and later ones right under Repeat,
+  where it is seen before Save or Delete. This event is the default, because it changes the least.
 - In the Mac app, the menu bar icon is the system's `checklist` symbol, drawn as a template so it
   matches the other icons in light and dark menu bars.
 - Weekly review is its own page rather than more panels on Home. Home is for the day; the review is

@@ -147,7 +147,7 @@ export function ReviewPage() {
                 </ul>
               )}
             </ReviewPanel>
-            <ReviewPanel title={`The week after, ${format(nextMonday, 'd MMM')} on`} count={week.coming.length}>
+            <ReviewPanel title={`Week of ${format(nextMonday, 'd MMM')}`} count={week.coming.length}>
               {week.coming.length === 0 ? (
                 <StateMessage title="Nothing planned yet." body="Deadlines and events for that week will show up here." />
               ) : (

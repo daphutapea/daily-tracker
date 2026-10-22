@@ -3,13 +3,18 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   buildUserMessage,
+  changeLine,
   parseRequest,
   proposeItems,
+  repairStandIns,
   TrackyError,
   RESPONSE_SCHEMA,
   scheduleLine,
   SYSTEM_PROMPT,
+  validateChanges,
   validateItems,
+  type ProposedChange,
+  type ScheduleEntry,
   type TrackyRequest,
 } from './logic.ts'
 
@@ -312,4 +317,186 @@ test('a rejected API key is reported as a key problem', async () => {
 test('unreadable model output is a clear error, not a crash', async () => {
   const { fetch } = fakeFetch([{ status: 200, body: { candidates: [{ content: { parts: [{ text: 'not json' }] } }] } }])
   await assert.rejects(proposeItems(req, { apiKey: 'k', models: ['a'], fetch }), (e: TrackyError) => e.code === 'model')
+})
+
+// Changes to saved items
+
+const saved: ScheduleEntry[] = [
+  { ref: 'T1', kind: 'task', title: 'Send the ATLAS report', at: '2026-10-14T17:00', status: 'todo', priority: 'high', project: 'ATLAS' },
+  { ref: 'T2', kind: 'task', title: 'Pay the invoice', at: null, status: 'waiting', priority: 'medium', project: null },
+  { ref: 'E1', kind: 'event', title: 'Sync with Dennis', at: '2026-10-15T15:00', day: '2026-10-15', end: '2026-10-15T16:00' },
+  { ref: 'E2', kind: 'event', title: 'Offsite', at: null, day: '2026-10-20', end: null },
+]
+const change = (fields: Record<string, unknown>) => ({
+  title: null, date: null, time: null, end_time: null, priority: null, status: null, remind_minutes_before: null, location: null,
+  ...fields,
+})
+
+test('schedule lines carry their reference, and pending changes read as plain lines', () => {
+  assert.equal(scheduleLine(saved[0], '2026-10-15T09:30'), '- [T1] Task, due Wed 14 Oct 17:00 (overdue), high, ATLAS: Send the ATLAS report')
+  assert.equal(scheduleLine(saved[3], '2026-10-15T09:30'), '- [E2] Event, Tue 20 Oct, all day: Offsite')
+  const pending: ProposedChange = { ref: 'T1', action: 'update', kind: 'task', title: 'Send the ATLAS report', set: { at: '2026-10-16T17:00', priority: 'urgent' } }
+  assert.equal(changeLine(pending), '- [T1] update: due Fri 16 Oct 17:00, priority urgent')
+  assert.equal(changeLine({ ...pending, action: 'delete', set: {} }), '- [T1] delete')
+  const message = buildUserMessage({ ...req, schedule: saved, changes: [pending] })
+  assert.match(message, /PENDING CHANGES \(not applied yet\):\n- \[T1\] update/)
+})
+
+test('moving a task to another day keeps its time; a task with no deadline is due at 17:00', () => {
+  const [moved, dated] = validateChanges(
+    [change({ ref: 'T1', action: 'update', date: '2026-10-16' }), change({ ref: 'T2', action: 'update', date: '2026-10-19' })],
+    saved,
+  )
+  assert.deepEqual(moved, { ref: 'T1', action: 'update', kind: 'task', title: 'Send the ATLAS report', set: { at: '2026-10-16T17:00' } })
+  assert.deepEqual(dated.set, { at: '2026-10-19T17:00' })
+})
+
+test('moving an event keeps its length unless a new end is given', () => {
+  const [later] = validateChanges([change({ ref: 'E1', action: 'update', time: '16:30' })], saved)
+  assert.deepEqual(later.set, { at: '2026-10-15T16:30', end: '2026-10-15T17:30' })
+  const [longer] = validateChanges([change({ ref: 'E1', action: 'update', end_time: '17:00' })], saved)
+  assert.deepEqual(longer.set, { end: '2026-10-15T17:00' })
+  const [backwards] = validateChanges([change({ ref: 'E1', action: 'update', date: '2026-10-16', end_time: '09:00' })], saved)
+  assert.deepEqual(backwards.set, { at: '2026-10-16T15:00', end: '2026-10-16T16:00' }, 'an end before the start is ignored')
+})
+
+test('an all-day event moves by day, and a start time makes it timed', () => {
+  assert.deepEqual(validateChanges([change({ ref: 'E2', action: 'update', date: '2026-10-21' })], saved)[0].set, { day: '2026-10-21' })
+  assert.deepEqual(validateChanges([change({ ref: 'E2', action: 'update', time: '09:00', end_time: '12:00' })], saved)[0].set, {
+    at: '2026-10-20T09:00',
+    all_day: false,
+    end: '2026-10-20T12:00',
+  })
+})
+
+test('done is for tasks, delete for anything, and unknown refs or empty updates are dropped', () => {
+  const changes = validateChanges(
+    [
+      change({ ref: 'T2', action: 'done' }),
+      change({ ref: 'E1', action: 'done' }),
+      change({ ref: 'E2', action: 'delete', title: 'ignored' }),
+      change({ ref: 'T9', action: 'delete' }),
+      change({ ref: 'T1', action: 'update', priority: 'high', title: 'Send the ATLAS report' }),
+      change({ ref: 'xyz', action: 'update', priority: 'low' }),
+    ],
+    saved,
+  )
+  assert.deepEqual(changes.map((c) => [c.ref, c.action, c.set]), [['T2', 'done', {}], ['E2', 'delete', {}]])
+})
+
+test('status, priority, reminder, title and place are checked before they are kept', () => {
+  const [task, event] = validateChanges(
+    [
+      change({ ref: 'T1', action: 'update', status: 'in_progress', priority: 'urgent', remind_minutes_before: 60, title: 'send the final report', location: 'Room 4' }),
+      change({ ref: 'E1', action: 'update', status: 'waiting', priority: 'high', remind_minutes_before: 99999, location: ' Room 4 ' }),
+    ],
+    saved,
+  )
+  assert.deepEqual(task.set, { title: 'Send the final report', priority: 'urgent', status: 'in_progress', remind_minutes_before: 60 })
+  assert.deepEqual(event.set, { location: 'Room 4' })
+})
+
+test('two updates to one item merge, and finishing or deleting replaces an update', () => {
+  const merged = validateChanges(
+    [change({ ref: 'T1', action: 'update', date: '2026-10-16' }), change({ ref: 'T1', action: 'update', priority: 'urgent' })],
+    saved,
+  )
+  assert.deepEqual(merged.map((c) => c.set), [{ at: '2026-10-16T17:00', priority: 'urgent' }])
+  const finished = validateChanges([change({ ref: 'T1', action: 'update', date: '2026-10-16' }), change({ ref: 'T1', action: 'done' })], saved)
+  assert.deepEqual(finished.map((c) => c.action), ['done'])
+})
+
+test('a follow-up builds on the pending change: "make it 4pm" keeps the day it was moved to', () => {
+  const pending: ProposedChange[] = [{ ref: 'T1', action: 'update', kind: 'task', title: 'Send the ATLAS report', set: { at: '2026-10-16T17:00' } }]
+  const [next] = validateChanges([change({ ref: 'T1', action: 'update', time: '16:00' })], saved, pending)
+  assert.deepEqual(next.set, { at: '2026-10-16T16:00' })
+})
+
+test('parseRequest keeps refs and pending changes that still match the schedule', () => {
+  const body = parseRequest({
+    text: 'and make it urgent',
+    now: '2026-10-15T09:30',
+    schedule: [...saved, { ref: 'bad ref', kind: 'task', title: 'No ref', at: null }],
+    changes: [
+      { ref: 'T1', action: 'update', set: { at: '2026-10-16T17:00', priority: 'nope', end: 'soon' } },
+      { ref: 'E1', action: 'done', set: {} },
+      { ref: 'T7', action: 'delete', set: {} },
+      { ref: 'E2', action: 'delete', set: {} },
+    ],
+  })
+  assert.deepEqual(body.schedule!.map((e) => e.ref), ['T1', 'T2', 'E1', 'E2', undefined])
+  assert.deepEqual(body.changes, [
+    { ref: 'T1', kind: 'task', title: 'Send the ATLAS report', action: 'update', set: { at: '2026-10-16T17:00' } },
+    { ref: 'E2', kind: 'event', title: 'Offsite', action: 'delete', set: {} },
+  ])
+})
+
+test('proposeItems returns checked changes next to the drafts', async () => {
+  const { fetch } = fakeFetch([
+    { status: 200, body: geminiReply({ items: [], changes: [change({ ref: 'T1', action: 'update', date: '2026-10-16' }), change({ ref: 'T5', action: 'done' })], reply: 'Moving it to Friday.' }) },
+  ])
+  const result = await proposeItems({ ...req, schedule: saved }, { apiKey: 'k', models: ['m'], fetch })
+  assert.deepEqual(result.changes.map((c) => [c.ref, c.set]), [['T1', { at: '2026-10-16T17:00' }]])
+  assert.equal(result.reply, 'Moving it to Friday.')
+})
+
+test('every change field is required, ref and action first, and the prompt explains changes', () => {
+  const schema = RESPONSE_SCHEMA.properties.changes.items
+  assert.deepEqual(schema.required, schema.propertyOrdering)
+  assert.deepEqual(schema.propertyOrdering.slice(0, 2), ['ref', 'action'])
+  assert.deepEqual(RESPONSE_SCHEMA.required, ['items', 'changes', 'reply'])
+  assert.match(SYSTEM_PROMPT, /Changes to saved items/)
+  assert.match(SYSTEM_PROMPT, /Use only refs from SCHEDULE/)
+  assert.match(SYSTEM_PROMPT, /Let Tracky see your\s+schedule/)
+})
+
+test('repeat is kept only as one of the rules, and a task repeats only from a deadline', () => {
+  const items = validateItems(
+    {
+      items: [
+        { kind: 'event', title: 'Standup', date: '2026-10-16', time: '09:00', repeat: 'weekdays' },
+        { kind: 'task', title: 'Pay rent', date: '2026-11-01', repeat: 'monthly' },
+        { kind: 'task', title: 'Water the plants', date: null, repeat: 'daily' },
+        { kind: 'task', title: 'Stretch', date: '2026-10-16', repeat: 'hourly' },
+      ],
+    },
+    [],
+  )
+  assert.deepEqual(items.map((i) => i.repeat), ['weekdays', 'monthly', null, null])
+  assert.ok(RESPONSE_SCHEMA.properties.items.items.propertyOrdering.indexOf('repeat') > RESPONSE_SCHEMA.properties.items.items.propertyOrdering.indexOf('date'))
+  assert.match(SYSTEM_PROMPT, /repeat is set only when the note says the thing recurs/)
+})
+
+test('deleting a saved item and drafting it again becomes an update, and the draft goes', () => {
+  const draft = validateItems({ items: [{ kind: 'task', title: 'renew passport', date: '2026-10-16', time: '10:00', priority: 'high' }] }, [])
+  const other = validateItems({ items: [{ kind: 'event', title: 'Call Sari', date: '2026-10-19', time: '11:00' }] }, [])
+  const schedule: ScheduleEntry[] = [
+    { ref: 'T6', kind: 'task', title: 'Renew passport', at: null, status: 'waiting', priority: 'high', project: null },
+    { ref: 'E2', kind: 'event', title: 'Dentist', at: '2026-10-19T09:30', day: '2026-10-19', end: '2026-10-19T10:30' },
+  ]
+  const { items, changes } = repairStandIns(
+    [...draft, ...other],
+    [{ ref: 'T6', action: 'delete', kind: 'task', title: 'Renew passport', set: {} }, { ref: 'E2', action: 'delete', kind: 'event', title: 'Dentist', set: {} }],
+    schedule,
+  )
+  assert.deepEqual(items.map((i) => i.title), ['Call Sari'])
+  assert.deepEqual(changes, [
+    { ref: 'T6', action: 'update', kind: 'task', title: 'Renew passport', set: { at: '2026-10-16T10:00' } },
+    { ref: 'E2', action: 'delete', kind: 'event', title: 'Dentist', set: {} },
+  ])
+})
+
+test('the prompt keeps new items next to changes and asks which one when two saved items fit', () => {
+  assert.match(SYSTEM_PROMPT, /A note can ask for both/)
+  assert.match(SYSTEM_PROMPT, /never delete a saved item to draft it again/)
+  assert.match(SYSTEM_PROMPT, /ask which one in reply and name\s+them/)
+})
+
+test('the prompt\'s examples of changes are not notes from the eval, and without a schedule a full note is drafted', () => {
+  for (const line of ['move the ATLAS report to Friday', 'cancel the dentist', 'move everything overdue to tomorrow']) {
+    assert.ok(!SYSTEM_PROMPT.includes(line), line)
+  }
+  assert.match(SYSTEM_PROMPT, /Without SCHEDULE you can't see or change saved items/)
+  assert.match(SYSTEM_PROMPT, /Never say you moved or changed it/)
+  assert.match(SYSTEM_PROMPT, /A note that says what something is and when it happens is new/)
 })

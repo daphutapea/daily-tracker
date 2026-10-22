@@ -19,6 +19,7 @@ export type Note = Omit<NoteRow, 'content'> & { content: JSONContent | null }
 export type NoteSummary = Omit<Note, 'content' | 'user_id'>
 
 export type CalEvent = Tables<'events'>
+export type EventSeries = Tables<'event_series'>
 export type Project = Tables<'projects'>
 export type QuickLink = Tables<'quick_links'>
 export type Profile = Tables<'profiles'>

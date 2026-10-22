@@ -1,10 +1,13 @@
-// Tracky, the assistant in Daily Tracker: turns a sentence into proposed tasks and events, and
-// answers questions about the schedule. The model only drafts; the app shows
-// the drafts for confirmation and saves them itself, so nothing reaches the database unreviewed.
+// Tracky, the assistant in Daily Tracker: turns a sentence into proposed tasks and events, proposes
+// changes to saved ones, and answers questions about the schedule. The model only proposes; the app
+// shows every draft and change for confirmation and saves them itself, so nothing reaches the
+// database unreviewed.
 // No Deno or Node APIs here, so the same file runs in the Edge Function and in `node --test`.
 
-/** Something already saved, so Tracky can advise on it. Times are the device's local time. */
+/** Something already saved, so Tracky can advise on it and change it. Times are the device's local time. */
 export interface ScheduleEntry {
+  /** "T3" or "E2": how this request refers to the entry. The app maps it back to the saved row. */
+  ref?: string
   kind: 'task' | 'event'
   title: string
   /** "YYYY-MM-DDTHH:mm": a task's deadline or an event's start. Null for an all-day event or a task without a deadline. */
@@ -38,6 +41,8 @@ export interface TrackyRequest {
   compact?: boolean
   /** Saved tasks and events, when the person lets Tracky see them. */
   schedule?: ScheduleEntry[]
+  /** Changes to saved items on screen that haven't been applied yet, by the refs of this request. */
+  changes?: ProposedChange[]
 }
 
 export interface ProposedItem {
@@ -49,14 +54,49 @@ export interface ProposedItem {
   time: string | null
   end_time: string | null
   all_day: boolean
+  /** How it recurs, or null. A repeating task needs a date: its first deadline. */
+  repeat: RepeatRule | null
   priority: 'urgent' | 'high' | 'medium' | 'low'
   project: string | null
   remind_minutes_before: number | null
   location: string | null
 }
 
+export type RepeatRule = 'daily' | 'weekdays' | 'weekly' | 'monthly' | 'yearly'
+const REPEAT_RULES = ['daily', 'weekdays', 'weekly', 'monthly', 'yearly'] as const
+
+type TaskStatus = 'todo' | 'in_progress' | 'waiting'
+
+/** What a change sets on a saved item. Only the fields that change are present. */
+export interface ChangeSet {
+  title?: string
+  /** A task's new deadline or a timed event's new start, local "YYYY-MM-DDTHH:mm". */
+  at?: string
+  /** An all-day event's new day, "YYYY-MM-DD". */
+  day?: string
+  /** A timed event's new end, or null when it no longer has one. */
+  end?: string | null
+  /** False when an all-day event gets a start time. */
+  all_day?: boolean
+  priority?: ProposedItem['priority']
+  status?: TaskStatus
+  remind_minutes_before?: number
+  location?: string
+}
+
+/** A change to something saved, for the person to confirm. */
+export interface ProposedChange {
+  ref: string
+  action: 'update' | 'done' | 'delete'
+  kind: 'task' | 'event'
+  /** The saved title, so the app can say which item it is. */
+  title: string
+  set: ChangeSet
+}
+
 export interface TrackyResult {
   items: ProposedItem[]
+  changes: ProposedChange[]
   reply: string | null
   model: string
 }
@@ -73,6 +113,7 @@ export class TrackyError extends Error {
 export const DEFAULT_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']
 
 const MAX_ITEMS = 10
+const MAX_CHANGES = 20
 const MAX_TURNS = 12
 /** A compaction reads the whole stored chat (the app keeps 60 messages), within a size budget. */
 const MAX_TURNS_COMPACT = 60
@@ -86,8 +127,8 @@ const PRIORITIES = ['urgent', 'high', 'medium', 'low'] as const
 
 export const SYSTEM_PROMPT = `You are Tracky, the assistant built into Daily Tracker, a personal board for one person's tasks,
 deadlines, events and notes. You run on a Gemini model made by Google. You turn short notes into
-tasks and events for the tracker, and you help the person plan: you answer questions about their
-schedule and give advice on what to do first and when.
+tasks and events for the tracker, change saved ones when asked, and help the person plan: you answer
+questions about their schedule and give advice on what to do first and when.
 
 A task is something to do, optionally with a deadline ("finish the report by Friday"). An event is
 something that happens at a time: a meeting, call, class, appointment or trip ("sync with Dennis
@@ -98,6 +139,10 @@ Rules:
   write them as YYYY-MM-DD. Times are 24-hour HH:mm. "next Friday" means the Friday of next week.
 - A task with a day but no time gets time null. An event with a day but no time is all_day true.
 - If an event gives a length or end ("10 to 11", "for an hour"), set end_time.
+- repeat is set only when the note says the thing recurs: "every day" or "daily" is daily, "every
+  weekday" or "Monday to Friday" is weekdays, "every Tuesday" or "weekly" is weekly, "every month" or
+  "on the 5th of each month" is monthly, "every year" is yearly. Otherwise null. date is the first
+  time it happens, the next matching day from NOW; a repeating task always has one.
 - "remind me 15 minutes before" sets remind_minutes_before to 15. No mention means null.
 - priority is "urgent" or "high" only when the note says so (urgent, ASAP, important, high
   priority, penting). Otherwise "medium".
@@ -128,10 +173,9 @@ the drafts on screen that are not saved yet.
   draft the note doesn't change exactly as it is, in the same order, and put new items after them.
 - When the note changes drafts ("make it 4pm", "the second one is urgent", "drop the call"), change
   only what it asks for. When it adds something new, keep the current drafts and add the new item.
-- When the note only asks a question or says thanks, return the current drafts unchanged and answer
-  in reply.
-- Items already added are saved and are not in CURRENT DRAFTS. If the note asks to change one, keep
-  the drafts unchanged and say in reply that it is saved, so they can open it from the app to edit.
+- When the note only asks a question or says thanks, return the current drafts unchanged, no
+  changes, and answer in reply.
+- Items already added are saved and are not in CURRENT DRAFTS. To change one, use changes (below).
 
 Advice. SCHEDULE, when given, is what the person has already saved: tasks with their deadline,
 priority and status, and events. Use it to answer questions and give advice, such as what to do
@@ -144,15 +188,49 @@ first, whether something fits, or whether work or a client meeting should come f
 - Advising is not adding. For advice alone, return the current drafts unchanged. Only when the note
   asks you to plan or schedule something, put what you suggest in items as drafts.
 - When a new draft clashes with a SCHEDULE event or lands on a crowded day, say so briefly in reply.
-- SCHEDULE entries are saved: never return them as items. To change one, the person opens it in the
-  app.`
+- SCHEDULE entries are saved: never return them as items. To change one, use changes.
+
+Changes to saved items. Each SCHEDULE line starts with its reference in brackets, such as [T3] or [E2].
+- When the note asks to move, reschedule, rename, reprioritise, finish or delete something saved
+  ("push the budget review to Friday", "the gas bill is paid", "cancel yoga", "everything late can
+  wait until Monday"), put one entry per item in changes, with its ref. Never add a draft to stand
+  in for a change, and never delete a saved item to draft it again: to give it a day or time, update
+  it.
+- A note can ask for both. Put new things in items and changes to saved things in changes, in the
+  same answer: "push my 1:1 to Thursday and add a dentist visit on Friday" is one change and one
+  draft.
+- action "update" gives the new value of each field the note changes, and null for every field it
+  leaves alone. Moving something to another day gives the new date with time null, so its time
+  stays. An event's end moves with its start unless the note gives a new end.
+- action "done" finishes a task. action "delete" removes a task or event, and only when the note
+  clearly says to delete, cancel, remove or drop it. Leave every other field null for both.
+- status in an update is "todo", "in_progress" or "waiting"; finishing a task is action "done".
+- Use only refs from SCHEDULE. When the note asks to change something saved and more than one saved
+  item fits (two saved calls, for "cancel the call"), change nothing: ask which one in reply and name
+  them. When it asks to change something and nothing saved fits, change nothing and say so.
+- A note that says what something is and when it happens is new, reminder or not ("remind me 10 min
+  before the haircut at 4"): draft it, unless SCHEDULE already holds that same thing, in which case
+  change the saved one (here, its remind_minutes_before).
+- PENDING CHANGES, when given, are changes on screen that are not applied yet. changes holds only what
+  this note asks for; pending changes stay unless the note changes the same item again.
+- Nothing changes until the person confirms. Say in reply, briefly, what you propose, and only what
+  is in items and changes: never say you added, drafted or changed something that isn't there.
+- Without SCHEDULE you can't see or change saved items. When the note asks to move, finish, rename
+  or delete something already saved, make no change and no draft, and say in reply that you can't
+  see saved items: they can turn on "Let Tracky see your schedule" in Settings, under Tracky, or
+  change it in the app. Never say you moved or changed it. Draft anything else the note says is
+  happening, as usual.`
 
 /**
  * The order Gemini writes an item's fields in. Without it, Gemini writes them alphabetically, so it
  * decided all_day before the title or the time and marked timed events as all day. Here the time
  * comes first and all_day follows from it.
  */
-const ITEM_FIELDS = ['kind', 'title', 'date', 'time', 'end_time', 'all_day', 'remind_minutes_before', 'priority', 'project', 'location']
+const ITEM_FIELDS = ['kind', 'title', 'date', 'time', 'end_time', 'all_day', 'repeat', 'remind_minutes_before', 'priority', 'project', 'location']
+
+/** A change names its item and action first, then the new values, null where nothing changes. */
+const CHANGE_FIELDS = ['ref', 'action', 'title', 'date', 'time', 'end_time', 'priority', 'status', 'remind_minutes_before', 'location']
+const UPDATE_STATUSES = ['todo', 'in_progress', 'waiting'] as const
 
 /**
  * Gemini's OpenAPI-style response schema. Every field is required, with null allowed where a field
@@ -172,6 +250,7 @@ export const RESPONSE_SCHEMA = {
           time: { type: 'STRING', nullable: true, description: 'HH:mm, 24-hour' },
           end_time: { type: 'STRING', nullable: true, description: 'HH:mm, 24-hour' },
           all_day: { type: 'BOOLEAN' },
+          repeat: { type: 'STRING', enum: [...REPEAT_RULES], nullable: true },
           priority: { type: 'STRING', enum: [...PRIORITIES] },
           project: { type: 'STRING', nullable: true },
           remind_minutes_before: { type: 'INTEGER', nullable: true },
@@ -181,10 +260,30 @@ export const RESPONSE_SCHEMA = {
         propertyOrdering: ITEM_FIELDS,
       },
     },
+    changes: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          ref: { type: 'STRING', description: 'From SCHEDULE, such as T3' },
+          action: { type: 'STRING', enum: ['update', 'done', 'delete'] },
+          title: { type: 'STRING', nullable: true },
+          date: { type: 'STRING', nullable: true, description: 'YYYY-MM-DD' },
+          time: { type: 'STRING', nullable: true, description: 'HH:mm, 24-hour' },
+          end_time: { type: 'STRING', nullable: true, description: 'HH:mm, 24-hour' },
+          priority: { type: 'STRING', enum: [...PRIORITIES], nullable: true },
+          status: { type: 'STRING', enum: [...UPDATE_STATUSES], nullable: true },
+          remind_minutes_before: { type: 'INTEGER', nullable: true },
+          location: { type: 'STRING', nullable: true },
+        },
+        required: CHANGE_FIELDS,
+        propertyOrdering: CHANGE_FIELDS,
+      },
+    },
     reply: { type: 'STRING', nullable: true },
   },
-  required: ['items', 'reply'],
-  propertyOrdering: ['items', 'reply'],
+  required: ['items', 'changes', 'reply'],
+  propertyOrdering: ['items', 'changes', 'reply'],
 }
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -199,11 +298,12 @@ function readable(local: string) {
   return `${weekday} ${Number(day)} ${MONTHS[Number(month) - 1]}${time ? ` ${time}` : ''}`
 }
 
-/** One saved task or event as a line the model reads, e.g. "- Task, due Tue 20 Oct 17:00 (overdue), high, ATLAS: Send the report". */
+/** One saved task or event as a line the model reads, e.g. "- [T3] Task, due Tue 20 Oct 17:00 (overdue), high, ATLAS: Send the report". */
 export function scheduleLine(e: ScheduleEntry, now: string): string {
+  const ref = e.ref ? `[${e.ref}] ` : ''
   if (e.kind === 'event') {
     const end = e.end && e.at ? ` to ${e.end.slice(0, 10) === e.at.slice(0, 10) ? e.end.slice(11) : readable(e.end)}` : ''
-    return `- Event, ${e.at ? `${readable(e.at)}${end}` : `${readable(e.day!)}, all day`}: ${e.title}`
+    return `- ${ref}Event, ${e.at ? `${readable(e.at)}${end}` : `${readable(e.day!)}, all day`}: ${e.title}`
   }
   const details = [
     e.at ? `due ${readable(e.at)}${e.at < now ? ' (overdue)' : ''}` : 'no deadline',
@@ -211,7 +311,24 @@ export function scheduleLine(e: ScheduleEntry, now: string): string {
     e.status && e.status !== 'todo' && e.status.replace('_', ' '),
     e.project,
   ].filter(Boolean)
-  return `- Task, ${details.join(', ')}: ${e.title}`
+  return `- ${ref}Task, ${details.join(', ')}: ${e.title}`
+}
+
+/** A pending change as a line the model reads, e.g. "- [T3] update: due Fri 23 Oct 17:00, priority high". */
+export function changeLine(c: ProposedChange): string {
+  if (c.action !== 'update') return `- [${c.ref}] ${c.action === 'done' ? 'mark done' : 'delete'}`
+  const s = c.set
+  const parts = [
+    s.title !== undefined && `title "${s.title}"`,
+    s.at !== undefined && `${c.kind === 'task' ? 'due' : 'starts'} ${readable(s.at)}`,
+    s.day !== undefined && `on ${readable(s.day)}, all day`,
+    s.end !== undefined && (s.end ? `ends ${readable(s.end)}` : 'no end time'),
+    s.priority !== undefined && `priority ${s.priority}`,
+    s.status !== undefined && `status ${s.status.replace('_', ' ')}`,
+    s.remind_minutes_before !== undefined && `reminder ${s.remind_minutes_before} min before`,
+    s.location !== undefined && `at ${s.location}`,
+  ].filter(Boolean)
+  return `- [${c.ref}] update: ${parts.join(', ')}`
 }
 
 export function buildUserMessage(req: TrackyRequest): string {
@@ -219,6 +336,7 @@ export function buildUserMessage(req: TrackyRequest): string {
   const history = req.history ?? []
   const drafts = req.drafts ?? []
   const schedule = req.schedule ?? []
+  const pending = req.changes ?? []
   return [
     `NOW: ${req.now.replace('T', ' ')} (${weekday})`,
     `TIMEZONE: ${req.timezone}`,
@@ -228,6 +346,7 @@ export function buildUserMessage(req: TrackyRequest): string {
       ? ['', 'EARLIER IN THIS CHAT:', ...history.map((t) => `${t.role === 'you' ? 'You' : 'Tracky'}: ${t.text}`)]
       : []),
     ...(drafts.length ? ['', 'CURRENT DRAFTS (not saved yet):', JSON.stringify(drafts)] : []),
+    ...(pending.length ? ['', 'PENDING CHANGES (not applied yet):', ...pending.map(changeLine)] : []),
     '',
     'NOTE:',
     req.text,
@@ -259,7 +378,9 @@ export function parseRequest(body: unknown): TrackyRequest {
   // Drafts come back from the browser, so they go through the same checks as the model's answer.
   const drafts = validateItems({ items: b.drafts }, projects, { asTyped: true })
   const schedule = Array.isArray(b.schedule) ? b.schedule.slice(0, MAX_SCHEDULE).flatMap(parseScheduleEntry) : []
-  return { text, now, timezone, projects, history, drafts, schedule, compact }
+  // Pending changes come back from the browser in their checked form; they are checked again.
+  const changes = Array.isArray(b.changes) ? parsePending(b.changes, schedule) : []
+  return { text, now, timezone, projects, history, drafts, schedule, compact, changes }
 }
 
 /**
@@ -278,19 +399,23 @@ const STATUSES = ['todo', 'in_progress', 'waiting', 'done'] as const
 const isLocalTime = (v: unknown): v is string =>
   typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d$/.test(v) && isDate(v.slice(0, 10))
 
+const isRef = (v: unknown): v is string => typeof v === 'string' && /^[TE]\d{1,3}$/.test(v)
+
 /** Keeps a well-formed schedule entry, or drops it. */
 function parseScheduleEntry(raw: unknown): ScheduleEntry[] {
   const r = (raw ?? {}) as Record<string, unknown>
   const title = typeof r.title === 'string' ? r.title.trim().slice(0, 200) : ''
   if (!title || (r.kind !== 'task' && r.kind !== 'event')) return []
   const at = isLocalTime(r.at) ? r.at : null
+  const ref = isRef(r.ref) ? { ref: r.ref } : {}
   if (r.kind === 'event') {
     const day = isDate(r.day) ? r.day : at?.slice(0, 10)
     if (!day) return []
-    return [{ kind: 'event', title, at, day, end: at && isLocalTime(r.end) && r.end > at ? r.end : null }]
+    return [{ ...ref, kind: 'event', title, at, day, end: at && isLocalTime(r.end) && r.end > at ? r.end : null }]
   }
   return [
     {
+      ...ref,
       kind: 'task',
       title,
       at,
@@ -344,6 +469,10 @@ export function validateItems(raw: unknown, projects: string[], { asTyped = fals
         ? r.remind_minutes_before
         : null
     const location = kind === 'event' && typeof r.location === 'string' && r.location.trim() ? r.location.trim().slice(0, 200) : null
+    // A task can only repeat from a deadline; a draft sent back keeps what the person picked, since
+    // the app asks for a date before Add.
+    const rule = REPEAT_RULES.includes(r.repeat as RepeatRule) ? (r.repeat as RepeatRule) : null
+    const repeat = rule && (asTyped || kind === 'event' || date !== null) ? rule : null
 
     items.push({
       kind,
@@ -353,6 +482,7 @@ export function validateItems(raw: unknown, projects: string[], { asTyped = fals
       end_time: kind === 'event' ? endTime : null,
       // An event with a day but no time can only be all day; a task never is.
       all_day: kind === 'event' && (r.all_day === true || (!asTyped && date !== null && time === null)),
+      repeat,
       priority,
       project,
       remind_minutes_before: remind,
@@ -360,6 +490,171 @@ export function validateItems(raw: unknown, projects: string[], { asTyped = fals
     })
   }
   return items
+}
+
+/** Local "YYYY-MM-DDTHH:mm" as minutes, for wall-clock arithmetic that no time zone can shift. */
+const minutesOf = (local: string) => Date.parse(`${local}:00Z`) / 60000
+const shiftLocal = (local: string, minutes: number) => new Date((minutesOf(local) + minutes) * 60000).toISOString().slice(0, 16)
+
+/** A saved entry as it will be once a pending update is applied, so a follow-up builds on it. */
+function withPending(e: ScheduleEntry, pending: ProposedChange | undefined): ScheduleEntry {
+  if (!pending || pending.action !== 'update') return e
+  const s = pending.set
+  const next: ScheduleEntry = { ...e }
+  if (s.title !== undefined) next.title = s.title
+  if (s.priority !== undefined) next.priority = s.priority
+  if (s.status !== undefined) next.status = s.status
+  if (s.at !== undefined) {
+    next.at = s.at
+    if (e.kind === 'event') next.day = s.at.slice(0, 10)
+  }
+  if (s.day !== undefined) next.day = s.day
+  if (s.end !== undefined) next.end = s.end
+  return next
+}
+
+/**
+ * What a change from the model sets on a saved entry, worked out against the entry (with any pending
+ * change applied): a new day keeps the time, a moved event keeps its length, and a field that ends up
+ * as it already is, is left out. Returns null when nothing would change.
+ */
+function resolveUpdate(r: Record<string, unknown>, e: ScheduleEntry): ChangeSet | null {
+  const set: ChangeSet = {}
+  const rawTitle = typeof r.title === 'string' ? r.title.trim().slice(0, 200) : ''
+  const title = /^\p{Ll}\S*\p{Lu}/u.test(rawTitle) ? rawTitle : rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1)
+  if (title && title !== e.title) set.title = title
+  const date = isDate(r.date) ? r.date : null
+  const time = isTime(r.time) ? r.time : null
+
+  if (e.kind === 'task') {
+    const day = date ?? e.at?.slice(0, 10) ?? null
+    if ((date || time) && day) {
+      // A task without a deadline that gets only a day is due at 17:00, as in the app.
+      const at = `${day}T${time ?? e.at?.slice(11) ?? '17:00'}`
+      if (at !== e.at) set.at = at
+    }
+    if (PRIORITIES.includes(r.priority as (typeof PRIORITIES)[number]) && r.priority !== e.priority) {
+      set.priority = r.priority as ProposedItem['priority']
+    }
+    if (UPDATE_STATUSES.includes(r.status as TaskStatus) && r.status !== e.status) set.status = r.status as TaskStatus
+  } else if (e.at) {
+    const start = `${date ?? e.at.slice(0, 10)}T${time ?? e.at.slice(11)}`
+    const end = isTime(r.end_time) ? `${start.slice(0, 10)}T${r.end_time}` : null
+    if (end && end > start) {
+      if (end !== e.end) set.end = end
+    } else if (e.end && start !== e.at) {
+      set.end = shiftLocal(e.end, minutesOf(start) - minutesOf(e.at))
+    }
+    if (start !== e.at) set.at = start
+  } else {
+    // All day: a start time makes it a timed event; otherwise only its day can move.
+    const day = date ?? e.day!
+    if (time) {
+      set.at = `${day}T${time}`
+      set.all_day = false
+      const end = isTime(r.end_time) && r.end_time > time ? `${day}T${r.end_time}` : null
+      if (end) set.end = end
+    } else if (day !== e.day) {
+      set.day = day
+    }
+  }
+
+  const remind = r.remind_minutes_before
+  if (typeof remind === 'number' && Number.isInteger(remind) && remind >= 0 && remind <= 10080) {
+    set.remind_minutes_before = remind
+  }
+  const location = e.kind === 'event' && typeof r.location === 'string' ? r.location.trim().slice(0, 200) : ''
+  if (location) set.location = location
+  return Object.keys(set).length ? set : null
+}
+
+/**
+ * Keeps the model's changes that name a saved entry and would change something, at most one per
+ * entry: two updates to one entry merge, and finishing or deleting replaces an update.
+ */
+export function validateChanges(raw: unknown, schedule: ScheduleEntry[], pending: ProposedChange[] = []): ProposedChange[] {
+  const list = Array.isArray(raw) ? raw : []
+  const byRef = new Map(schedule.filter((e) => e.ref).map((e) => [e.ref!, e]))
+  const pendingByRef = new Map(pending.map((c) => [c.ref, c]))
+  const changes = new Map<string, ProposedChange>()
+
+  for (const entry of list) {
+    const r = (entry ?? {}) as Record<string, unknown>
+    const saved = isRef(r.ref) ? byRef.get(r.ref) : undefined
+    if (!saved) continue
+    const ref = saved.ref!
+    const base = { ref, kind: saved.kind, title: saved.title }
+    if (r.action === 'delete' || (r.action === 'done' && saved.kind === 'task')) {
+      changes.set(ref, { ...base, action: r.action, set: {} })
+      continue
+    }
+    if (r.action !== 'update') continue
+    const earlier = changes.get(ref)
+    const set = resolveUpdate(r, withPending(withPending(saved, pendingByRef.get(ref)), earlier))
+    if (!set) continue
+    changes.set(ref, { ...base, action: 'update', set: earlier?.action === 'update' ? { ...earlier.set, ...set } : set })
+  }
+  return [...changes.values()].slice(0, MAX_CHANGES)
+}
+
+/** Pending changes sent back by the app: kept when their entry is still in the schedule and their fields check out. */
+function parsePending(raw: unknown[], schedule: ScheduleEntry[]): ProposedChange[] {
+  const byRef = new Map(schedule.filter((e) => e.ref).map((e) => [e.ref!, e]))
+  return raw.slice(0, MAX_CHANGES).flatMap((entry): ProposedChange[] => {
+    const r = (entry ?? {}) as Record<string, unknown>
+    const saved = isRef(r.ref) ? byRef.get(r.ref) : undefined
+    if (!saved) return []
+    const base = { ref: saved.ref!, kind: saved.kind, title: saved.title }
+    if (r.action === 'delete' || (r.action === 'done' && saved.kind === 'task')) return [{ ...base, action: r.action, set: {} }]
+    const s = (r.set ?? {}) as Record<string, unknown>
+    const set: ChangeSet = {}
+    if (typeof s.title === 'string' && s.title.trim()) set.title = s.title.trim().slice(0, 200)
+    if (isLocalTime(s.at)) set.at = s.at
+    if (isDate(s.day)) set.day = s.day
+    if (s.end === null || isLocalTime(s.end)) set.end = s.end
+    if (s.all_day === false) set.all_day = false
+    if (PRIORITIES.includes(s.priority as (typeof PRIORITIES)[number])) set.priority = s.priority as ProposedItem['priority']
+    if (UPDATE_STATUSES.includes(s.status as TaskStatus)) set.status = s.status as TaskStatus
+    const remind = s.remind_minutes_before
+    if (typeof remind === 'number' && Number.isInteger(remind) && remind >= 0 && remind <= 10080) set.remind_minutes_before = remind
+    if (typeof s.location === 'string' && s.location.trim()) set.location = s.location.trim().slice(0, 200)
+    return r.action === 'update' && Object.keys(set).length ? [{ ...base, action: 'update', set }] : []
+  })
+}
+
+const sameTitle = (a: string, b: string) => a.trim().toLowerCase().replace(/\s+/g, ' ') === b.trim().toLowerCase().replace(/\s+/g, ' ')
+
+/**
+ * Deleting a saved item and drafting one with the same title is a move done the wrong way round: the
+ * saved item's notes, links and history would go with it. It becomes an update of the saved item to
+ * the draft's day and time, and the draft is dropped.
+ */
+export function repairStandIns(
+  items: ProposedItem[],
+  changes: ProposedChange[],
+  schedule: ScheduleEntry[],
+  pending: ProposedChange[] = [],
+): { items: ProposedItem[]; changes: ProposedChange[] } {
+  const kept = [...items]
+  const fixed = changes.flatMap((c): ProposedChange[] => {
+    const saved = schedule.find((e) => e.ref === c.ref)
+    const at = c.action === 'delete' && saved ? kept.findIndex((d) => d.kind === saved.kind && sameTitle(d.title, saved.title)) : -1
+    if (at === -1 || !saved) return [c]
+    const [draft] = kept.splice(at, 1)
+    const set = resolveUpdate(
+      {
+        date: draft.date,
+        time: draft.time,
+        end_time: draft.end_time,
+        priority: draft.priority,
+        remind_minutes_before: draft.remind_minutes_before,
+        location: draft.location,
+      },
+      withPending(saved, pending.find((p) => p.ref === c.ref)),
+    )
+    return set ? [{ ...c, action: 'update', set }] : []
+  })
+  return { items: kept, changes: fixed }
 }
 
 type FetchLike = (url: string, init: { method: string; headers: Record<string, string>; body: string }) => Promise<{
@@ -431,9 +726,16 @@ export async function proposeItems(
     const cut = Array.isArray(found) && found.length > MAX_ITEMS
       ? `I can hold ${MAX_ITEMS} drafts at a time, so I kept the first ${MAX_ITEMS}. Add these, then ask me for the rest.`
       : null
+    const proposed = (parsed as { changes?: unknown }).changes
+    const checked = validateChanges(proposed, req.schedule ?? [], req.changes ?? [])
+    const cutChanges = Array.isArray(proposed) && proposed.length > MAX_CHANGES && checked.length === MAX_CHANGES
+      ? `I can propose ${MAX_CHANGES} changes at a time, so I kept the first ${MAX_CHANGES}. Apply these, then ask me again.`
+      : null
+    const { items, changes } = repairStandIns(validateItems(parsed, req.projects), checked, req.schedule ?? [], req.changes ?? [])
     return {
-      items: validateItems(parsed, req.projects),
-      reply: [said, cut].filter(Boolean).join('\n') || null,
+      items,
+      changes,
+      reply: [said, cut, cutChanges].filter(Boolean).join('\n') || null,
       model,
     }
   }
