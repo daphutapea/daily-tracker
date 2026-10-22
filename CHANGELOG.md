@@ -3,7 +3,7 @@
 ## v1.11 (2026-10-22)
 
 ### Added
-- An iPhone app. It's the same tracker as on the Mac, with the pages inside the app, so nothing has to be put online, and the same data. Reminders and summaries arrive as iPhone notifications with Mark done and Snooze, the icon shows how many tasks are overdue, and the strip behind the status bar takes the page's colour. `npm run iphone` installs it from the Mac over a cable; with a free Apple ID it needs renewing every 7 days the same way.
+- An iPhone app. It's the same tracker as on the Mac, with the pages inside the app, so nothing has to be put online, and the same data. Reminders and summaries arrive as iPhone notifications with Mark done and Snooze, the icon shows how many tasks are overdue, and the strip behind the status bar takes the page's colour. It also refreshes them in the background, so a task added on the Mac reaches the phone's reminders without opening the app there; iOS decides how often. `npm run iphone` installs it from the Mac over a cable; with a free Apple ID it needs renewing every 7 days the same way.
 - Tracky changes what you've already saved. Ask it to move the ATLAS report to Friday, mark the invoice done, cancel the dentist or push everything overdue to tomorrow, and each change shows as a card with the old and new values: "Deadline Wed 21 Oct, 17:00 → Fri 23 Oct, 17:00". Nothing changes until you press Make 2 changes (or Add 1, change 2 when there are drafts too). Undo sits on the message that says what changed. Follow-ups build on changes still on screen, and the cross on a card drops it.
 - Repeating tasks. Set Repeat on a task with a deadline: every day, weekday, week, month or year. When you finish it, the next one is added, due on the next day the rule allows that is still ahead, with its reminder the same time before it. Unticking takes the next one back. A small repeat mark shows in lists.
 - Repeating events. Set Repeat on an event and its next three months are written into the calendar as ordinary events, with more added as time passes. Open one later and pick This event or This and later ones before you save or delete; Delete these comes with Undo.
@@ -28,7 +28,7 @@
 - Tracky can't change how something repeats; do that in the event or task.
 - Undo for Tracky's changes lasts until the next message in the chat.
 - Weekly backups need the Mac app. In a browser or the iPhone app, use Download a copy, which opens the share sheet on the phone.
-- The iPhone app's reminders are brought up to date when you open it, so a change made on the Mac reaches them the next time you open the app on the phone.
+- The iPhone app's background refresh runs when iOS allows, usually a few times a day, and only with Background App Refresh on. A change made on the Mac minutes before a reminder may not reach the phone in time unless you open the app there.
 
 ## v1.10 (2026-10-19)
 

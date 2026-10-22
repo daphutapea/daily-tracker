@@ -40,6 +40,8 @@ type ToMac =
   /** A backup, written without asking to iCloud Drive (or Documents) › Daily Tracker Backups. */
   | { type: 'backup'; filename: string; content: string }
   | { type: 'showBackups' }
+  /** iPhone app: what its background refresh needs to fetch and plan on its own. */
+  | { type: 'native'; switches: { reminders: boolean; badge: boolean }; supabaseUrl: string; supabaseKey: string }
 
 export type FromMac =
   | { type: 'permission'; status: 'granted' | 'denied' | 'undetermined' }
@@ -54,6 +56,74 @@ export type FromMac =
 
 const handler = (window as { webkit?: { messageHandlers?: { dailyTracker?: { postMessage(m: unknown): void } } } }).webkit
   ?.messageHandlers?.dailyTracker
+
+type SessionReply = (message: { op: 'get' | 'set' | 'remove'; key: string; value?: string }) => Promise<string | null>
+const sessionHandler = (window as { webkit?: { messageHandlers?: { dailyTrackerSession?: { postMessage: SessionReply } } } }).webkit
+  ?.messageHandlers?.dailyTrackerSession
+
+/**
+ * Where the iPhone app keeps the sign-in: in the iOS Keychain, through the app, rather than in the
+ * page's storage. Its background refresh renews and uses the same session, so the two never hold
+ * different refresh tokens (Supabase signs you out when a used one comes back). A session left in the
+ * page's storage by an earlier version moves over the first time it's read.
+ */
+export const appSessionStorage = {
+  async getItem(key: string): Promise<string | null> {
+    const earlier = pageStorage.get(key)
+    let kept: string | null
+    try {
+      kept = await sessionHandler!.postMessage({ op: 'get', key })
+    } catch {
+      return earlier
+    }
+    if (kept != null || earlier == null) return kept
+    // Moved over only once the app has it, so a failed move never signs you out.
+    try {
+      await sessionHandler!.postMessage({ op: 'set', key, value: earlier })
+      pageStorage.remove(key)
+    } catch {
+      // The Keychain refused it: it stays where it was.
+    }
+    return earlier
+  },
+  async setItem(key: string, value: string) {
+    try {
+      await sessionHandler!.postMessage({ op: 'set', key, value })
+      pageStorage.remove(key)
+    } catch {
+      pageStorage.set(key, value)
+    }
+  },
+  async removeItem(key: string) {
+    pageStorage.remove(key)
+    await sessionHandler!.postMessage({ op: 'remove', key }).catch(() => null)
+  },
+}
+
+/** The page's own storage, which may be blocked. */
+const pageStorage = {
+  get(key: string) {
+    try {
+      return localStorage.getItem(key)
+    } catch {
+      return null
+    }
+  },
+  set(key: string, value: string) {
+    try {
+      localStorage.setItem(key, value)
+    } catch {
+      // Nowhere to keep it: the sign-in lasts until the app closes.
+    }
+  },
+  remove(key: string) {
+    try {
+      localStorage.removeItem(key)
+    } catch {
+      // Nothing to remove.
+    }
+  },
+}
 
 /** Set by the iPhone app before the page runs; the Mac app leaves it unset. */
 const platform = (window as { dailyTrackerPlatform?: string }).dailyTrackerPlatform

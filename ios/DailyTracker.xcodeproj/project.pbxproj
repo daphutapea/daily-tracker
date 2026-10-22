@@ -133,7 +133,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# The app's pages: the web build that npm run build writes to dist/ (scripts/build-iphone-app.sh\n# runs it first), or the folder in WEB_BUILD. Copied whole, so the folders inside stay as the pages\n# expect.\nset -e\nSRC=\"${WEB_BUILD:-${PROJECT_DIR}/../dist}\"\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web\"\nif [ ! -f \"$SRC/index.html\" ]; then\n  echo \"error: dist/ has no web build. Run npm run build first.\" >&2\n  exit 1\nfi\nrm -rf \"$DEST\"\nmkdir -p \"$DEST\"\ncp -R \"$SRC/\" \"$DEST/\"\n";
+			shellScript = "# The app's pages: the web build that npm run build writes to dist/ (scripts/build-iphone-app.sh\n# runs it first), or the folder in WEB_BUILD. Copied whole, so the folders inside stay as the pages\n# expect.\nset -e\nSRC=\"${WEB_BUILD:-${PROJECT_DIR}/../dist}\"\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web\"\nif [ ! -f \"$SRC/index.html\" ]; then\n  echo \"error: dist/ has no web build. Run npm run build first.\" >&2\n  exit 1\nfi\nrm -rf \"$DEST\"\nmkdir -p \"$DEST\"\ncp -R \"$SRC/\" \"$DEST/\"\n# The reminder planner for the background refresh (npm run build:native).\nPLAN=\"${PROJECT_DIR}/../build/native/plan.js\"\nif [ ! -f \"$PLAN\" ]; then\n  echo \"error: build/native/plan.js is missing. Run npm run build:native first.\" >&2\n  exit 1\nfi\ncp \"$PLAN\" \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/plan.js\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -188,6 +188,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Daily Tracker";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -212,6 +213,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Daily Tracker";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

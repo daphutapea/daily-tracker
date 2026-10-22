@@ -16,6 +16,7 @@ OUT="$PWD/build/ios"
 
 echo "Building the web app"
 npm run build --silent
+npm run build:native --silent
 
 if [[ "${1:-}" == "--simulator" ]]; then
   echo "Building for the simulator"

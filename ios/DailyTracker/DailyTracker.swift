@@ -2,8 +2,12 @@
 // (macos/main.swift). Pages come from the app itself through the dailytracker:// scheme, so nothing
 // has to be hosted; data comes from Supabase over the network, so the phone, the Mac and a browser
 // share everything. Reminders and summaries become iPhone notifications that iOS keeps, so they
-// arrive with the app closed.
+// arrive with the app closed, and a background refresh keeps them in step with changes made
+// elsewhere while the app stays closed.
 
+import BackgroundTasks
+import JavaScriptCore
+import Security
 import UIKit
 import UserNotifications
 import WebKit
@@ -16,6 +20,8 @@ private let reminderPrefix = "reminder:"
 private let snoozePrefix = "snooze:"
 /// iOS keeps at most 64 notifications per app; this leaves room for snoozes.
 private let maxScheduled = 56
+/// The background refresh iOS runs now and then (Info.plist lists it).
+private let refreshTaskID = "com.daphutapea.dailytracker.refresh"
 
 /// Runs before the page's own scripts: tells the page it's in the iPhone app (src/lib/native.ts), and
 /// reports the page's background whenever the theme changes, so the strip behind the status bar
@@ -43,8 +49,15 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
-    // Set up before the first screen, so a notification that launched the app is handled.
+    // Set up before the first screen, so a notification that launched the app is handled. The page
+    // itself only loads when a screen appears, so a background launch never starts it.
     Bridge.shared.startNotifications()
+    Refresher.shared.register()
+    if ProcessInfo.processInfo.arguments.contains("--refresh-now") {
+      // For checking the background refresh by hand: npm run iphone -- --simulator, then
+      // xcrun simctl launch booted com.daphutapea.dailytracker --refresh-now
+      Task { print("REFRESH:", await Refresher.shared.refresh()) }
+    }
     return true
   }
 
@@ -68,6 +81,10 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     window.rootViewController = TrackerViewController()
     window.makeKeyAndVisible()
     self.window = window
+  }
+
+  func sceneDidEnterBackground(_ scene: UIScene) {
+    Refresher.shared.schedule()
   }
 }
 
@@ -207,7 +224,9 @@ private struct Reminder: Sendable {
 final class Bridge: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, UNUserNotificationCenterDelegate {
   static let shared = Bridge()
 
-  let webView: WKWebView
+  /// Made when the first screen appears, never in a background launch, so the page can't renew the
+  /// sign-in while the background refresh does.
+  lazy var webView: WKWebView = makeWebView()
   weak var host: TrackerViewController?
   private(set) var surface: UIColor = .systemBackground
   private(set) var surfaceIsDark = false
@@ -215,17 +234,18 @@ final class Bridge: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessag
   private var pageListening = false
   private var heldForPage: [[String: String]] = []
 
-  override init() {
+  private func makeWebView() -> WKWebView {
     let configuration = WKWebViewConfiguration()
     let webRoot = Bundle.main.resourceURL!.appending(path: "web")
     configuration.setURLSchemeHandler(BundleSchemeHandler(root: webRoot), forURLScheme: appScheme)
-    configuration.websiteDataStore = .default()  // keeps you signed in between launches
+    configuration.websiteDataStore = .default()
     configuration.userContentController.addUserScript(
       WKUserScript(source: pageSetup, injectionTime: .atDocumentStart, forMainFrameOnly: true)
     )
-    webView = WKWebView(frame: .zero, configuration: configuration)
-    super.init()
-    webView.configuration.userContentController.add(self, name: "dailyTracker")
+    configuration.userContentController.add(self, name: "dailyTracker")
+    // The sign-in, kept in the Keychain for the page (src/lib/native.ts, appSessionStorage).
+    configuration.userContentController.addScriptMessageHandler(SessionHandler(), contentWorld: .page, name: "dailyTrackerSession")
+    let webView = WKWebView(frame: .zero, configuration: configuration)
     webView.navigationDelegate = self
     webView.uiDelegate = self
     webView.allowsBackForwardNavigationGestures = true
@@ -237,6 +257,7 @@ final class Bridge: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessag
     webView.backgroundColor = .clear
     webView.isInspectable = true  // Safari > Develop can inspect the page, as with the Mac app
     webView.load(URLRequest(url: startURL))
+    return webView
   }
 
   // MARK: Navigation
@@ -325,6 +346,18 @@ final class Bridge: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessag
       sendTestNotification()
     case "save":
       share(filename: body["filename"] as? String ?? "daily-tracker.json", content: body["content"] as? String ?? "")
+    case "native":
+      // What the background refresh needs: this phone's switches and where the data is.
+      let defaults = UserDefaults.standard
+      if let switches = body["switches"] as? [String: Bool] {
+        defaults.set(switches["reminders"] ?? true, forKey: "RemindersOn")
+        defaults.set(switches["badge"] ?? true, forKey: "BadgeOn")
+      }
+      if let url = body["supabaseUrl"] as? String, let key = body["supabaseKey"] as? String {
+        defaults.set(url, forKey: "SupabaseURL")
+        defaults.set(key, forKey: "SupabaseKey")
+      }
+      Refresher.shared.schedule()
     default:
       break  // backups, Show backups and Calendar settings are the Mac app's
     }
@@ -406,7 +439,7 @@ final class Bridge: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessag
 
   /// Replaces every reminder handed over earlier with the page's current list, nearest first, up to
   /// what iOS will hold.
-  private func schedule(_ reminders: [Reminder]) async {
+  fileprivate func schedule(_ reminders: [Reminder]) async {
     let center = UNUserNotificationCenter.current()
     let upcoming = reminders.filter { $0.at > Date() }.sorted { $0.at < $1.at }
     if !upcoming.isEmpty, await authorizationStatus() == .notDetermined {
@@ -438,7 +471,7 @@ final class Bridge: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessag
 
   /// A task finished or deleted since its reminder went off takes that reminder with it: a snoozed copy
   /// won't come back, and the one still in Notification Center goes. Same as the Mac app.
-  private func clearFinished(keeping openTasks: Set<String>) async {
+  fileprivate func clearFinished(keeping openTasks: Set<String>) async {
     let center = UNUserNotificationCenter.current()
     let isFinished: @Sendable (UNNotificationRequest) -> Bool = { request in
       guard let taskId = request.content.userInfo["taskId"] as? String, !taskId.isEmpty else { return false }
@@ -498,6 +531,198 @@ final class Bridge: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessag
     default:
       break
     }
+  }
+}
+
+// MARK: The sign-in, kept in the Keychain
+
+/// The Supabase session the page keeps through appSessionStorage, under the same key it would use in
+/// localStorage. The background refresh reads and renews the same item, so there is only one.
+enum SessionStore {
+  private static let service = "Daily Tracker sign-in"
+
+  private static func query(_ key: String) -> [String: Any] {
+    [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: key]
+  }
+
+  static func get(_ key: String) -> String? {
+    var q = query(key)
+    q[kSecReturnData as String] = true
+    q[kSecMatchLimit as String] = kSecMatchLimitOne
+    var result: CFTypeRef?
+    guard SecItemCopyMatching(q as CFDictionary, &result) == errSecSuccess, let data = result as? Data else { return nil }
+    return String(data: data, encoding: .utf8)
+  }
+
+  /// False when the Keychain refused it, so the page keeps the sign-in itself rather than lose it.
+  @discardableResult
+  static func set(_ key: String, _ value: String) -> Bool {
+    let data = Data(value.utf8)
+    // Readable after the first unlock, so a background refresh can use it while the phone is locked.
+    let attributes: [String: Any] = [kSecValueData as String: data, kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock]
+    var status = SecItemUpdate(query(key) as CFDictionary, attributes as CFDictionary)
+    if status == errSecItemNotFound {
+      status = SecItemAdd(query(key).merging(attributes) { $1 } as CFDictionary, nil)
+    }
+    return status == errSecSuccess
+  }
+
+  static func remove(_ key: String) {
+    SecItemDelete(query(key) as CFDictionary)
+  }
+}
+
+/// Answers the page's appSessionStorage: get, set and remove, each with a reply.
+final class SessionHandler: NSObject, WKScriptMessageHandlerWithReply {
+  func userContentController(
+    _ userContentController: WKUserContentController,
+    didReceive message: WKScriptMessage
+  ) async -> (Any?, String?) {
+    guard let body = message.body as? [String: Any], let op = body["op"] as? String, let key = body["key"] as? String else {
+      return (nil, "bad request")
+    }
+    switch op {
+    case "get":
+      return (SessionStore.get(key) ?? NSNull(), nil)
+    case "set":
+      return SessionStore.set(key, body["value"] as? String ?? "") ? (NSNull(), nil) : (nil, "the Keychain refused it")
+    case "remove":
+      SessionStore.remove(key)
+      // Signed out: reminders for this account stop.
+      let center = UNUserNotificationCenter.current()
+      center.removeAllPendingNotificationRequests()
+      try? await center.setBadgeCount(0)
+      return (NSNull(), nil)
+    default:
+      return (nil, "unknown op")
+    }
+  }
+}
+
+// MARK: Background refresh
+
+/// Now and then, with the app closed, iOS wakes it for a few seconds. The refresh fetches your tasks,
+/// events and summary times itself, runs the same planner the page uses (build/native/plan.js, from
+/// src/native/plan.ts), and reschedules the notifications, so a change made on your Mac reaches this
+/// iPhone without opening the app.
+@MainActor
+final class Refresher {
+  static let shared = Refresher()
+
+  func register() {
+    BGTaskScheduler.shared.register(forTaskWithIdentifier: refreshTaskID, using: .main) { task in
+      MainActor.assumeIsolated {
+        guard let task = task as? BGAppRefreshTask else { return }
+        Refresher.shared.handle(task)
+      }
+    }
+  }
+
+  /// Asks for the next refresh, in about half an hour at the earliest. iOS decides when.
+  func schedule() {
+    let request = BGAppRefreshTaskRequest(identifier: refreshTaskID)
+    request.earliestBeginDate = Date(timeIntervalSinceNow: 30 * 60)
+    try? BGTaskScheduler.shared.submit(request)
+  }
+
+  private func handle(_ task: BGAppRefreshTask) {
+    schedule()
+    let work = Task { await refresh() }
+    task.expirationHandler = { work.cancel() }
+    Task {
+      let done = await work.value
+      task.setTaskCompleted(success: done == "ok")
+    }
+  }
+
+  /// One refresh. Returns "ok", or why it stopped, for the --refresh-now check.
+  func refresh() async -> String {
+    let defaults = UserDefaults.standard
+    guard let base = defaults.string(forKey: "SupabaseURL"), let apiKey = defaults.string(forKey: "SupabaseKey"),
+      let host = URL(string: base)?.host(), let ref = host.split(separator: ".").first
+    else { return "not set up: open the app once" }
+    let storageKey = "sb-\(ref)-auth-token"
+    guard var session = SessionStore.get(storageKey).flatMap(Self.json) else { return "signed out" }
+
+    // Renew the sign-in when it's about to expire, and keep the new one for the page too.
+    let expiresAt = session["expires_at"] as? Double ?? 0
+    // --renew forces this path, for checking it by hand with --refresh-now.
+    let forced = ProcessInfo.processInfo.arguments.contains("--renew")
+    if forced || expiresAt - Date().timeIntervalSince1970 < 120 {
+      guard let refreshToken = session["refresh_token"] as? String,
+        let renewed = await post("\(base)/auth/v1/token?grant_type=refresh_token", apiKey: apiKey, body: ["refresh_token": refreshToken]),
+        renewed["access_token"] is String, let text = Self.text(renewed)
+      else { return "couldn't renew the sign-in" }
+      SessionStore.set(storageKey, text)
+      session = renewed
+    }
+    guard let token = session["access_token"] as? String else { return "no access token" }
+
+    // Fetched side by side as raw bytes, which can cross threads; read once all three are in.
+    async let tasksData = Self.load("\(base)/rest/v1/tasks?select=*", apiKey: apiKey, token: token)
+    async let eventsData = Self.load("\(base)/rest/v1/events?select=*", apiKey: apiKey, token: token)
+    async let profilesData = Self.load("\(base)/rest/v1/profiles?select=*", apiKey: apiKey, token: token)
+    let (t, e, pr) = await (tasksData, eventsData, profilesData)
+    guard let tasks = Self.rows(t), let events = Self.rows(e), let profile = Self.rows(pr)?.first else { return "couldn't load data" }
+    if Task.isCancelled { return "out of time" }
+
+    let input: [String: Any] = [
+      "tasks": tasks, "events": events, "profile": profile,
+      "switches": ["reminders": defaults.object(forKey: "RemindersOn") as? Bool ?? true, "badge": defaults.object(forKey: "BadgeOn") as? Bool ?? true],
+      "now": Date().timeIntervalSince1970 * 1000,
+    ]
+    guard let plan = Self.plan(input) else { return "planner failed" }
+    let reminders = (plan["reminders"] as? [Any] ?? []).compactMap(Reminder.init)
+    let openTasks = Set(plan["openTasks"] as? [String] ?? [])
+    await Bridge.shared.schedule(reminders)
+    await Bridge.shared.clearFinished(keeping: openTasks)
+    try? await UNUserNotificationCenter.current().setBadgeCount(plan["badge"] as? Int ?? 0)
+    return "ok"
+  }
+
+  /// Runs DailyTrackerPlan.plan from the bundled script, with JSON in and JSON out.
+  private static func plan(_ input: [String: Any]) -> [String: Any]? {
+    guard let url = Bundle.main.url(forResource: "plan", withExtension: "js"), let script = try? String(contentsOf: url, encoding: .utf8),
+      let context = JSContext(), let inputText = text(input)
+    else { return nil }
+    context.evaluateScript(script)
+    let result = context.objectForKeyedSubscript("DailyTrackerPlan")?.objectForKeyedSubscript("plan")?.call(withArguments: [inputText])
+    guard context.exception == nil, let output = result?.toString() else { return nil }
+    return json(output)
+  }
+
+  nonisolated private static func load(_ url: String, apiKey: String, token: String) async -> Data? {
+    guard let url = URL(string: url) else { return nil }
+    var request = URLRequest(url: url)
+    request.setValue(apiKey, forHTTPHeaderField: "apikey")
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    guard let (data, response) = try? await URLSession.shared.data(for: request), (response as? HTTPURLResponse)?.statusCode == 200
+    else { return nil }
+    return data
+  }
+
+  private static func rows(_ data: Data?) -> [[String: Any]]? {
+    data.flatMap { (try? JSONSerialization.jsonObject(with: $0)) as? [[String: Any]] }
+  }
+
+  private func post(_ url: String, apiKey: String, body: [String: Any]) async -> [String: Any]? {
+    guard let url = URL(string: url), let payload = try? JSONSerialization.data(withJSONObject: body) else { return nil }
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.httpBody = payload
+    request.setValue(apiKey, forHTTPHeaderField: "apikey")
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    guard let (data, response) = try? await URLSession.shared.data(for: request), (response as? HTTPURLResponse)?.statusCode == 200
+    else { return nil }
+    return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+  }
+
+  private static func json(_ text: String) -> [String: Any]? {
+    (try? JSONSerialization.jsonObject(with: Data(text.utf8))) as? [String: Any]
+  }
+
+  private static func text(_ object: [String: Any]) -> String? {
+    (try? JSONSerialization.data(withJSONObject: object)).flatMap { String(data: $0, encoding: .utf8) }
   }
 }
 

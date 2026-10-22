@@ -2,7 +2,10 @@ import { useEffect, useEffectEvent, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { backupFilename, makeBackup } from '@/lib/backup'
+import { planForNative } from '@/lib/nativePlan'
+import { supabaseKey, supabaseUrl } from '@/lib/supabase'
 import {
+  inIphoneApp,
   inMacApp,
   onMacMessage,
   postToMac,
@@ -14,7 +17,7 @@ import {
   type FromMac,
 } from '@/lib/native'
 import { useEvents, useProfile, useSetTaskStatus, useTasks } from '@/lib/queries'
-import { todaySummary, upcomingReminders, upcomingSummaries } from '@/lib/reminders'
+import { todaySummary } from '@/lib/reminders'
 import { useNow } from '@/lib/useNow'
 import { useOpenTracky } from './trackyContext'
 
@@ -63,17 +66,21 @@ export function MacAppBridge() {
   const sent = useRef<string | null>(null)
   useEffect(() => {
     if (!tasks.data || !events.data || !profile.data) return
-    const list = enabled
-      ? [...upcomingReminders(tasks.data, events.data, now), ...upcomingSummaries(tasks.data, events.data, profile.data, now)]
-      : []
-    const openTasks = enabled ? tasks.data.filter((t) => t.status !== 'done').map((t) => t.id) : []
+    const plan = planForNative(tasks.data, events.data, profile.data, { reminders: enabled, badge: badgeOn }, now)
     // The calendar route to the iPhone is for the Mac app; the iPhone app notifies by itself.
-    const message = { type: 'reminders' as const, reminders: list.sort((a, b) => a.at - b.at), calendar: inMacApp && iphone, openTasks }
+    const message = { type: 'reminders' as const, reminders: plan.reminders, calendar: inMacApp && iphone, openTasks: plan.openTasks }
     const key = JSON.stringify(message)
     if (key === sent.current) return
     sent.current = key
     postToMac(message)
-  }, [tasks.data, events.data, profile.data, enabled, iphone, now])
+  }, [tasks.data, events.data, profile.data, enabled, badgeOn, iphone, now])
+
+  // The iPhone app refreshes reminders in the background by itself, so it needs this device's
+  // switches and where the data is. The address and key are the public ones the page uses.
+  useEffect(() => {
+    if (!inIphoneApp) return
+    postToMac({ type: 'native', switches: { reminders: enabled, badge: badgeOn }, supabaseUrl, supabaseKey })
+  }, [enabled, badgeOn])
 
   // The weekly backup: once the last one is a week old (or there is none), the page makes the file
   // and the Mac app saves it. Asked once per launch, so a failing disk doesn't retry every minute.

@@ -75,7 +75,12 @@ npm run iphone
 It builds the pages, signs the app with your Apple ID, and installs it on the phone. The first time,
 the iPhone won't open it until you trust your profile: Settings → General → VPN & Device Management →
 your Apple ID → Trust. Open Daily Tracker, sign in with your tracker account, and allow notifications
-when it asks (or later, under Settings → iPhone app).
+when it asks (or later, under Settings → iPhone app). Keep Background App Refresh on for it (iPhone
+Settings → General → Background App Refresh), so reminders stay up to date while the app is closed.
+
+The app keeps your sign-in in the iPhone's Keychain rather than in the page, so the background refresh
+and the page share one session. `xcrun simctl launch booted com.daphutapea.dailytracker --refresh-now`
+runs one background refresh by hand in the simulator and prints how it went.
 
 With a free Apple ID the app stops opening after 7 days. Plug the phone in and run `npm run iphone`
 again to renew it; your sign-in and settings stay. A paid Apple Developer membership makes it last a

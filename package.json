@@ -14,6 +14,7 @@
     "logo": "xcrun swift scripts/make-logo.swift",
     "app": "bash scripts/build-mac-app.sh",
     "iphone": "bash scripts/build-iphone-app.sh",
+    "build:native": "vite build -c vite.native.config.ts",
     "test:functions": "node --test supabase/functions/tracky/logic.test.ts supabase/functions/tracky/eval/grade.test.ts",
     "eval:tracky": "node supabase/functions/tracky/eval/run_eval.ts",
     "test": "npm run test:functions && npm run test:app && node --test scripts/changelog.test.mjs",

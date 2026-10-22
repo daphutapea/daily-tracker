@@ -275,9 +275,12 @@ was closed when something changed, the summary shows things as they were when it
 
 The Daily Tracker iPhone app hands your reminders and summaries to iOS the same way, so they arrive as
 iPhone notifications, with Mark done and Snooze 10 minutes, even when the app is closed. Its icon shows
-how many tasks are overdue. iOS keeps the next 56 at a time, and they're brought up to date each time
-you open the app, so a change made on your Mac reaches the phone's reminders the next time you open it
-there. Settings → iPhone app has the switches and a test notification.
+how many tasks are overdue. iOS keeps the next 56 at a time. They're brought up to date each time you
+open the app, and now and then in the background too: iOS wakes Daily Tracker for a few seconds, it
+fetches your tasks and events, and reschedules, so a task you add on your Mac reaches the phone's
+reminders without opening the app there. iOS decides how often, usually a few times a day for an app
+you use daily, and only while Background App Refresh is on for it. Settings → iPhone app has the
+switches and a test notification.
 
 Without the iPhone app, calendar alerts can carry reminders over instead. Turn on **Also alert me on
 my iPhone** in Settings → Mac app and the app keeps a “Daily Tracker” calendar in your iCloud: each
