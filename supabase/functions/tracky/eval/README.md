@@ -3,10 +3,11 @@
 How often the AI reads a note correctly, measured against notes whose right answer was worked out by
 hand first.
 
-**Latest results: 34/34 on gemini-3.6-flash, finished on 19 Oct 2026 over three days, and 34/34 on
-gemini-3.5-flash-lite, one run on 16 Oct 2026.** The prompt changed during the gemini-3.6-flash
-measurement: 25 notes ran on the v1.5 prompt and the last 9 on v1.9's. Read the
-[Limitations](#limitations) before quoting either.
+**Latest results, on the current prompt: 61/62 on gemini-3.5-flash-lite, one run on 23 Oct 2026, and
+20/20 so far on gemini-3.6-flash, also from 23 Oct, with 42 of the 62 notes still to run.** On the earlier
+34-note set both models scored 34/34: gemini-3.6-flash between 16 and 19 Oct, across two prompts, and
+gemini-3.5-flash-lite in one run on 16 Oct. Read the [Limitations](#limitations) before quoting any
+of these.
 
 ## Why
 
@@ -17,7 +18,7 @@ which kinds of note it gets wrong.
 
 ## The gold set
 
-[`gold_set.json`](gold_set.json) has 60 notes. Every case is read at the same moment: Thursday
+[`gold_set.json`](gold_set.json) has 62 notes. Every case is read at the same moment: Thursday
 15 October 2026, 09:00, Jakarta time, with the projects ATLAS, FinChat and Personal. That way
 "tomorrow" and "next Friday" each have one right answer. The `note` on each case says how that answer
 was reached, so you can check it instead of trusting it.
@@ -61,6 +62,8 @@ answers in words, `reply_has` lists groups of words, and the reply must contain 
 
 | Date | Model | Passed | Notes |
 |---|---|---:|---|
+| 23 Oct 2026 | gemini-3.5-flash-lite | 61/62 | One run on the 62-note set with the current prompt. Every kind passed except one change note: with two saved reports, "move the report" should change nothing and ask which one, but it moved the ATLAS report to Monday and said so. All 10 typo notes passed. |
+| 23 Oct 2026 | gemini-3.6-flash | 20/20 so far | `--remaining` on the 62-note set, starting over because the prompt changed on 22 Oct. The 17 notes run earlier on 22 Oct measured the old prompt and were dropped. The first 20 notes all passed: tasks 8/8, events 8/8, several items in one note 2/2, and task-or-event 2/2. 1 request got a 503 and passed on a retry. The allowance ran out with 42 notes left: refusals, typo notes, follow-ups, changes, advice, the summary, identity, repeats and reminders. |
 | 19 Oct 2026 | gemini-3.6-flash | 34/34 | `--remaining`, the last 9 notes, all typo notes: 9/9. That completes the set with every note right, all 10 typo notes included. These 9 ran on the v1.9 prompt (Tracky), the other 25 on v1.5's. 3 requests got a 503 and passed on a retry. |
 | 18 Oct 2026 | gemini-3.6-flash | 25/25 so far | `--remaining`, adding 14/14 to the 11 from 16 Oct. Every kind passed, including the 3 refusals and the first typo note ("Sync with Mr. Dennis", 15:00 to 16:00, then "Work on ATLAS improvements"). 7 requests got a 503 and the allowance ran out with 9 typo notes left. |
 | 16 Oct 2026 | gemini-3.6-flash | 11/11 so far | Part 1, after all the fixes. Every note it answered was right. 8 of the day's 20 requests got a 503 from Google, so one note stayed busy after its retries and the allowance ran out with 5 notes of part 1 left. The other 23 notes are still to run. |

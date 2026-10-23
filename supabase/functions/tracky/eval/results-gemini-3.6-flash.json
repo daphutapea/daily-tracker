@@ -1,14 +1,14 @@
 {
   "model": "gemini-3.6-flash",
-  "prompt": "02016f971da4",
-  "updated_at": "2026-10-22T12:18:56.100Z",
+  "prompt": "893073cf79ec",
+  "updated_at": "2026-10-23T07:16:25.258Z",
   "runs": 1,
-  "passed": 17,
-  "attempted": 17,
+  "passed": 20,
+  "attempted": 20,
   "by_kind": {
     "task": {
-      "passed": 6,
-      "attempted": 6
+      "passed": 8,
+      "attempted": 8
     },
     "event": {
       "passed": 8,
@@ -19,15 +19,12 @@
       "attempted": 2
     },
     "either": {
-      "passed": 1,
-      "attempted": 1
+      "passed": 2,
+      "attempted": 2
     }
   },
   "flaky": [],
   "not_run": [
-    "project_match",
-    "project_none",
-    "single_item_only",
     "four_items_today",
     "nothing_to_add_thanks",
     "nothing_to_add_question",
@@ -67,7 +64,9 @@
     "repeat_rent_monthly",
     "repeat_gym_weekly",
     "repeat_indonesian_daily",
-    "once_not_repeating"
+    "once_not_repeating",
+    "reminder_for_new_with_schedule",
+    "reminder_for_saved"
   ],
   "cases": [
     {
@@ -93,9 +92,9 @@
           }
         ],
         "changes": [],
-        "reply": "I have drafted a task to finish the labelling sheet by tomorrow, Friday, October 16."
+        "reply": "I drafted a task to finish the labelling sheet by Friday, October 16."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "event_with_time",
@@ -120,9 +119,9 @@
           }
         ],
         "changes": [],
-        "reply": "I drafted a sync with Dennis for Tuesday, October 20 at 10:00."
+        "reply": "I have created a draft for Sync with Dennis on Tuesday, 20 October 2026 at 10:00."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "event_range_and_reminder",
@@ -147,9 +146,9 @@
           }
         ],
         "changes": [],
-        "reply": "I have added a sync with Dennis for Tuesday, October 20, from 10:00 to 11:00, with a reminder 15 minutes before."
+        "reply": "I have created a draft to sync with Dennis on Tuesday, October 20, 2026, from 10:00 to 11:00 with a reminder 15 minutes before."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "task_high_priority_project",
@@ -174,9 +173,9 @@
           }
         ],
         "changes": [],
-        "reply": "I have created a high priority task to submit the ATLAS weekly report tomorrow at 17:00."
+        "reply": "I drafted a high-priority task to submit the ATLAS weekly report tomorrow at 17:00."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "task_urgent",
@@ -201,9 +200,9 @@
           }
         ],
         "changes": [],
-        "reply": "I have drafted an urgent task to renew your passport photo by Monday, October 19."
+        "reply": "I've drafted an urgent task to renew your passport photo by Monday, October 19."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "two_items_example",
@@ -241,9 +240,9 @@
           }
         ],
         "changes": [],
-        "reply": "I drafted two new items for you:\n- Event: Sync with Dennis on Tuesday, Oct 20 from 10:00 to 11:00 (15-min reminder)\n- Task: Finish the labelling sheet by Friday, Oct 16 (high priority)"
+        "reply": "I have drafted the sync with Dennis for Tuesday, October 20 from 10:00 to 11:00 with a 15-minute reminder, and the high-priority task to finish the labelling sheet by tomorrow, Friday, October 16."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "three_items_mixed",
@@ -262,7 +261,7 @@
             "all_day": false,
             "repeat": null,
             "priority": "medium",
-            "project": null,
+            "project": "Personal",
             "remind_minutes_before": null,
             "location": null
           },
@@ -275,28 +274,28 @@
             "all_day": false,
             "repeat": null,
             "priority": "medium",
-            "project": null,
+            "project": "Personal",
             "remind_minutes_before": null,
             "location": null
           },
           {
             "kind": "task",
-            "title": "Pay the internet bill",
+            "title": "Pay internet bill",
             "date": "2026-10-20",
             "time": null,
             "end_time": null,
             "all_day": false,
             "repeat": null,
             "priority": "medium",
-            "project": null,
+            "project": "Personal",
             "remind_minutes_before": null,
             "location": null
           }
         ],
         "changes": [],
-        "reply": "I have drafted the dentist appointment for Saturday, a call to Mom for Sunday evening, and a task to pay the internet bill by October 20."
+        "reply": "I have drafted the dentist appointment for Saturday, the call with Mom for Sunday evening, and the task to pay the internet bill by October 20."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "all_day_event",
@@ -308,7 +307,7 @@
         "items": [
           {
             "kind": "event",
-            "title": "Company Offsite",
+            "title": "Company offsite",
             "date": "2026-10-21",
             "time": null,
             "end_time": null,
@@ -321,9 +320,9 @@
           }
         ],
         "changes": [],
-        "reply": "I drafted the Company Offsite event for Wednesday, October 21, 2026."
+        "reply": null
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "next_friday",
@@ -335,7 +334,7 @@
         "items": [
           {
             "kind": "event",
-            "title": "Quarterly Review Meeting",
+            "title": "Quarterly review meeting",
             "date": "2026-10-23",
             "time": "14:00",
             "end_time": null,
@@ -348,9 +347,9 @@
           }
         ],
         "changes": [],
-        "reply": "I have added a draft for the Quarterly Review Meeting on Friday, October 23, 2026, at 14:00."
+        "reply": null
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "indonesian_besok",
@@ -375,9 +374,9 @@
           }
         ],
         "changes": [],
-        "reply": "Saya telah menjadwalkan rapat dengan tim ATLAS untuk besok pukul 15:00."
+        "reply": "Saya buatkan draf jadwal rapat dengan tim ATLAS untuk besok pukul 15:00."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "indonesian_lusa_penting",
@@ -402,9 +401,9 @@
           }
         ],
         "changes": [],
-        "reply": "Saya sudah menyiapkan draf tugas Kirim laporan ke Pak Budi untuk tanggal 17 Oktober 2026 dengan prioritas tinggi."
+        "reply": "Saya sudah menyusun draf tugas untuk mengirim laporan ke Pak Budi pada Sabtu, 17 Oktober 2026 dengan prioritas tinggi."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "indonesian_kamis_depan",
@@ -429,9 +428,9 @@
           }
         ],
         "changes": [],
-        "reply": "Saya telah menyiapkan draf acara Meeting dengan vendor untuk Kamis, 22 Oktober 2026 jam 10:00."
+        "reply": "Saya sudah menyiapkan draf untuk Meeting dengan vendor pada Kamis, 22 Oktober 2026 pukul 10:00."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "reminder_one_hour",
@@ -456,9 +455,9 @@
           }
         ],
         "changes": [],
-        "reply": "I drafted your flight to Singapore for Sunday, October 18, 2026 at 06:40 with a 60-minute reminder."
+        "reply": "I have drafted your flight to Singapore for Sunday, 18 October at 06:40 with a reminder 60 minutes before."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "reminder_day_before_next_month",
@@ -477,15 +476,15 @@
             "all_day": false,
             "repeat": "monthly",
             "priority": "medium",
-            "project": null,
+            "project": "Personal",
             "remind_minutes_before": 1440,
             "location": null
           }
         ],
         "changes": [],
-        "reply": "I have added a recurring task to pay rent on the 1st of every month, starting November 1, with a reminder set for 1 day before."
+        "reply": "I drafted a recurring monthly task to pay rent on the 1st of each month starting November 1, with a reminder set for 1 day before."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "tonight_24h_range",
@@ -510,9 +509,9 @@
           }
         ],
         "changes": [],
-        "reply": "I have drafted an event for the deploy window tonight from 22:00 to 23:30."
+        "reply": "I have drafted the deploy window event for tonight from 22:00 to 23:30."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "relative_hours",
@@ -537,9 +536,9 @@
           }
         ],
         "changes": [],
-        "reply": "I have drafted an event to call back the bank today at 11:00."
+        "reply": "I've drafted an event to call back the bank today at 11:00."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
     },
     {
       "id": "task_no_date",
@@ -564,9 +563,90 @@
           }
         ],
         "changes": [],
-        "reply": "I have added a draft task to buy a new HDMI cable."
+        "reply": "I have drafted a task to buy a new HDMI cable."
       },
-      "ran_at": "2026-10-22T12:18:56.100Z"
+      "ran_at": "2026-10-23T07:16:25.258Z"
+    },
+    {
+      "id": "project_match",
+      "kind": "task",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_answer": {
+        "items": [
+          {
+            "kind": "task",
+            "title": "Write the eval summary",
+            "date": "2026-10-19",
+            "time": "09:00",
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": "FinChat",
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I drafted a task to write the eval summary for FinChat by Monday, October 19 at 09:00."
+      },
+      "ran_at": "2026-10-23T07:16:25.258Z"
+    },
+    {
+      "id": "project_none",
+      "kind": "task",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_answer": {
+        "items": [
+          {
+            "kind": "task",
+            "title": "Plan the team lunch",
+            "date": "2026-10-16",
+            "time": null,
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I drafted a task to plan the team lunch by Friday, October 16."
+      },
+      "ran_at": "2026-10-23T07:16:25.258Z"
+    },
+    {
+      "id": "single_item_only",
+      "kind": "either",
+      "passes": 1,
+      "attempts": 1,
+      "problems": [],
+      "last_answer": {
+        "items": [
+          {
+            "kind": "task",
+            "title": "Stretch",
+            "date": "2026-10-15",
+            "time": "15:00",
+            "end_time": null,
+            "all_day": false,
+            "repeat": null,
+            "priority": "medium",
+            "project": null,
+            "remind_minutes_before": null,
+            "location": null
+          }
+        ],
+        "changes": [],
+        "reply": "I've created a draft task to stretch today at 15:00."
+      },
+      "ran_at": "2026-10-23T07:16:25.258Z"
     }
   ]
 }
